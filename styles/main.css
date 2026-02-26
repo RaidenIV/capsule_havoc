@@ -297,6 +297,7 @@ canvas { display: block; }
   padding: 12px 14px calc(24px + var(--cp-footer-pad, 96px) + env(safe-area-inset-bottom)); display: flex; flex-direction: column; gap: 8px;
   -webkit-overflow-scrolling: touch;
   overscroll-behavior: contain;
+  touch-action: pan-y;
 }
 #cp-scroll::-webkit-scrollbar { width: 5px; }
 #cp-scroll::-webkit-scrollbar-thumb { background: var(--cp-border); border-radius: 3px; }
