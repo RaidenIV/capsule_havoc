@@ -22,6 +22,14 @@ export function resumeAudioContext() {
   }
 }
 
+// Whenever the AudioContext transitions to 'running' (e.g. after any user gesture),
+// automatically start music if it was requested but blocked
+ctx.addEventListener('statechange', () => {
+  if (ctx.state === 'running' && _musicWanted && !muted && musicEl && musicEl.paused) {
+    musicEl.play().catch(() => {});
+  }
+});
+
 // ── Load all SFX up front ─────────────────────────────────────────────────────
 export async function initAudio() {
   const sfxFiles = {
