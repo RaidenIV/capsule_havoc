@@ -10,6 +10,7 @@ const sounds = {};
 let musicEl = null;         // <Audio> element for background music
 let musicVolume = 0.4;
 let sfxVolume   = 1.0;
+let muted       = false;
 
 // ── Load all SFX up front ─────────────────────────────────────────────────────
 export async function initAudio() {
@@ -61,7 +62,7 @@ export function resumeAudioContext() {
 // pitch:  playback rate, 1.0 = normal, vary slightly for variety
 export function playSound(name, volume = 1.0, pitch = 1.0) {
   const buf = sounds[name];
-  if (!buf || ctx.state === 'suspended') return;
+  if (!buf || ctx.state === 'suspended' || muted) return;
 
   const src  = ctx.createBufferSource();
   const gain = ctx.createGain();
@@ -77,7 +78,7 @@ export function playSound(name, volume = 1.0, pitch = 1.0) {
 export function startMusic() {
   if (!musicEl) return;
   musicEl.currentTime = 0;
-  musicEl.play().catch(() => {}); // silently ignore if blocked
+  if (!muted) musicEl.play().catch(() => {});
 }
 
 export function pauseMusic() {
@@ -87,7 +88,7 @@ export function pauseMusic() {
 
 export function resumeMusic() {
   if (!musicEl) return;
-  musicEl.play().catch(() => {});
+  if (!muted) musicEl.play().catch(() => {});
 }
 
 export function stopMusic() {
@@ -96,9 +97,31 @@ export function stopMusic() {
   musicEl.currentTime = 0;
 }
 
-// ── Volume helpers (hook these up to your control panel if desired) ───────────
+// ── Mute toggle ───────────────────────────────────────────────────────────────
+export function toggleMute() {
+  muted = !muted;
+  if (musicEl) {
+    if (muted) musicEl.pause();
+    else musicEl.play().catch(() => {});
+  }
+  return muted;
+}
+
+export function setMuted(v) {
+  muted = !!v;
+  if (musicEl) {
+    if (muted) musicEl.pause();
+    else musicEl.play().catch(() => {});
+  }
+}
+
+// ── Volume helpers ────────────────────────────────────────────────────────────
 export function setSfxVolume(v)   { sfxVolume   = Math.max(0, Math.min(1, v)); }
 export function setMusicVolume(v) {
   musicVolume = Math.max(0, Math.min(1, v));
   if (musicEl) musicEl.volume = musicVolume;
 }
+
+export function getMuted()       { return muted; }
+export function getSfxVolume()   { return sfxVolume; }
+export function getMusicVolume() { return musicVolume; }
