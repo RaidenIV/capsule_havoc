@@ -23,6 +23,7 @@ import { playerMesh, hbObj, dashBarObj } from '../player.js';
 import { explConfig } from '../particles.js';
 import { ground, grid } from '../terrain.js';
 import { updateXP } from '../xp.js';
+import { XP_THRESHOLDS } from '../constants.js';
 import { syncOrbitBullets } from '../weapons.js';
 import { restartGame } from '../gameFlow.js';
 import { clock } from '../loop.js';
@@ -206,7 +207,6 @@ invCb?.addEventListener('change', () => {
 function jumpToLevel(targetLevel) {
   restartGame({ skipInitialSpawn: true });
   if (targetLevel > 0) {
-    const { XP_THRESHOLDS } = await import('../constants.js');
     state.playerXP    = XP_THRESHOLDS[Math.min(targetLevel, XP_THRESHOLDS.length - 1)];
     state.playerLevel = Math.min(targetLevel, XP_THRESHOLDS.length - 1);
     updateXP(0);
