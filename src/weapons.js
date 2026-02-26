@@ -14,7 +14,6 @@ import {
   getFireInterval, getWaveBullets, getBulletDamage, getWeaponConfig,
 } from './xp.js';
 import { playSound } from './audio.js';
-import { playSound } from './audio.js';
 
 // ── Orbit bullet helpers ──────────────────────────────────────────────────────
 function makeOrbitMat(color) {
