@@ -14,6 +14,7 @@ import { triggerVictory, restartGame, startCountdown } from './gameFlow.js';
 import { initInput }       from './input.js';
 import { tick }            from './loop.js';
 import { togglePanel, togglePause, updatePauseBtn } from './panel/index.js';
+import { initAudio, resumeAudioContext } from './audio.js';
 
 // ── Wire cross-module callbacks (breaks enemies ↔ weapons circular deps) ──────
 setVictoryCallback(triggerVictory);
@@ -29,6 +30,7 @@ initInput({
   togglePanel,
   togglePause,
   restartGame,
+  onFirstKey: resumeAudioContext,  // satisfies browser autoplay policy
 });
 
 // ── Expose restart globally for the HTML restart button onclick ───────────────
@@ -44,6 +46,7 @@ window.addEventListener('resize', () => {
 updateHealthBar();
 updateXP(0);
 for (let i = 0; i < 20; i++) spawnEnemyAtEdge();
+initAudio(); // load all sounds (non-blocking, fails gracefully if files missing)
 tick();
 // Let two frames render so terrain loads before countdown freezes the game
 requestAnimationFrame(() => requestAnimationFrame(() => startCountdown()));
