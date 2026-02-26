@@ -435,158 +435,217 @@ input[type=color]::-webkit-color-swatch { border: none; border-radius: 3px; }
 }
 
 
-/* ─────────────────────────────────────────────────────────────────────────────
-   Main Menu Screen (separate screen, not overlay)
-   Controlled by body classes: .mode-menu / .mode-playing
-───────────────────────────────────────────────────────────────────────────── */
-body.mode-menu #game-screen { display: none !important; }
-body.mode-menu #menu-screen { display: flex !important; }
+/* ────────────────────────────────────────────────────────────────────────────
+   MENU SCREEN (modular UI)
+   Uses body.mode-menu / body.mode-playing to switch screens.
+   ──────────────────────────────────────────────────────────────────────────── */
 
-body.mode-playing #menu-screen { display: none !important; }
-body.mode-playing #game-screen { display: block !important; }
-
-#menu-screen {
-  position: fixed;
-  inset: 0;
-  display: none;
-  align-items: center;
-  justify-content: center;
-  padding: 24px;
-  background: radial-gradient(1200px 600px at 50% 25%, rgba(0,153,255,0.18), rgba(0,0,0,0)),
-              linear-gradient(180deg, rgba(0,0,0,0.95), rgba(0,0,0,0.98));
-  z-index: 9999;
+body.mode-menu #ui,
+body.mode-menu #coin-hud,
+body.mode-menu #xp-hud,
+body.mode-menu #fpsOverlay,
+body.mode-menu #instructions,
+body.mode-menu #tab-hint,
+body.mode-menu #pause-overlay,
+body.mode-menu #countdown,
+body.mode-menu #notif,
+body.mode-menu #game-over,
+body.mode-menu #cp,
+body.mode-menu canvas {
+  display: none !important;
 }
 
-.menu-card {
-  width: min(560px, 92vw);
-  border-radius: 14px;
-  padding: 22px 22px 18px;
-  background: rgba(18,18,18,0.92);
+body.mode-playing #menu-screen { display: none !important; }
+
+.menu-screen {
+  position: fixed;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  background: radial-gradient(1200px 800px at 50% 35%, rgba(0,229,255,0.09), transparent 60%),
+              linear-gradient(180deg, rgba(10,12,14,0.98), rgba(5,6,8,0.98));
+  z-index: 9999;
+  font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+}
+
+.menu-card{
+  width: min(520px, calc(100vw - 32px));
+  border-radius: 18px;
+  padding: 26px 22px 20px;
+  background: rgba(18,20,24,0.78);
   border: 1px solid rgba(255,255,255,0.08);
-  box-shadow: 0 14px 60px rgba(0,0,0,0.65);
+  box-shadow: 0 30px 80px rgba(0,0,0,0.55);
   backdrop-filter: blur(10px);
 }
 
-.menu-title {
-  font-size: 34px;
+.menu-title{
+  font-weight: 900;
   letter-spacing: 0.12em;
-  font-weight: 800;
+  font-size: 22px;
+  color: #e9f7ff;
   text-align: center;
-  margin-top: 2px;
 }
 
-.menu-subtitle {
-  text-align: center;
-  opacity: 0.7;
-  margin: 6px 0 16px;
+.menu-sub{
+  margin-top: 8px;
+  font-weight: 500;
   font-size: 13px;
-  letter-spacing: 0.16em;
-  text-transform: uppercase;
+  color: rgba(233,247,255,0.6);
+  text-align: center;
 }
 
-.menu-buttons {
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: 10px;
-  margin: 10px 0 8px;
-}
+.menu-page{ display: none; margin-top: 18px; }
+.menu-page.active{ display: block; }
 
-.menu-btn {
+.menu-btn{
   width: 100%;
+  margin-top: 10px;
   padding: 12px 14px;
   border-radius: 12px;
   border: 1px solid rgba(255,255,255,0.10);
   background: rgba(255,255,255,0.06);
-  color: #fff;
+  color: #e9f7ff;
   font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
+  letter-spacing: 0.06em;
   cursor: pointer;
-  transition: transform 120ms ease, background 120ms ease, border-color 120ms ease;
 }
 
-.menu-btn:hover { transform: translateY(-1px); background: rgba(255,255,255,0.09); border-color: rgba(255,255,255,0.16); }
-.menu-btn:active { transform: translateY(0px); }
-
-.menu-btn.primary {
-  background: rgba(0,153,255,0.20);
-  border-color: rgba(0,153,255,0.40);
+.menu-btn:hover{ background: rgba(255,255,255,0.09); }
+.menu-btn.primary{
+  background: rgba(0,229,255,0.14);
+  border-color: rgba(0,229,255,0.28);
 }
-.menu-btn.primary:hover { background: rgba(0,153,255,0.28); border-color: rgba(0,153,255,0.52); }
-
-.menu-btn.small { padding: 10px 12px; font-size: 12px; border-radius: 10px; }
-.menu-btn.danger { background: rgba(255,53,53,0.14); border-color: rgba(255,53,53,0.32); }
-.menu-btn.danger:hover { background: rgba(255,53,53,0.20); border-color: rgba(255,53,53,0.45); }
-
-.menu-panel {
-  display: none;
-  margin-top: 14px;
-  padding: 14px;
-  border-radius: 12px;
-  background: rgba(255,255,255,0.04);
-  border: 1px solid rgba(255,255,255,0.08);
+.menu-btn.primary:hover{ background: rgba(0,229,255,0.18); }
+.menu-btn.small{
+  width: auto;
+  flex: 1;
 }
-
-.menu-panel.show { display: block; }
-
-.menu-panel-hdr {
+.menu-btn.danger{
+  background: rgba(255,53,53,0.14);
+  border-color: rgba(255,53,53,0.24);
+}
+.menu-row{
   display: flex;
-  align-items: center;
-  justify-content: space-between;
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.menu-muted{
+  margin-top: 14px;
+  text-align: center;
+  font-size: 12px;
+  color: rgba(233,247,255,0.55);
+}
+
+.menu-hdr-row{
+  display:flex;
+  justify-content:center;
   margin-bottom: 10px;
 }
 
-.menu-panel-title {
+.menu-hdr{
   font-weight: 800;
-  letter-spacing: 0.10em;
-  text-transform: uppercase;
-  font-size: 12px;
-  opacity: 0.9;
-}
-
-.menu-panel-close {
-  padding: 8px 10px;
-  border-radius: 10px;
-  border: 1px solid rgba(255,255,255,0.10);
-  background: rgba(255,255,255,0.06);
-  color: #fff;
-  cursor: pointer;
-  font-weight: 700;
   letter-spacing: 0.08em;
+  color: #e9f7ff;
+  font-size: 14px;
 }
 
-.score-list {
+.menu-form{
   display: grid;
-  gap: 8px;
-  max-height: 260px;
-  overflow: auto;
-  padding-right: 4px;
+  gap: 14px;
+  margin-top: 12px;
 }
 
-.score-item {
-  display: grid;
-  grid-template-columns: 42px 1fr auto;
+.menu-check{
+  display:flex;
+  align-items:center;
   gap: 10px;
-  align-items: center;
-  padding: 10px 10px;
-  border-radius: 10px;
-  background: rgba(0,0,0,0.22);
-  border: 1px solid rgba(255,255,255,0.06);
+  color: rgba(233,247,255,0.85);
+  font-weight: 600;
+}
+
+.menu-field{
+  display:grid;
+  gap: 8px;
+}
+
+.menu-field-row{
+  display:flex;
+  justify-content: space-between;
+  color: rgba(233,247,255,0.75);
+  font-weight: 600;
+  font-size: 12px;
+}
+
+.scores-list{
+  max-height: 320px;
+  overflow: auto;
+  padding-right: 6px;
+}
+
+.score-row{
+  display:flex;
+  gap: 10px;
+  padding: 10px 8px;
+  border-radius: 12px;
+  border: 1px solid rgba(255,255,255,0.07);
+  background: rgba(255,255,255,0.04);
+  margin-bottom: 10px;
+}
+
+.score-rank{
+  width: 46px;
+  display:flex;
+  align-items:flex-start;
+  justify-content:center;
+  padding-top: 2px;
+  color: rgba(233,247,255,0.75);
+  font-weight: 800;
+}
+
+.score-line{
+  color: rgba(233,247,255,0.9);
+  font-weight: 700;
   font-size: 13px;
 }
-.score-rank { opacity: 0.7; font-weight: 800; text-align: right; }
-.score-meta { opacity: 0.75; font-size: 12px; margin-top: 2px; }
-.score-points { font-weight: 900; letter-spacing: 0.06em; }
 
-.settings-grid { display: grid; gap: 10px; }
-.setting-row {
-  display: grid;
-  grid-template-columns: 90px 1fr 64px;
-  gap: 10px;
-  align-items: center;
+.score-label{
+  color: rgba(233,247,255,0.6);
+  font-weight: 600;
+  margin-left: 4px;
 }
-.setting-label { opacity: 0.85; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; font-size: 12px; }
-.setting-val { text-align: right; opacity: 0.8; font-variant-numeric: tabular-nums; }
 
-.menu-panel-actions { margin-top: 12px; display: flex; gap: 10px; justify-content: flex-end; }
-.menu-footer { margin-top: 12px; text-align: center; opacity: 0.7; font-size: 12px; }
+.score-sep{
+  margin: 0 8px;
+  color: rgba(233,247,255,0.35);
+}
+
+.score-sub{
+  margin-top: 6px;
+  display:flex;
+  gap: 10px;
+  align-items:center;
+  color: rgba(233,247,255,0.55);
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.score-tag{
+  padding: 2px 8px;
+  border-radius: 999px;
+  border: 1px solid rgba(255,255,255,0.10);
+  background: rgba(255,255,255,0.06);
+  letter-spacing: 0.06em;
+}
+
+.score-tag.victory{
+  border-color: rgba(255,224,102,0.3);
+  background: rgba(255,224,102,0.12);
+  color: rgba(255,224,102,0.95);
+}
+
+.score-tag.destroyed{
+  border-color: rgba(255,53,53,0.26);
+  background: rgba(255,53,53,0.10);
+  color: rgba(255,190,190,0.95);
+}
