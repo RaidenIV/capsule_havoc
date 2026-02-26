@@ -10,6 +10,9 @@ export const state = {
   invincible:  false,
   gameSession: 0,      // incremented on restart to cancel stale setTimeout callbacks
 
+  // UI mode: 'menu' | 'playing'
+  uiMode:     'menu',
+
   // ── Stats ────────────────────────────────────────────────────────────────────
   kills:   0,
   elapsed: 0,
