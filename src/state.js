@@ -4,14 +4,15 @@
 // Import with: import { state } from './state.js';
 
 export const state = {
-  // ── Game flow ───────────────────────────────────────────────────────────────
+  
+  uiMode: \'menu\',
+  loopStarted: false,
+  inputInitialized: false,
+// ── Game flow ───────────────────────────────────────────────────────────────
   gameOver:    false,
   paused:      false,
   invincible:  false,
   gameSession: 0,      // incremented on restart to cancel stale setTimeout callbacks
-
-  // UI mode: 'menu' | 'playing'
-  uiMode:     'menu',
 
   // ── Stats ────────────────────────────────────────────────────────────────────
   kills:   0,
