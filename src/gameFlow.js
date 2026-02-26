@@ -19,43 +19,48 @@ const finalStatsEl = document.getElementById('final-stats');
 const countdownEl  = document.getElementById('countdown');
 const countdownNum = document.getElementById('countdown-num');
 
+const HIGH_SCORE_KEY = 'capsule_havoc_high_scores_v1';
+
+function safeParseJSON(str, fallback) {
+  try { return JSON.parse(str); } catch { return fallback; }
+}
+
+export function computeScore() {
+  // Simple, deterministic: kills are king; coins matter; time survived adds a smaller bonus.
+  const timeBonus = Math.floor(state.elapsed);
+  return Math.max(0, Math.floor(state.kills * 100 + state.coins * 10 + timeBonus));
+}
+
+export function getHighScores() {
+  const arr = safeParseJSON(localStorage.getItem(HIGH_SCORE_KEY) || '[]', []);
+  return Array.isArray(arr) ? arr : [];
+}
+
+export function clearHighScores() {
+  localStorage.removeItem(HIGH_SCORE_KEY);
+}
+
+export function recordHighScore(resultLabel) {
+  const entry = {
+    score: computeScore(),
+    kills: state.kills,
+    coins: state.coins,
+    time: Math.floor(state.elapsed),
+    result: resultLabel,
+    ts: Date.now()
+  };
+
+  const list = getHighScores();
+  list.push(entry);
+  list.sort((a,b) => b.score - a.score || b.ts - a.ts);
+  localStorage.setItem(HIGH_SCORE_KEY, JSON.stringify(list.slice(0, 10)));
+}
+
 export function formatTime(secs) {
   const m = Math.floor(secs / 60).toString().padStart(2, '0');
   const s = Math.floor(secs % 60).toString().padStart(2, '0');
   return m + ':' + s;
 }
-
-// ── High score persistence (localStorage) ─────────────────────────────────────
-const HS_KEY = 'ch_highscores_v1';
-
-export function getHighScores() {
-  try {
-    const raw = localStorage.getItem(HS_KEY);
-    const arr = raw ? JSON.parse(raw) : [];
-    return Array.isArray(arr) ? arr : [];
-  } catch { return []; }
-}
-
-function _saveHighScores(arr) {
-  try { localStorage.setItem(HS_KEY, JSON.stringify(arr)); } catch {}
-}
-
-export function clearHighScores() {
-  _saveHighScores([]);
-}
-
-export function pushHighScore(entry) {
-  const arr = getHighScores();
-  arr.push(entry);
-  // Sort: kills desc, then time asc, then coins desc
-  arr.sort((a,b) =>
-    (b.kills||0) - (a.kills||0) ||
-    (a.time||0) - (b.time||0) ||
-    (b.coins||0) - (a.coins||0)
-  );
-  _saveHighScores(arr.slice(0, 20));
-}
-
 
 // ── Countdown overlay ─────────────────────────────────────────────────────────
 export function startCountdown(onDone) {
@@ -100,13 +105,7 @@ export function startCountdown(onDone) {
 export function triggerGameOver() {
   state.gameOver = true;
   stopMusic();
-  pushHighScore({
-    date: new Date().toISOString(),
-    result: 'destroyed',
-    kills: state.kills,
-    time: state.elapsed,
-    coins: state.coins,
-  });
+  recordHighScore('DESTROYED');
   finalStatsEl.textContent = `${formatTime(state.elapsed)} — ${state.kills} destroyed — ${state.coins} coins`;
   gameOverEl.classList.add('show');
 }
@@ -114,13 +113,7 @@ export function triggerGameOver() {
 export function triggerVictory() {
   state.gameOver = true;
   stopMusic();
-  pushHighScore({
-    date: new Date().toISOString(),
-    result: 'victory',
-    kills: state.kills,
-    time: state.elapsed,
-    coins: state.coins,
-  });
+  recordHighScore('VICTORY');
   const h1 = document.querySelector('#game-over h1');
   h1.textContent  = 'VICTORY';
   h1.style.color  = '#ffe066';
@@ -192,5 +185,11 @@ export function restartGame(opts = {}) {
     for (let i = 0; i < 20; i++) spawnEnemyAtEdge();
   }
 
-  if (!opts.skipCountdown) startCountdown(opts.onCountdownDone);
+  if (opts.startCountdown === false) {
+    // show player UI immediately (used by menu flows)
+    playerMesh.visible = true; hbObj.visible = true; dashBarObj.visible = true;
+    startMusic();
+  } else {
+    startCountdown();
+  }
 }
