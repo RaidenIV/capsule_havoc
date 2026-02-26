@@ -7,7 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;900&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="./styles/main_cpfix_v1.css">
+<link rel="stylesheet" href="./styles/main_cpfix_v2.css">
 </head>
 <body>
 
@@ -228,6 +228,29 @@
     <button class="fp-btn rst" id="reset-all-btn">Reset All</button>
   </div>
 </div><!-- /cp -->
+
+<!-- Ensure the control panel can scroll even if the game registers global wheel/touch handlers -->
+<script>
+  (function(){
+    const cp = document.getElementById('cp');
+    if(!cp) return;
+    const isInCP = (ev) => cp.classList.contains('open') && ev.target && ev.target.closest && ev.target.closest('#cp');
+
+    // Capture-phase guard: prevents downstream listeners (often on window/canvas) from swallowing scroll.
+    window.addEventListener('wheel', (ev) => {
+      if(isInCP(ev)) {
+        ev.stopImmediatePropagation();
+        // Do NOT preventDefault here—allow native scrolling.
+      }
+    }, { capture: true, passive: false });
+
+    window.addEventListener('touchmove', (ev) => {
+      if(isInCP(ev)) {
+        ev.stopImmediatePropagation();
+      }
+    }, { capture: true, passive: false });
+  })();
+</script>
 
 <script type="importmap">
 {
