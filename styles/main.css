@@ -233,12 +233,7 @@ canvas { display: block; }
   color: var(--cp-muted); margin-bottom: 8px;
 }
 .lvl-btns {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(28px, 1fr));
-  gap: 6px;
-}
-@media (min-width: 380px) {
-  .lvl-btns { grid-template-columns: repeat(11, 1fr); gap: 4px; }
+  display: grid; grid-template-columns: repeat(11, 1fr); gap: 4px;
 }
 .lvl-cb {
   padding: 5px 0; border-radius: 6px; text-align: center;
@@ -261,7 +256,7 @@ canvas { display: block; }
 
 /* ── Tabs ── */
 .cap-tabs {
-  display: grid; grid-template-columns: repeat(6, 1fr);
+  display: grid; grid-template-columns: repeat(7, 1fr);
   background: var(--cp-card); border-bottom: 1px solid var(--cp-border);
   flex-shrink: 0;
 }
@@ -278,17 +273,14 @@ canvas { display: block; }
 .cap-tab[data-t="scene"].active   { color: var(--cp-accent); border-bottom-color: var(--cp-accent); background: var(--cp-accent-w); }
 .cap-tab[data-t="destr"].active   { color: #e05c00; border-bottom-color: #e05c00; background: rgba(224,92,0,0.07); }
 .cap-tab[data-t="enemy-behavior"].active { color: #7b2fbe; border-bottom-color: #7b2fbe; background: rgba(123,47,190,0.07); }
+.cap-tab[data-t="audio"].active          { color: #0a7c6e; border-bottom-color: #0a7c6e; background: rgba(10,124,110,0.07); }
 
 /* ── Scrollable section area ── */
 #cp-scroll {
   flex: 1 1 0; min-height: 0; overflow-y: auto; overflow-x: hidden;
   scrollbar-width: thin; scrollbar-color: var(--cp-border) transparent;
-  padding: 12px 14px 140px;
- display: flex; flex-direction: column; gap: 8px;
-  -webkit-overflow-scrolling: touch;
-  overscroll-behavior: contain;
+  padding: 12px 14px 24px; display: flex; flex-direction: column; gap: 8px;
 }
-
 #cp-scroll::-webkit-scrollbar { width: 5px; }
 #cp-scroll::-webkit-scrollbar-thumb { background: var(--cp-border); border-radius: 3px; }
 #cp-scroll::-webkit-scrollbar-track { background: transparent; }
@@ -441,6 +433,3 @@ input[type=color]::-webkit-color-swatch { border: none; border-radius: 3px; }
   font: 12px ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
   backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
 }
-
-/* Ensure panel fits dynamic viewport on mobile */
-#cp { height: 100dvh; }
