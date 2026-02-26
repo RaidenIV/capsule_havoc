@@ -46,7 +46,8 @@ window.addEventListener('resize', () => {
 updateHealthBar();
 updateXP(0);
 for (let i = 0; i < 20; i++) spawnEnemyAtEdge();
-initAudio(); // load all sounds (non-blocking, fails gracefully if files missing)
 tick();
-// Let two frames render so terrain loads before countdown freezes the game
-requestAnimationFrame(() => requestAnimationFrame(() => startCountdown()));
+// Await audio init then start countdown so musicEl exists when countdown ends
+initAudio().then(() => {
+  requestAnimationFrame(() => requestAnimationFrame(() => startCountdown()));
+});
