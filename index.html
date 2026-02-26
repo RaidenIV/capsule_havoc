@@ -105,6 +105,7 @@
     <div class="cap-tab active" data-t="scene">Scene</div>
     <div class="cap-tab" data-t="destr">Destroy</div>
     <div class="cap-tab" data-t="enemy-behavior">Behav.</div>
+    <div class="cap-tab" data-t="audio">Audio</div>
   </div>
 
   <div id="cp-scroll">
@@ -219,6 +220,20 @@
       <div class="sec-body">
         <div class="cr"><span class="cl">Max On Screen</span><input type="range" id="e-maxcount" min="1" max="100" step="1" value="50"><input type="number" class="nv" id="e-maxcount-v" min="1" max="100" step="1" value="50"></div>
       </div>
+    </div><!-- /enemy-behavior-sec -->
+
+    <!-- ── Audio ── -->
+    <div class="sec" id="audio-sec" data-scope="audio">
+      <div class="sec-hdr"><span class="sec-title">Volume</span><div class="sec-r"><button class="sec-rst" data-s="audio">Reset</button><span class="sec-arrow">▾</span></div></div>
+      <div class="sec-body">
+        <div class="cr">
+          <span class="cl">Mute</span>
+          <label class="tog warn"><input type="checkbox" id="aud-mute"><div class="tog-track"></div><div class="tog-thumb"></div></label>
+          <span style="font-size:10px;color:var(--cp-muted);margin-left:4px">M key</span>
+        </div>
+        <div class="cr"><span class="cl">SFX Vol</span><input type="range" id="aud-sfx" min="0" max="1" step="0.01" value="1"><input type="number" class="nv" id="aud-sfx-v" min="0" max="1" step="0.01" value="1"></div>
+        <div class="cr"><span class="cl">Music Vol</span><input type="range" id="aud-music" min="0" max="1" step="0.01" value="0.4"><input type="number" class="nv" id="aud-music-v" min="0" max="1" step="0.01" value="0.4"></div>
+      </div>
     </div>
 
   </div><!-- /cp-scroll -->
@@ -236,37 +251,6 @@
     "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
   }
 }
-</script>
-
-
-<script>
-/* Control-panel scroll guard:
-   Many games attach wheel/touch handlers at window level (sometimes in capture phase),
-   which can swallow scroll events and make expanded CP sections look "cut off".
-   This guard stops propagation ONLY when the event originated inside the CP scroll area.
-   It does NOT call preventDefault, so native scrolling still works.
-*/
-(function(){
-  const cp = document.getElementById('cp');
-  const sc = document.getElementById('cp-scroll');
-  if(!cp || !sc) return;
-
-  function inScrollArea(t){ return sc.contains(t); }
-
-  window.addEventListener('wheel', function(e){
-    if(!cp.classList.contains('open')) return;
-    if(!inScrollArea(e.target)) return;
-    if(e.stopImmediatePropagation) e.stopImmediatePropagation();
-    e.stopPropagation();
-  }, {capture:true, passive:true});
-
-  window.addEventListener('touchmove', function(e){
-    if(!cp.classList.contains('open')) return;
-    if(!inScrollArea(e.target)) return;
-    if(e.stopImmediatePropagation) e.stopImmediatePropagation();
-    e.stopPropagation();
-  }, {capture:true, passive:true});
-})();
 </script>
 
 <script type="module" src="./src/main.js"></script>
