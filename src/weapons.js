@@ -145,18 +145,18 @@ export function updateEnemyBullets(worldDelta) {
     b.mesh.position.z += b.vz * worldDelta;
     if (b.life <= 0) { scene.remove(b.mesh); state.enemyBullets.splice(i, 1); continue; }
 
-    if (!state.invincible) {
-      const pdx = b.mesh.position.x - playerGroup.position.x;
-      const pdz = b.mesh.position.z - playerGroup.position.z;
-      if (pdx*pdx + pdz*pdz < 0.36) {
+    const pdx = b.mesh.position.x - playerGroup.position.x;
+    const pdz = b.mesh.position.z - playerGroup.position.z;
+    if (pdx*pdx + pdz*pdz < 0.36) {
+      playSound('player_hit', 0.7, 0.95 + Math.random() * 0.1);
+      if (!state.invincible) {
         state.playerHP -= ENEMY_BULLET_DMG;
         spawnPlayerDamageNum(ENEMY_BULLET_DMG);
-        playSound('hit', 0.6, 0.85 + Math.random() * 0.1);
         updateHealthBar();
-        scene.remove(b.mesh); state.enemyBullets.splice(i, 1);
         if (state.playerHP <= 0) return 'DEAD';
-        continue;
       }
+      scene.remove(b.mesh); state.enemyBullets.splice(i, 1);
+      continue;
     }
 
     let blocked = false;
