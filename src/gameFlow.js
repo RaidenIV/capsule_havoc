@@ -7,10 +7,12 @@ import { updateXP } from './xp.js';
 import { spawnEnemyAtEdge, removeCSS2DFromGroup } from './enemies.js';
 import { destroyOrbitBullets, syncOrbitBullets } from './weapons.js';
 import { _particleMeshPool } from './particles.js';
-import { startMusic, stopMusic, pauseMusic, resumeMusic } from './audio.js';
+import { startMusic, stopMusic, playSound } from './audio.js';
 import { recordRun } from './ui/highScores.js';
 
-export { pauseMusic, resumeMusic }; // re-export so panel/index.js can use them
+// Music intentionally continues during pause — these are no-ops exported for panel/index.js
+export function pauseMusic() {}
+export function resumeMusic() {}
 
 const timerEl      = document.getElementById('timer-value');
 const killsEl      = document.getElementById('kills-value');
@@ -48,6 +50,9 @@ export function startCountdown(onDone) {
     countdownNum.style.animation  = 'none';
     void countdownNum.offsetWidth;
     countdownNum.style.animation  = '';
+    // Play beep for 3/2/1, louder accent for SURVIVE
+    if (s.text !== 'SURVIVE') playSound('countdown', 0.8, 1.0);
+    else playSound('countdown', 1.0, 1.3);
     idx++;
     const delay = s.text === 'SURVIVE' ? 900 : 800;
     if (idx < steps.length) {
@@ -69,6 +74,7 @@ export function startCountdown(onDone) {
 export function triggerGameOver() {
   state.gameOver = true;
   stopMusic();
+  playSound('gameover', 0.9);
   finalStatsEl.textContent = `${formatTime(state.elapsed)} — ${state.kills} destroyed — ${state.coins} coins`;
   recordRun({ kills: state.kills, elapsed: state.elapsed, coins: state.coins, victory: false });
   gameOverEl.classList.add('show');
@@ -77,6 +83,7 @@ export function triggerGameOver() {
 export function triggerVictory() {
   state.gameOver = true;
   stopMusic();
+  playSound('victory', 0.9);
   const h1 = document.querySelector('#game-over h1');
   h1.textContent  = 'VICTORY';
   h1.style.color  = '#ffe066';
