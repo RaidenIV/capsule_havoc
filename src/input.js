@@ -67,6 +67,11 @@ window.addEventListener('keydown', e => {
   }
 });
 
+// Also unlock audio on first click (covers mouse users who haven't pressed a key yet)
+window.addEventListener('click', () => {
+  if (!_firstKeyFired && _onFirstKey) { _onFirstKey(); _firstKeyFired = true; }
+}, { once: true });
+
 window.addEventListener('keyup', e => {
   const k = e.key.toLowerCase();
   if (k === 'w' || k === 'arrowup')    state.keys.w = false;
