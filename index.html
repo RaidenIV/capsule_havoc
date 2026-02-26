@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CAPSULE HAVOC</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="./styles/main.css">
+</head>
+<body>
+
+<!-- ── HUD ── -->
+<div id="ui">
+  <div class="ui-panel"><span class="ui-label">Time</span><span class="ui-value" id="timer-value">00:00</span></div>
+  <div class="ui-panel"><span class="ui-label">Kills</span><span class="ui-value" id="kills-value">0</span></div>
+</div>
+
+<!-- ── Coin counter ── -->
+<div id="coin-hud">
+  <div id="coin-icon"></div>
+  <span id="coin-count">0</span>
+</div>
+
+<!-- ── XP / Level HUD ── -->
+<div id="xp-hud">
+  <div id="xp-left">
+    <span id="xp-level-label">LVL</span>
+    <span id="xp-level">0</span>
+  </div>
+  <div id="xp-bar-wrap">
+    <div id="xp-bar-fill"></div>
+  </div>
+  <div id="xp-right">
+    <span id="xp-cur">0</span><span id="xp-sep">/</span><span id="xp-next">500</span>
+  </div>
+</div>
+
+<!-- ── FPS overlay ── -->
+<div id="fpsOverlay"><span id="fpsVal">--</span> fps</div>
+
+<!-- ── Instructions ── -->
+<div id="instructions">WASD · SHIFT DASH · AUTO SHOOT · TAB SETTINGS</div>
+<div id="tab-hint">TAB — SETTINGS</div>
+
+<!-- ── Pause overlay ── -->
+<div id="pause-overlay"><span>PAUSED</span></div>
+
+<!-- ── Countdown overlay ── -->
+<div id="countdown"><div id="countdown-num"></div></div>
+
+<!-- ── Toast notification ── -->
+<div id="notif"></div>
+<input type="file" id="import-file" accept=".json">
+
+<!-- ── Game over screen ── -->
+<div id="game-over">
+  <h1>DESTROYED</h1>
+  <p id="final-stats"></p>
+  <p>Press R or click to restart</p>
+  <button id="restart-btn" onclick="restartGame()">RESTART</button>
+</div>
+
+<!-- ── Control Panel ── -->
+<div id="cp">
+  <div class="cp-hdr">
+    <span class="cp-title">CAPSULE HAVOC</span>
+    <button class="cp-close" id="cp-close">CLOSE</button>
+  </div>
+
+  <div class="cp-top-bar">
+    <button class="pause-btn" id="pause-btn">⏸ Pause</button>
+    <div class="inv-row" id="inv-row">
+      <label class="inv-label">Invincible</label>
+      <label class="tog"><input type="checkbox" id="invincible"><div class="tog-track"></div><div class="tog-thumb"></div></label>
+    </div>
+  </div>
+
+  <!-- Level skip -->
+  <div class="cp-level-row">
+    <span class="cp-section-label">JUMP TO LEVEL</span>
+    <div class="lvl-btns">
+      <button class="lvl-cb" data-lv="0">0</button>
+      <button class="lvl-cb" data-lv="1">1</button>
+      <button class="lvl-cb" data-lv="2">2</button>
+      <button class="lvl-cb" data-lv="3">3</button>
+      <button class="lvl-cb" data-lv="4">4</button>
+      <button class="lvl-cb" data-lv="5">5</button>
+      <button class="lvl-cb" data-lv="6">6</button>
+      <button class="lvl-cb" data-lv="7">7</button>
+      <button class="lvl-cb" data-lv="8">8</button>
+      <button class="lvl-cb" data-lv="9">9</button>
+      <button class="lvl-cb" data-lv="10">10</button>
+    </div>
+  </div>
+
+  <!-- Import -->
+  <div class="imp-row">
+    <button class="imp-btn" id="import-btn">📂 Import JSON Settings</button>
+  </div>
+
+  <!-- Capsule / Scene / Destr tabs -->
+  <div class="cap-tabs">
+    <div class="cap-tab" data-t="player">Player</div>
+    <div class="cap-tab" data-t="enemy">Enemy</div>
+    <div class="cap-tab" data-t="bullet">Bullet</div>
+    <div class="cap-tab active" data-t="scene">Scene</div>
+    <div class="cap-tab" data-t="destr">Destroy</div>
+    <div class="cap-tab" data-t="enemy-behavior">Behavior</div>
+  </div>
+
+  <div id="cp-scroll">
+
+    <!-- ── Geometry (capsule tabs) ── -->
+    <div class="sec" data-scope="capsule">
+      <div class="sec-hdr"><span class="sec-title">Geometry</span><div class="sec-r"><button class="sec-rst" data-s="geo">Reset</button><span class="sec-arrow">▾</span></div></div>
+      <div class="sec-body">
+        <div class="cr"><span class="cl">Radius</span><input type="range" id="g-radius" min="0.1" max="2" step="0.01" value="0.4"><input type="number" class="nv" id="g-radius-v" min="0.1" max="2" step="0.01" value="0.4"></div>
+        <div class="cr"><span class="cl">Length</span><input type="range" id="g-length" min="0.1" max="4" step="0.01" value="1.2"><input type="number" class="nv" id="g-length-v" min="0.1" max="4" step="0.01" value="1.2"></div>
+        <div class="cr"><span class="cl">Cap Segs</span><input type="range" id="g-capSegs" min="2" max="16" step="1" value="8"><input type="number" class="nv" id="g-capSegs-v" min="2" max="16" step="1" value="8"></div>
+        <div class="cr"><span class="cl">Radial</span><input type="range" id="g-radial" min="4" max="32" step="1" value="16"><input type="number" class="nv" id="g-radial-v" min="4" max="32" step="1" value="16"></div>
+      </div>
+    </div>
+
+    <!-- ── Material (capsule tabs) ── -->
+    <div class="sec" data-scope="capsule">
+      <div class="sec-hdr"><span class="sec-title">Material</span><div class="sec-r"><button class="sec-rst" data-s="mat">Reset</button><span class="sec-arrow">▾</span></div></div>
+      <div class="sec-body">
+        <div class="cr"><span class="cl">Color</span><input type="color" id="m-color" value="#0044cc"></div>
+        <div class="cr"><span class="cl">Metalness</span><input type="range" id="m-metal" min="0" max="1" step="0.01" value="0.67"><input type="number" class="nv" id="m-metal-v" min="0" max="1" step="0.01" value="0.67"></div>
+        <div class="cr"><span class="cl">Roughness</span><input type="range" id="m-rough" min="0" max="1" step="0.01" value="0"><input type="number" class="nv" id="m-rough-v" min="0" max="1" step="0.01" value="0"></div>
+        <div class="cr"><span class="cl">Clearcoat</span><input type="range" id="m-cc" min="0" max="1" step="0.01" value="1"><input type="number" class="nv" id="m-cc-v" min="0" max="1" step="0.01" value="1"></div>
+        <div class="cr"><span class="cl">CC Rough</span><input type="range" id="m-ccr" min="0" max="1" step="0.01" value="0"><input type="number" class="nv" id="m-ccr-v" min="0" max="1" step="0.01" value="0"></div>
+        <div class="cr"><span class="cl">Env Intens</span><input type="range" id="m-env" min="0" max="5" step="0.1" value="0"><input type="number" class="nv" id="m-env-v" min="0" max="5" step="0.1" value="0"></div>
+      </div>
+    </div>
+
+    <!-- ── Emissive (capsule tabs) ── -->
+    <div class="sec" data-scope="capsule">
+      <div class="sec-hdr"><span class="sec-title">Emissive</span><div class="sec-r"><button class="sec-rst" data-s="em">Reset</button><span class="sec-arrow">▾</span></div></div>
+      <div class="sec-body">
+        <div class="cr"><span class="cl">Color</span><input type="color" id="e-color" value="#000000"></div>
+        <div class="cr"><span class="cl">Intensity</span><input type="range" id="e-int" min="0" max="10" step="0.1" value="1"><input type="number" class="nv" id="e-int-v" min="0" max="10" step="0.1" value="1"></div>
+      </div>
+    </div>
+
+    <!-- ── Scene ── -->
+    <div class="sec" data-scope="scene">
+      <div class="sec-hdr"><span class="sec-title">Scene</span><div class="sec-r"><button class="sec-rst" data-s="scene">Reset</button><span class="sec-arrow">▾</span></div></div>
+      <div class="sec-body">
+        <div class="cr"><span class="cl">Fog Near</span><input type="range" id="s-fnear" min="0" max="50" step="1" value="1"><input type="number" class="nv" id="s-fnear-v" min="0" max="50" step="1" value="1"></div>
+        <div class="cr"><span class="cl">Fog Far</span><input type="range" id="s-ffar" min="10" max="500" step="1" value="200"><input type="number" class="nv" id="s-ffar-v" min="10" max="500" step="1" value="200"></div>
+        <div class="cr"><span class="cl">Grid</span><label class="tog"><input type="checkbox" id="s-grid" checked><div class="tog-track"></div><div class="tog-thumb"></div></label></div>
+        <div class="cr"><span class="cl">Floor</span><label class="tog"><input type="checkbox" id="s-floor" checked><div class="tog-track"></div><div class="tog-thumb"></div></label></div>
+        <div class="cr"><span class="cl">FPS</span><label class="tog"><input type="checkbox" id="s-fps" checked><div class="tog-track"></div><div class="tog-thumb"></div></label></div>
+      </div>
+    </div>
+
+    <!-- ── Lighting ── -->
+    <div class="sec" data-scope="scene">
+      <div class="sec-hdr"><span class="sec-title">Lighting</span><div class="sec-r"><button class="sec-rst" data-s="light">Reset</button><span class="sec-arrow">▾</span></div></div>
+      <div class="sec-body">
+        <div class="cr"><span class="cl">Ambient</span><input type="range" id="l-amb" min="0" max="5" step="0.1" value="0"><input type="number" class="nv" id="l-amb-v" min="0" max="5" step="0.1" value="0"></div>
+        <div class="cr"><span class="cl">Sun</span><input type="range" id="l-sun" min="0" max="50" step="0.5" value="15"><input type="number" class="nv" id="l-sun-v" min="0" max="50" step="0.5" value="15"></div>
+        <div class="cr"><span class="cl">Fill</span><input type="range" id="l-fill" min="0" max="20" step="0.5" value="0"><input type="number" class="nv" id="l-fill-v" min="0" max="20" step="0.5" value="0"></div>
+        <div class="cr"><span class="cl">Rim</span><input type="range" id="l-rim" min="0" max="20" step="0.5" value="0"><input type="number" class="nv" id="l-rim-v" min="0" max="20" step="0.5" value="0"></div>
+        <div class="cr"><span class="cl">Orbit Spd</span><input type="range" id="l-ospd" min="0" max="3" step="0.05" value="0"><input type="number" class="nv" id="l-ospd-v" min="0" max="3" step="0.05" value="0"></div>
+        <div class="cr"><span class="cl">Orbit Int</span><input type="range" id="l-oint" min="0" max="300" step="5" value="80"><input type="number" class="nv" id="l-oint-v" min="0" max="300" step="5" value="80"></div>
+      </div>
+    </div>
+
+    <!-- ── Global Bloom ── -->
+    <div class="sec" data-scope="scene">
+      <div class="sec-hdr"><span class="sec-title">Global Bloom</span><div class="sec-r"><button class="sec-rst" data-s="bloom">Reset</button><span class="sec-arrow">▾</span></div></div>
+      <div class="sec-body">
+        <div class="cr"><span class="cl">Threshold</span><input type="range" id="b-thresh" min="0" max="2" step="0.01" value="1"><input type="number" class="nv" id="b-thresh-v" min="0" max="2" step="0.01" value="1"></div>
+        <div class="cr"><span class="cl">Strength</span><input type="range" id="b-str" min="0" max="4" step="0.05" value="0"><input type="number" class="nv" id="b-str-v" min="0" max="4" step="0.05" value="0"></div>
+        <div class="cr"><span class="cl">Exposure</span><input type="range" id="b-exp" min="0.1" max="2" step="0.01" value="0.3"><input type="number" class="nv" id="b-exp-v" min="0.1" max="2" step="0.01" value="0.3"></div>
+      </div>
+    </div>
+
+    <!-- ── Bullet Bloom (bullet tab) ── -->
+    <div class="sec" id="bullet-bloom-sec" data-scope="scene" style="display:none">
+      <div class="sec-hdr"><span class="sec-title">Bullet Bloom</span><div class="sec-r"><button class="sec-rst" data-s="bbloom">Reset</button><span class="sec-arrow">▾</span></div></div>
+      <div class="sec-body">
+        <div class="cr"><span class="cl">Enable</span><label class="tog"><input type="checkbox" id="bb-en" checked><div class="tog-track"></div><div class="tog-thumb"></div></label></div>
+        <div class="cr"><span class="cl">Threshold</span><input type="range" id="bb-thresh" min="0" max="1" step="0.01" value="0.35"><input type="number" class="nv" id="bb-thresh-v" min="0" max="1" step="0.01" value="0.35"></div>
+        <div class="cr"><span class="cl">Strength</span><input type="range" id="bb-str" min="0" max="6" step="0.05" value="2.0"><input type="number" class="nv" id="bb-str-v" min="0" max="6" step="0.05" value="2.0"></div>
+      </div>
+    </div>
+
+    <!-- ── Destruction — Standard ── -->
+    <div class="sec" id="destr-std-sec" data-scope="destr">
+      <div class="sec-hdr"><span class="sec-title">Standard Explosion</span><div class="sec-r"><button class="sec-rst" data-s="destr-std">Reset</button><span class="sec-arrow">▾</span></div></div>
+      <div class="sec-body">
+        <div class="cr"><span class="cl">Count</span><input type="range" id="dx-count" min="1" max="200" step="1" value="40"><input type="number" class="nv" id="dx-count-v" min="1" max="200" step="1" value="40"></div>
+        <div class="cr"><span class="cl">Size</span><input type="range" id="dx-size" min="0.05" max="2" step="0.01" value="0.25"><input type="number" class="nv" id="dx-size-v" min="0.05" max="2" step="0.01" value="0.25"></div>
+        <div class="cr"><span class="cl">Speed</span><input type="range" id="dx-speed" min="0.1" max="4" step="0.05" value="1"><input type="number" class="nv" id="dx-speed-v" min="0.1" max="4" step="0.05" value="1"></div>
+        <div class="cr"><span class="cl">Glow</span><input type="range" id="dx-glow" min="0" max="20" step="0.1" value="12"><input type="number" class="nv" id="dx-glow-v" min="0" max="20" step="0.1" value="12"></div>
+        <div class="cr"><span class="cl">Bloom Thresh</span><input type="range" id="dx-bthresh" min="0" max="1" step="0.01" value="0"><input type="number" class="nv" id="dx-bthresh-v" min="0" max="1" step="0.01" value="0"></div>
+        <div class="cr"><span class="cl">Bloom Str</span><input type="range" id="dx-bstr" min="0" max="2" step="0.01" value="0.2"><input type="number" class="nv" id="dx-bstr-v" min="0" max="2" step="0.01" value="0.2"></div>
+      </div>
+    </div>
+
+    <!-- ── Destruction — Elite ── -->
+    <div class="sec" id="destr-elite-sec" data-scope="destr">
+      <div class="sec-hdr"><span class="sec-title">Elite Explosion</span><div class="sec-r"><button class="sec-rst" data-s="destr-elite">Reset</button><span class="sec-arrow">▾</span></div></div>
+      <div class="sec-body">
+        <div class="cr"><span class="cl">Count</span><input type="range" id="ex-count" min="1" max="200" step="1" value="100"><input type="number" class="nv" id="ex-count-v" min="1" max="200" step="1" value="100"></div>
+        <div class="cr"><span class="cl">Size</span><input type="range" id="ex-size" min="0.05" max="2" step="0.01" value="0.5"><input type="number" class="nv" id="ex-size-v" min="0.05" max="2" step="0.01" value="0.5"></div>
+        <div class="cr"><span class="cl">Speed</span><input type="range" id="ex-speed" min="0.1" max="4" step="0.05" value="1.75"><input type="number" class="nv" id="ex-speed-v" min="0.1" max="4" step="0.05" value="1.75"></div>
+        <div class="cr"><span class="cl">Glow</span><input type="range" id="ex-glow" min="0" max="20" step="0.1" value="12"><input type="number" class="nv" id="ex-glow-v" min="0" max="20" step="0.1" value="12"></div>
+        <div class="cr"><span class="cl">Bloom Thresh</span><input type="range" id="ex-bthresh" min="0" max="1" step="0.01" value="0"><input type="number" class="nv" id="ex-bthresh-v" min="0" max="1" step="0.01" value="0"></div>
+        <div class="cr"><span class="cl">Bloom Str</span><input type="range" id="ex-bstr" min="0" max="2" step="0.01" value="0.2"><input type="number" class="nv" id="ex-bstr-v" min="0" max="2" step="0.01" value="0.2"></div>
+      </div>
+    </div>
+
+    <!-- ── Enemy Behavior ── -->
+    <div class="sec" id="enemy-behavior-sec" data-scope="enemy-behavior">
+      <div class="sec-hdr"><span class="sec-title">Behavior</span><div class="sec-r"><span class="sec-arrow">▾</span></div></div>
+      <div class="sec-body">
+        <div class="cr"><span class="cl">Max On Screen</span><input type="range" id="e-maxcount" min="1" max="100" step="1" value="50"><input type="number" class="nv" id="e-maxcount-v" min="1" max="100" step="1" value="50"></div>
+      </div>
+    </div>
+
+  </div><!-- /cp-scroll -->
+
+  <div class="cp-footer">
+    <button class="fp-btn export" id="export-btn">Export JSON</button>
+    <button class="fp-btn rst" id="reset-all-btn">Reset All</button>
+  </div>
+</div><!-- /cp -->
+
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+    "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+  }
+}
+</script>
+
+<script type="module" src="./src/main.js"></script>
+
+</body>
+</html>

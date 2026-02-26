@@ -1,0 +1,64 @@
+// ─── input.js ─────────────────────────────────────────────────────────────────
+import { state } from './state.js';
+import { DASH_DURATION, DASH_COOLDOWN } from './constants.js';
+import { ISO_FWD, ISO_RIGHT } from './renderer.js';
+import * as THREE from 'three';
+
+// Injected callbacks to avoid circular imports
+let _togglePanel   = null;
+let _restartGame   = null;
+let _togglePause   = null;
+
+export function initInput({ togglePanel, restartGame, togglePause }) {
+  _togglePanel  = togglePanel;
+  _restartGame  = restartGame;
+  _togglePause  = togglePause;
+}
+
+const _dv = new THREE.Vector3();
+
+window.addEventListener('keydown', e => {
+  if (e.key === 'Tab') { e.preventDefault(); if (_togglePanel) _togglePanel(); return; }
+
+  if (e.key === 'Escape' && !state.gameOver) {
+    e.preventDefault();
+    if (!state.panelOpen) { if (_togglePause) _togglePause(); }
+    return;
+  }
+  if (e.key.toLowerCase() === 'r' && (state.gameOver || !state.paused)) {
+    if (_restartGame) _restartGame();
+    return;
+  }
+  if (state.paused) return;
+
+  const k = e.key.toLowerCase();
+  if (k === 'w' || k === 'arrowup')    state.keys.w = true;
+  if (k === 's' || k === 'arrowdown')  state.keys.s = true;
+  if (k === 'a' || k === 'arrowleft')  state.keys.a = true;
+  if (k === 'd' || k === 'arrowright') state.keys.d = true;
+
+  if (e.key === 'Shift' && !state.gameOver) {
+    e.preventDefault();
+    if (state.dashCooldown <= 0 && state.dashTimer <= 0) {
+      _dv.set(0, 0, 0);
+      if (state.keys.w) _dv.addScaledVector(ISO_FWD,    1);
+      if (state.keys.s) _dv.addScaledVector(ISO_FWD,   -1);
+      if (state.keys.a) _dv.addScaledVector(ISO_RIGHT, -1);
+      if (state.keys.d) _dv.addScaledVector(ISO_RIGHT,  1);
+      if (_dv.lengthSq() > 0) { _dv.normalize(); state.lastMoveX = _dv.x; state.lastMoveZ = _dv.z; }
+      state.dashVX        = state.lastMoveX;
+      state.dashVZ        = state.lastMoveZ;
+      state.dashTimer     = DASH_DURATION;
+      state.dashCooldown  = DASH_COOLDOWN;
+      state.dashGhostTimer = 0;
+    }
+  }
+});
+
+window.addEventListener('keyup', e => {
+  const k = e.key.toLowerCase();
+  if (k === 'w' || k === 'arrowup')    state.keys.w = false;
+  if (k === 's' || k === 'arrowdown')  state.keys.s = false;
+  if (k === 'a' || k === 'arrowleft')  state.keys.a = false;
+  if (k === 'd' || k === 'arrowright') state.keys.d = false;
+});
