@@ -35,7 +35,6 @@ export async function initAudio() {
   const sfxFiles = {
     countdown:    './assets/sfx/countdown.wav',
     shoot:        './assets/sfx/shoot.wav',
-    hit:          './assets/sfx/hit.wav',
     player_hit:   './assets/sfx/player_hit.wav',
     elite_hit:    './assets/sfx/elite_hit.wav',
     elite_shoot:  './assets/sfx/elite_shoot.wav',
