@@ -33,6 +33,7 @@ ctx.addEventListener('statechange', () => {
 // ── Load all SFX up front ─────────────────────────────────────────────────────
 export async function initAudio() {
   const sfxFiles = {
+    countdown:    './assets/sfx/countdown.wav',
     shoot:        './assets/sfx/shoot.wav',
     hit:          './assets/sfx/hit.wav',
     player_hit:   './assets/sfx/player_hit.wav',
