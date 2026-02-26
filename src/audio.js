@@ -7,10 +7,20 @@
 const ctx = new AudioContext();
 const sounds = {};
 
-let musicEl = null;         // <Audio> element for background music
-let musicVolume = 0.4;
-let sfxVolume   = 1.0;
-let muted       = false;
+let musicEl = null;
+let musicVolume  = 0.4;
+let sfxVolume    = 1.0;
+let muted        = false;
+let _musicWanted = false; // true when music should be playing
+
+// ── Resume AudioContext after user gesture (required by browsers) ─────────────
+export function resumeAudioContext() {
+  if (ctx.state === 'suspended') ctx.resume();
+  // If music was requested before a user gesture, play it now
+  if (_musicWanted && !muted && musicEl && musicEl.paused) {
+    musicEl.play().catch(() => {});
+  }
+}
 
 // ── Load all SFX up front ─────────────────────────────────────────────────────
 export async function initAudio() {
@@ -51,11 +61,6 @@ export async function initAudio() {
   musicEl.preload = 'auto';
 }
 
-// ── Resume AudioContext after user gesture (required by browsers) ─────────────
-export function resumeAudioContext() {
-  if (ctx.state === 'suspended') ctx.resume();
-}
-
 // ── Play a named SFX ──────────────────────────────────────────────────────────
 // name:   key from sfxFiles above
 // volume: 0.0 – 1.0  (multiplied by global sfxVolume)
@@ -77,13 +82,15 @@ export function playSound(name, volume = 1.0, pitch = 1.0) {
 // ── Music controls ────────────────────────────────────────────────────────────
 export function startMusic() {
   if (!musicEl) return;
+  _musicWanted = true;
   musicEl.currentTime = 0;
-  if (!muted) musicEl.play().catch(() => {});
+  if (!muted) musicEl.play().catch(() => {}); // may silently fail before user gesture - resumeAudioContext handles it
 }
 
 export function pauseMusic() {
   if (!musicEl) return;
   musicEl.pause();
+  // don't clear _musicWanted — game is just paused, not stopped
 }
 
 export function resumeMusic() {
@@ -93,6 +100,7 @@ export function resumeMusic() {
 
 export function stopMusic() {
   if (!musicEl) return;
+  _musicWanted = false;
   musicEl.pause();
   musicEl.currentTime = 0;
 }
@@ -102,7 +110,7 @@ export function toggleMute() {
   muted = !muted;
   if (musicEl) {
     if (muted) musicEl.pause();
-    else musicEl.play().catch(() => {});
+    else if (_musicWanted) musicEl.play().catch(() => {});
   }
   return muted;
 }
@@ -111,7 +119,7 @@ export function setMuted(v) {
   muted = !!v;
   if (musicEl) {
     if (muted) musicEl.pause();
-    else musicEl.play().catch(() => {});
+    else if (_musicWanted) musicEl.play().catch(() => {});
   }
 }
 
