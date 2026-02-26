@@ -8,13 +8,13 @@ import { onRendererResize } from './renderer.js';
 import { onBloomResize }   from './bloom.js';
 import { updateXP }        from './xp.js';
 import { updateHealthBar } from './player.js';
-import { spawnLevelElites, setLevelUpCallback, setVictoryCallback } from './enemies.js';
+import { spawnEnemyAtEdge, spawnLevelElites, setLevelUpCallback, setVictoryCallback } from './enemies.js';
 import { syncOrbitBullets } from './weapons.js';
-import { triggerVictory, restartGame, getHighScores, clearHighScores } from './gameFlow.js';
+import { triggerVictory, restartGame, startCountdown } from './gameFlow.js';
 import { initInput }       from './input.js';
 import { tick }            from './loop.js';
 import { togglePanel, togglePause, updatePauseBtn } from './panel/index.js';
-import { initAudio, resumeAudioContext, setMuted, setMusicVolume, setSfxVolume, getMuted, getMusicVolume, getSfxVolume } from './audio.js';
+import { initAudio, resumeAudioContext, setMuted, setSfxVolume, setMusicVolume, getMuted, getSfxVolume, getMusicVolume } from './audio.js';
 
 // ── Wire cross-module callbacks (breaks enemies ↔ weapons circular deps) ──────
 setVictoryCallback(triggerVictory);
@@ -25,13 +25,6 @@ setLevelUpCallback((newLevel) => {
              .forEach(et => spawnLevelElites(et));
 });
 
-// ── Wire input callbacks ──────────────────────────────────────────────────────
-initInput({
-  togglePanel,
-  togglePause,
-  restartGame,
-  onFirstKey: resumeAudioContext,  // satisfies browser autoplay policy
-});
 
 // ── Expose restart globally for the HTML restart button onclick ───────────────
 window.restartGame = restartGame;
@@ -42,171 +35,136 @@ window.addEventListener('resize', () => {
   onBloomResize();
 });
 
+// ── Boot into menu screen ────────────────────────────────────────────────────
+const body = document.body;
 
-// ── Main menu (Start / High Scores / Settings) ───────────────────────────────
-const menuEl        = document.getElementById('main-menu');
-const startBtn      = document.getElementById('btn-start');
-const scoresBtn     = document.getElementById('btn-scores');
-const settingsBtn   = document.getElementById('btn-settings');
-
-const scoresPanel   = document.getElementById('panel-scores');
-const scoresBackBtn = document.getElementById('btn-scores-back');
-const scoresClearBtn= document.getElementById('btn-scores-clear');
-const hsListEl      = document.getElementById('hs-list');
-const hsMetaEl      = document.getElementById('hs-meta');
-
-const settingsPanel = document.getElementById('panel-settings');
-const settingsBackBtn = document.getElementById('btn-settings-back');
-const mutedEl       = document.getElementById('set-muted');
-const musicEl       = document.getElementById('set-music');
-const musicValEl    = document.getElementById('set-music-val');
-const sfxEl         = document.getElementById('set-sfx');
-const sfxValEl      = document.getElementById('set-sfx-val');
-
-const AUDIO_KEY = 'ch_audio_v1';
-
-function setMenuOpen(open) {
-  if (!menuEl) return;
-  document.body.classList.toggle('menu-open', open);
-  menuEl.hidden = !open;
-  menuEl.setAttribute('aria-hidden', open ? 'false' : 'true');
-  state.uiMode = open ? 'menu' : 'playing';
-  state.paused = open ? true : state.paused;
+function setMode(mode) {
+  state.uiMode = mode;
+  body.classList.toggle('mode-menu', mode === 'menu');
+  body.classList.toggle('mode-playing', mode === 'playing');
 }
 
-function showActionsOnly() {
-  scoresPanel.hidden = true;
-  settingsPanel.hidden = true;
-}
-
-function fmtDate(iso) {
-  try {
-    const d = new Date(iso);
-    return d.toLocaleDateString(undefined, { year:'2-digit', month:'short', day:'2-digit' });
-  } catch { return ''; }
-}
+function $(id) { return document.getElementById(id); }
 
 function renderHighScores() {
-  const scores = getHighScores();
-  if (hsMetaEl) hsMetaEl.textContent = scores.length ? `Top ${Math.min(scores.length, 20)} runs (sorted by kills, then time).` : 'No runs yet.';
-  if (!hsListEl) return;
-
+  const listEl = $('score-list');
+  if (!listEl) return;
+  const scores = (window.getHighScores?.() || []);
   if (!scores.length) {
-    hsListEl.innerHTML = `<div class="hs-row"><div class="hs-rank">—</div><div class="hs-main"><div class="hs-score">No scores saved</div><div class="hs-subline">Finish a run to record a score.</div></div><div class="hs-date"></div></div>`;
+    listEl.innerHTML = '<div style="opacity:.7; padding:10px;">No scores yet.</div>';
     return;
   }
-
-  hsListEl.innerHTML = scores.map((s, i) => {
-    const kills = (s.kills ?? 0);
-    const time  = (s.time ?? 0);
-    const coins = (s.coins ?? 0);
-    const res   = (s.result === 'victory') ? 'Victory' : 'Destroyed';
-    const tmmss = (typeof time === 'number') ? (Math.floor(time/60).toString().padStart(2,'0') + ':' + Math.floor(time%60).toString().padStart(2,'0')) : '--:--';
+  listEl.innerHTML = scores.map((s, i) => {
+    const mm = Math.floor((s.time || 0) / 60).toString().padStart(2,'0');
+    const ss = Math.floor((s.time || 0) % 60).toString().padStart(2,'0');
+    const when = new Date(s.ts || Date.now()).toLocaleDateString();
     return `
-      <div class="hs-row">
-        <div class="hs-rank">#${i+1}</div>
-        <div class="hs-main">
-          <div class="hs-score">${kills} kills <span style="opacity:.7;font-weight:700">·</span> ${tmmss} <span style="opacity:.7;font-weight:700">·</span> ${coins} coins</div>
-          <div class="hs-subline">${res}</div>
+      <div class="score-item">
+        <div class="score-rank">#${i+1}</div>
+        <div>
+          <div><strong>${s.result || ''}</strong> — ${mm}:${ss} — ${s.kills || 0} kills — ${s.coins || 0} coins</div>
+          <div class="score-meta">${when}</div>
         </div>
-        <div class="hs-date">${fmtDate(s.date)}</div>
-      </div>
-    `;
+        <div class="score-points">${(s.score ?? 0).toLocaleString()}</div>
+      </div>`;
   }).join('');
 }
 
-function showScores() {
-  showActionsOnly();
-  scoresPanel.hidden = false;
-  renderHighScores();
+function openPanel(which) {
+  const scoresP = $('menu-panel-scores');
+  const settingsP = $('menu-panel-settings');
+  if (scoresP) scoresP.classList.toggle('show', which === 'scores');
+  if (settingsP) settingsP.classList.toggle('show', which === 'settings');
+  if (which === 'scores') renderHighScores();
 }
 
-function showSettings() {
-  showActionsOnly();
-  settingsPanel.hidden = false;
-
-  if (mutedEl) mutedEl.checked = !!getMuted();
-  if (musicEl) musicEl.value = String(getMusicVolume());
-  if (sfxEl)   sfxEl.value   = String(getSfxVolume());
-  if (musicValEl) musicValEl.textContent = `${Math.round(getMusicVolume()*100)}%`;
-  if (sfxValEl)   sfxValEl.textContent   = `${Math.round(getSfxVolume()*100)}%`;
+function closePanels() {
+  $('menu-panel-scores')?.classList.remove('show');
+  $('menu-panel-settings')?.classList.remove('show');
 }
 
-function loadAudioSettings() {
-  try {
-    const raw = localStorage.getItem(AUDIO_KEY);
-    if (!raw) return;
-    const s = JSON.parse(raw);
-    if (typeof s.muted === 'boolean') setMuted(s.muted);
-    if (typeof s.musicVolume === 'number') setMusicVolume(s.musicVolume);
-    if (typeof s.sfxVolume === 'number') setSfxVolume(s.sfxVolume);
-  } catch {}
+function syncAudioUI() {
+  const mute = $('audio-mute');
+  const mus  = $('audio-music');
+  const sfx  = $('audio-sfx');
+  const musV = $('audio-music-val');
+  const sfxV = $('audio-sfx-val');
+
+  if (!mute || !mus || !sfx) return;
+  mute.checked = getMuted();
+  mus.value = String(getMusicVolume());
+  sfx.value = String(getSfxVolume());
+  if (musV) musV.textContent = Number(mus.value).toFixed(2);
+  if (sfxV) sfxV.textContent = Number(sfx.value).toFixed(2);
 }
 
-function saveAudioSettings() {
-  try {
-    localStorage.setItem(AUDIO_KEY, JSON.stringify({
-      muted: getMuted(),
-      musicVolume: getMusicVolume(),
-      sfxVolume: getSfxVolume(),
-    }));
-  } catch {}
+async function startFromMenu() {
+  closePanels();
+  setMode('playing');
+
+  // Ensure audio graph exists; then resume context on the gesture.
+  await initAudio();
+  resumeAudioContext();
+
+  // Wire input once (so menu doesn't accidentally restart / pause)
+  if (!state.inputInitialized) {
+    initInput({
+      togglePanel,
+      togglePause,
+      restartGame,
+      onFirstKey: resumeAudioContext,
+    });
+    state.inputInitialized = true;
+  }
+
+  // Start render loop once
+  if (!state.loopStarted) {
+    tick();
+    state.loopStarted = true;
+  }
+
+  // Fresh run: restart (spawns enemies + countdown)
+  restartGame({ skipInitialSpawn: false, startCountdown: true });
 }
 
-// Wire menu buttons
-startBtn?.addEventListener('click', () => {
-  resumeAudioContext();
-  setMenuOpen(false);
-  // Full reset + initial spawn + countdown
-  restartGame();
-});
+// Expose high score fns for menu renderer
+import { getHighScores, clearHighScores } from './gameFlow.js';
+window.getHighScores = getHighScores;
 
-scoresBtn?.addEventListener('click', () => { resumeAudioContext(); showScores(); });
-settingsBtn?.addEventListener('click', () => { resumeAudioContext(); showSettings(); });
+document.addEventListener('DOMContentLoaded', async () => {
+  setMode('menu');
 
-scoresBackBtn?.addEventListener('click', () => showActionsOnly());
-settingsBackBtn?.addEventListener('click', () => showActionsOnly());
+  // Init audio graph (no playback until user gesture)
+  await initAudio();
 
-scoresClearBtn?.addEventListener('click', () => {
-  clearHighScores();
-  renderHighScores();
-});
+  // Menu buttons
+  $('menu-start')?.addEventListener('click', startFromMenu);
+  $('menu-scores')?.addEventListener('click', () => openPanel('scores'));
+  $('menu-settings')?.addEventListener('click', () => { openPanel('settings'); syncAudioUI(); });
 
-mutedEl?.addEventListener('change', () => {
-  resumeAudioContext();
-  setMuted(!!mutedEl.checked);
-  saveAudioSettings();
-});
+  document.querySelectorAll('[data-menu-close]')?.forEach(btn => {
+    btn.addEventListener('click', () => closePanels());
+  });
 
-musicEl?.addEventListener('input', () => {
-  resumeAudioContext();
-  const v = Math.max(0, Math.min(1, parseFloat(musicEl.value)));
-  setMusicVolume(v);
-  if (musicValEl) musicValEl.textContent = `${Math.round(v*100)}%`;
-  saveAudioSettings();
-});
+  $('scores-clear')?.addEventListener('click', () => {
+    clearHighScores();
+    renderHighScores();
+  });
 
-sfxEl?.addEventListener('input', () => {
-  resumeAudioContext();
-  const v = Math.max(0, Math.min(1, parseFloat(sfxEl.value)));
-  setSfxVolume(v);
-  if (sfxValEl) sfxValEl.textContent = `${Math.round(v*100)}%`;
-  saveAudioSettings();
-});
+  // Audio controls
+  $('audio-mute')?.addEventListener('change', (e) => setMuted(!!e.target.checked));
+  $('audio-music')?.addEventListener('input', (e) => {
+    const v = Number(e.target.value);
+    setMusicVolume(v);
+    $('audio-music-val').textContent = v.toFixed(2);
+  });
+  $('audio-sfx')?.addEventListener('input', (e) => {
+    const v = Number(e.target.value);
+    setSfxVolume(v);
+    $('audio-sfx-val').textContent = v.toFixed(2);
+  });
 
-// ── Initial boot (show menu, keep sim paused) ─────────────────────────────────
-setMenuOpen(true);
-showActionsOnly();
-updateHealthBar();
-updateXP(0);
-
-// Start render loop immediately so the scene is visible behind the menu
-state.paused = true;
-tick();
-
-// Init audio + apply persisted settings
-initAudio().then(() => {
-  loadAudioSettings();
-  // Settings panel (if opened) should reflect persisted values
-  // (menu is already open by default)
+  // Still keep resize handlers alive for menu responsiveness
+  updateHealthBar();
+  updateXP(0);
 });
