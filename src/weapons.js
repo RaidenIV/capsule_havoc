@@ -13,6 +13,8 @@ import { killEnemy, updateEliteBar } from './enemies.js';
 import {
   getFireInterval, getWaveBullets, getBulletDamage, getWeaponConfig,
 } from './xp.js';
+import { playSound } from './audio.js';
+import { playSound } from './audio.js';
 
 // ── Orbit bullet helpers ──────────────────────────────────────────────────────
 function makeOrbitMat(color) {
@@ -72,6 +74,7 @@ const _bulletQ   = new THREE.Quaternion();
 export function shootBulletWave() {
   const dirs = getWaveBullets();
   const dmg  = getBulletDamage();
+  playSound('shoot', 0.45, 0.92 + Math.random() * 0.16); // slight pitch variation
   for (let i = 0; i < dirs; i++) {
     const angle = state.bulletWaveAngle + (i / dirs) * Math.PI * 2;
     const vx = Math.cos(angle) * BULLET_SPEED;
@@ -118,10 +121,16 @@ export function updateBullets(worldDelta) {
       if (dx*dx + dz*dz < 0.75*0.75) {
         e.hp -= b.dmg;
         spawnEnemyDamageNum(b.dmg, e);
+        playSound('hit', 0.4, 0.85 + Math.random() * 0.3);
         e.staggerTimer = 0.12;
         updateEliteBar(e);
         scene.remove(b.mesh); state.bullets.splice(i, 1); hit = true;
-        if (e.hp <= 0) killEnemy(j);
+        if (e.hp <= 0) {
+          playSound(e.isElite ? 'explodeElite' : 'explode', 0.7, 0.9 + Math.random() * 0.2);
+          killEnemy(j);
+        } else {
+          playSound('hit', 0.3, 0.95 + Math.random() * 0.1);
+        }
         break;
       }
     }
@@ -144,6 +153,7 @@ export function updateEnemyBullets(worldDelta) {
       if (pdx*pdx + pdz*pdz < 0.36) {
         state.playerHP -= ENEMY_BULLET_DMG;
         spawnPlayerDamageNum(ENEMY_BULLET_DMG);
+        playSound('hit', 0.6, 0.85 + Math.random() * 0.1);
         updateHealthBar();
         scene.remove(b.mesh); state.enemyBullets.splice(i, 1);
         if (state.playerHP <= 0) return 'DEAD';
@@ -190,6 +200,7 @@ export function updateOrbitBullets(worldDelta) {
           state.orbitHitActive.add(key);
           e.hp -= dmg;
           spawnEnemyDamageNum(dmg, e);
+          playSound('hit', 0.25, 0.85 + Math.random() * 0.3);
           e.staggerTimer = 0.12;
           updateEliteBar(e);
           if (e.hp <= 0) { killEnemy(j); break; }
