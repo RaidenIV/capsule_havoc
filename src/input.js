@@ -3,7 +3,7 @@ import { state } from './state.js';
 import { DASH_DURATION, DASH_COOLDOWN } from './constants.js';
 import { ISO_FWD, ISO_RIGHT } from './renderer.js';
 import * as THREE from 'three';
-import { playSound } from './audio.js';
+import { playSound, toggleMute } from './audio.js';
 
 // Injected callbacks to avoid circular imports
 let _togglePanel   = null;
@@ -34,6 +34,10 @@ window.addEventListener('keydown', e => {
   }
   if (e.key.toLowerCase() === 'r' && (state.gameOver || !state.paused)) {
     if (_restartGame) _restartGame();
+    return;
+  }
+  if (e.key.toLowerCase() === 'm') {
+    toggleMute();
     return;
   }
   if (state.paused) return;
