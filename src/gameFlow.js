@@ -7,6 +7,9 @@ import { updateXP } from './xp.js';
 import { spawnEnemyAtEdge, removeCSS2DFromGroup } from './enemies.js';
 import { destroyOrbitBullets, syncOrbitBullets } from './weapons.js';
 import { _particleMeshPool } from './particles.js';
+import { startMusic, stopMusic, pauseMusic, resumeMusic } from './audio.js';
+
+export { pauseMusic, resumeMusic }; // re-export so panel/index.js can use them
 
 const timerEl      = document.getElementById('timer-value');
 const killsEl      = document.getElementById('kills-value');
@@ -53,6 +56,7 @@ export function startCountdown(onDone) {
         countdownEl.classList.remove('show');
         state.paused = false;
         playerMesh.visible = hbObj.visible = dashBarObj.visible = true;
+        startMusic();
         if (onDone) onDone();
       }, delay);
     }
@@ -63,12 +67,14 @@ export function startCountdown(onDone) {
 // ── Game over / victory ───────────────────────────────────────────────────────
 export function triggerGameOver() {
   state.gameOver = true;
+  stopMusic();
   finalStatsEl.textContent = `${formatTime(state.elapsed)} — ${state.kills} destroyed — ${state.coins} coins`;
   gameOverEl.classList.add('show');
 }
 
 export function triggerVictory() {
   state.gameOver = true;
+  stopMusic();
   const h1 = document.querySelector('#game-over h1');
   h1.textContent  = 'VICTORY';
   h1.style.color  = '#ffe066';
