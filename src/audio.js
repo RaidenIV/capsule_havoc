@@ -67,6 +67,11 @@ export async function initAudio() {
   musicEl.loop    = true;
   musicEl.volume  = musicVolume;
   musicEl.preload = 'auto';
+
+  // If startMusic() was called before we finished loading, play now
+  if (_musicWanted && !muted) {
+    musicEl.play().catch(() => {});
+  }
 }
 
 // ── Play a named SFX ──────────────────────────────────────────────────────────
