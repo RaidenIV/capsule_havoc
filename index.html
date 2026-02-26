@@ -44,6 +44,64 @@
 <!-- ── Pause overlay ── -->
 <div id="pause-overlay"><span>PAUSED</span></div>
 
+<!-- ── Main Menu ── -->
+<div id="main-menu" class="menu show" aria-hidden="false">
+  <div class="menu-card">
+    <div class="menu-title">CAPSULE HAVOC</div>
+    <div class="menu-sub">Bullet Heaven Prototype</div>
+
+    <div class="menu-actions" id="menu-actions">
+      <button class="menu-btn primary" id="btn-start">START</button>
+      <button class="menu-btn" id="btn-scores">HIGH SCORES</button>
+      <button class="menu-btn" id="btn-settings">SETTINGS</button>
+    </div>
+
+    <!-- High Scores Panel -->
+    <div class="menu-panel" id="panel-scores" hidden>
+      <div class="menu-panel-hdr">
+        <div class="menu-panel-title">High Scores</div>
+        <button class="menu-x" id="btn-scores-back">BACK</button>
+      </div>
+
+      <div class="hs-meta" id="hs-meta"></div>
+      <div class="hs-list" id="hs-list"></div>
+
+      <div class="menu-panel-actions">
+        <button class="menu-btn danger" id="btn-scores-clear">CLEAR</button>
+      </div>
+    </div>
+
+    <!-- Settings Panel (Audio only for now) -->
+    <div class="menu-panel" id="panel-settings" hidden>
+      <div class="menu-panel-hdr">
+        <div class="menu-panel-title">Settings</div>
+        <button class="menu-x" id="btn-settings-back">BACK</button>
+      </div>
+
+      <div class="set-row">
+        <div class="set-label">Mute</div>
+        <label class="tog">
+          <input type="checkbox" id="set-muted">
+          <div class="tog-track"></div><div class="tog-thumb"></div>
+        </label>
+      </div>
+
+      <div class="set-row">
+        <div class="set-label">Music Volume</div>
+        <input type="range" id="set-music" min="0" max="1" step="0.01" value="0.4">
+        <div class="set-val" id="set-music-val">40%</div>
+      </div>
+
+      <div class="set-row">
+        <div class="set-label">SFX Volume</div>
+        <input type="range" id="set-sfx" min="0" max="1" step="0.01" value="1">
+        <div class="set-val" id="set-sfx-val">100%</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+
 <!-- ── Countdown overlay ── -->
 <div id="countdown"><div id="countdown-num"></div></div>
 
