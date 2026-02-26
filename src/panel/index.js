@@ -27,6 +27,7 @@ import { XP_THRESHOLDS } from '../constants.js';
 import { syncOrbitBullets } from '../weapons.js';
 import { restartGame } from '../gameFlow.js';
 import { pauseMusic, resumeMusic } from '../gameFlow.js';
+import { setSfxVolume, setMusicVolume, setMuted, getMuted, getSfxVolume, getMusicVolume } from '../audio.js';
 import { clock } from '../loop.js';
 
 // ── DOM refs ──────────────────────────────────────────────────────────────────
@@ -72,10 +73,11 @@ function geoParamsFor(type) {
 function updateSectionVisibility() {
   const t = state.activeTab;
   document.querySelectorAll('.sec[data-scope="scene"]').forEach(el   => el.style.display = t === 'scene' ? '' : 'none');
-  document.querySelectorAll('.sec[data-scope="capsule"]').forEach(el => el.style.display = (t === 'scene' || t === 'destr') ? 'none' : '');
+  document.querySelectorAll('.sec[data-scope="capsule"]').forEach(el => el.style.display = (t === 'scene' || t === 'destr' || t === 'enemy-behavior' || t === 'audio') ? 'none' : '');
   document.querySelectorAll('.sec[data-scope="destr"]').forEach(el   => el.style.display = t === 'destr' ? '' : 'none');
+  document.querySelectorAll('.sec[data-scope="audio"]').forEach(el   => el.style.display = t === 'audio' ? '' : 'none');
   const bb = g('bullet-bloom-sec'); if (bb) bb.style.display = t === 'bullet' ? '' : 'none';
-  const eb = g('enemy-behavior-sec'); if (eb) eb.style.display = t === 'enemy' ? '' : 'none';
+  const eb = g('enemy-behavior-sec'); if (eb) eb.style.display = t === 'enemy-behavior' ? '' : 'none';
 }
 
 // ── Load panel state from Three.js objects → DOM inputs ───────────────────────
@@ -100,6 +102,12 @@ function loadPanel() {
     setR('ex-count',  explConfig.elite.count, 0);setR('ex-size',  explConfig.elite.size);
     setR('ex-speed',  explConfig.elite.speed);   setR('ex-glow',  explConfig.elite.glow);
     setR('ex-bthresh',explBloom.eliteThreshold); setR('ex-bstr',  explBloom.eliteStrength);
+    return;
+  }
+  if (t === 'audio') {
+    g('aud-mute').checked = getMuted();
+    setR('aud-sfx',   getSfxVolume(),   2);
+    setR('aud-music', getMusicVolume(), 2);
     return;
   }
   const mat = matRefs[t], gp = geoParamsFor(t);
@@ -355,6 +363,7 @@ document.querySelectorAll('.sec-rst').forEach(btn => {
       if (s === 'bbloom') { Object.assign(bulletBloom, { enabled:DEFS.bbullet.enabled, threshold:DEFS.bbullet.thresh, strength:DEFS.bbullet.str }); syncBulletBloomUI(); }
       if (s === 'destr-std')   { Object.assign(explConfig.std,  DEFS.destrStd);   explBloom.stdThreshold=DEFS.destrStd.bthresh;   explBloom.stdStrength=DEFS.destrStd.bstr;   loadPanel(); }
       if (s === 'destr-elite') { Object.assign(explConfig.elite,DEFS.destrElite); explBloom.eliteThreshold=DEFS.destrElite.bthresh; explBloom.eliteStrength=DEFS.destrElite.bstr; loadPanel(); }
+      if (s === 'audio')       { setMuted(false); setSfxVolume(1.0); setMusicVolume(0.4); loadPanel(); }
       return;
     }
     const mat = matRefs[t], d = DEFS[t];
@@ -396,6 +405,13 @@ g('reset-all-btn')?.addEventListener('click', () => {
   loadPanel();
 });
 
+// ── Audio controls ────────────────────────────────────────────────────────────
+g('aud-mute')?.addEventListener('change', () => { setMuted(g('aud-mute').checked); });
+g('aud-sfx')?.addEventListener('input',   () => { const v=parseFloat(g('aud-sfx').value);   g('aud-sfx-v').value=v.toFixed(2);   setSfxVolume(v); });
+g('aud-sfx-v')?.addEventListener('change',() => { const v=parseFloat(g('aud-sfx-v').value); g('aud-sfx').value=v;                setSfxVolume(v); });
+g('aud-music')?.addEventListener('input', () => { const v=parseFloat(g('aud-music').value); g('aud-music-v').value=v.toFixed(2); setMusicVolume(v); });
+g('aud-music-v')?.addEventListener('change',()=>{ const v=parseFloat(g('aud-music-v').value); g('aud-music').value=v;           setMusicVolume(v); });
+
 // ── Export JSON ───────────────────────────────────────────────────────────────
 function snapMat(mat) {
   return { color:'#'+mat.color.getHexString(), metalness:mat.metalness, roughness:mat.roughness,
@@ -420,6 +436,7 @@ g('export-btn')?.addEventListener('click', () => {
       elite:    { count:explConfig.elite.count, size:explConfig.elite.size, speed:explConfig.elite.speed, glow:explConfig.elite.glow, bloomThreshold:explBloom.eliteThreshold, bloomStrength:explBloom.eliteStrength },
     },
     ui: { showFps: g('s-fps')?.checked },
+    audio: { muted: getMuted(), sfxVolume: getSfxVolume(), musicVolume: getMusicVolume() },
     exportedAt: new Date().toISOString(),
   };
   const a = document.createElement('a');
@@ -486,6 +503,11 @@ function applyImport(data) {
     if (el.bloomStrength  !== undefined) explBloom.eliteStrength  = el.bloomStrength;
   }
   syncEnemyMats(state.enemies);
+  if (data.audio) {
+    if (data.audio.muted       !== undefined) setMuted(data.audio.muted);
+    if (data.audio.sfxVolume   !== undefined) setSfxVolume(data.audio.sfxVolume);
+    if (data.audio.musicVolume !== undefined) setMusicVolume(data.audio.musicVolume);
+  }
   loadPanel();
   setR('s-fnear',scene.fog.near,0); setR('s-ffar',scene.fog.far,0);
   setR('l-amb',ambientLight.intensity); setR('l-sun',sunLight.intensity);
