@@ -25,6 +25,38 @@ export function formatTime(secs) {
   return m + ':' + s;
 }
 
+// ── High score persistence (localStorage) ─────────────────────────────────────
+const HS_KEY = 'ch_highscores_v1';
+
+export function getHighScores() {
+  try {
+    const raw = localStorage.getItem(HS_KEY);
+    const arr = raw ? JSON.parse(raw) : [];
+    return Array.isArray(arr) ? arr : [];
+  } catch { return []; }
+}
+
+function _saveHighScores(arr) {
+  try { localStorage.setItem(HS_KEY, JSON.stringify(arr)); } catch {}
+}
+
+export function clearHighScores() {
+  _saveHighScores([]);
+}
+
+export function pushHighScore(entry) {
+  const arr = getHighScores();
+  arr.push(entry);
+  // Sort: kills desc, then time asc, then coins desc
+  arr.sort((a,b) =>
+    (b.kills||0) - (a.kills||0) ||
+    (a.time||0) - (b.time||0) ||
+    (b.coins||0) - (a.coins||0)
+  );
+  _saveHighScores(arr.slice(0, 20));
+}
+
+
 // ── Countdown overlay ─────────────────────────────────────────────────────────
 export function startCountdown(onDone) {
   playerMesh.visible = false; hbObj.visible = false; dashBarObj.visible = false;
@@ -68,6 +100,13 @@ export function startCountdown(onDone) {
 export function triggerGameOver() {
   state.gameOver = true;
   stopMusic();
+  pushHighScore({
+    date: new Date().toISOString(),
+    result: 'destroyed',
+    kills: state.kills,
+    time: state.elapsed,
+    coins: state.coins,
+  });
   finalStatsEl.textContent = `${formatTime(state.elapsed)} — ${state.kills} destroyed — ${state.coins} coins`;
   gameOverEl.classList.add('show');
 }
@@ -75,6 +114,13 @@ export function triggerGameOver() {
 export function triggerVictory() {
   state.gameOver = true;
   stopMusic();
+  pushHighScore({
+    date: new Date().toISOString(),
+    result: 'victory',
+    kills: state.kills,
+    time: state.elapsed,
+    coins: state.coins,
+  });
   const h1 = document.querySelector('#game-over h1');
   h1.textContent  = 'VICTORY';
   h1.style.color  = '#ffe066';
@@ -146,5 +192,5 @@ export function restartGame(opts = {}) {
     for (let i = 0; i < 20; i++) spawnEnemyAtEdge();
   }
 
-  startCountdown();
+  if (!opts.skipCountdown) startCountdown(opts.onCountdownDone);
 }
