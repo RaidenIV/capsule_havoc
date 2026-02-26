@@ -7,7 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;900&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="./styles/main_cpfix_v2.css">
+<link rel="stylesheet" href="./styles/main_cpfix_v3.css">
 </head>
 <body>
 
@@ -229,29 +229,6 @@
   </div>
 </div><!-- /cp -->
 
-<!-- Ensure the control panel can scroll even if the game registers global wheel/touch handlers -->
-<script>
-  (function(){
-    const cp = document.getElementById('cp');
-    if(!cp) return;
-    const isInCP = (ev) => cp.classList.contains('open') && ev.target && ev.target.closest && ev.target.closest('#cp');
-
-    // Capture-phase guard: prevents downstream listeners (often on window/canvas) from swallowing scroll.
-    window.addEventListener('wheel', (ev) => {
-      if(isInCP(ev)) {
-        ev.stopImmediatePropagation();
-        // Do NOT preventDefault here—allow native scrolling.
-      }
-    }, { capture: true, passive: false });
-
-    window.addEventListener('touchmove', (ev) => {
-      if(isInCP(ev)) {
-        ev.stopImmediatePropagation();
-      }
-    }, { capture: true, passive: false });
-  })();
-</script>
-
 <script type="importmap">
 {
   "imports": {
@@ -259,6 +236,37 @@
     "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
   }
 }
+</script>
+
+
+<script>
+/* Control-panel scroll guard:
+   Many games attach wheel/touch handlers at window level (sometimes in capture phase),
+   which can swallow scroll events and make expanded CP sections look "cut off".
+   This guard stops propagation ONLY when the event originated inside the CP scroll area.
+   It does NOT call preventDefault, so native scrolling still works.
+*/
+(function(){
+  const cp = document.getElementById('cp');
+  const sc = document.getElementById('cp-scroll');
+  if(!cp || !sc) return;
+
+  function inScrollArea(t){ return sc.contains(t); }
+
+  window.addEventListener('wheel', function(e){
+    if(!cp.classList.contains('open')) return;
+    if(!inScrollArea(e.target)) return;
+    if(e.stopImmediatePropagation) e.stopImmediatePropagation();
+    e.stopPropagation();
+  }, {capture:true, passive:true});
+
+  window.addEventListener('touchmove', function(e){
+    if(!cp.classList.contains('open')) return;
+    if(!inScrollArea(e.target)) return;
+    if(e.stopImmediatePropagation) e.stopImmediatePropagation();
+    e.stopPropagation();
+  }, {capture:true, passive:true});
+})();
 </script>
 
 <script type="module" src="./src/main.js"></script>
