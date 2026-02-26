@@ -17,6 +17,7 @@ import { spawnEnemyDamageNum, spawnPlayerDamageNum } from './damageNumbers.js';
 import { spawnExplosion } from './particles.js';
 import { dropLoot } from './pickups.js';
 import { updateXP, getXPPerKill, getCoinValue, getEnemyHP } from './xp.js';
+import { playSound } from './audio.js';
 
 // Reused quaternion helpers for enemy laser orientation
 const _eBulletUp  = new THREE.Vector3(0, 1, 0);
@@ -207,6 +208,7 @@ export function updateEnemies(delta, worldDelta, elapsed) {
           bMesh.position.y = floorY(bulletGeoParams);
           scene.add(bMesh);
           state.enemyBullets.push({ mesh: bMesh, mat: bMat, vx: dvx, vz: dvz, life: ENEMY_BULLET_LIFETIME });
+          playSound('elite_shoot', 0.5, 0.9 + Math.random() * 0.2);
         }
       }
     }
