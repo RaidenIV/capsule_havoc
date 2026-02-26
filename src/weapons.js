@@ -120,7 +120,6 @@ export function updateBullets(worldDelta) {
       if (dx*dx + dz*dz < 0.75*0.75) {
         e.hp -= b.dmg;
         spawnEnemyDamageNum(b.dmg, e);
-        playSound('hit', 0.4, 0.85 + Math.random() * 0.3);
         e.staggerTimer = 0.12;
         updateEliteBar(e);
         scene.remove(b.mesh); state.bullets.splice(i, 1); hit = true;
@@ -128,7 +127,7 @@ export function updateBullets(worldDelta) {
           playSound(e.isElite ? 'explodeElite' : 'explode', 0.7, 0.9 + Math.random() * 0.2);
           killEnemy(j);
         } else {
-          playSound('hit', 0.3, 0.95 + Math.random() * 0.1);
+          playSound(e.isElite ? 'elite_hit' : 'standard_hit', 0.4, 0.95 + Math.random() * 0.1);
         }
         break;
       }
