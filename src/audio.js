@@ -43,7 +43,7 @@ export async function initAudio() {
   );
 
   // Set up music element
-  musicEl = new Audio('./assets/music/theme.mp3');
+  musicEl = new Audio('./assets/music/theme.wav');
   musicEl.loop    = true;
   musicEl.volume  = musicVolume;
   musicEl.preload = 'auto';
