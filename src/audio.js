@@ -14,16 +14,16 @@ let sfxVolume   = 1.0;
 // ── Load all SFX up front ─────────────────────────────────────────────────────
 export async function initAudio() {
   const sfxFiles = {
-    shoot:   './assets/sfx/shoot.mp3',
-    explode: './assets/sfx/explode.mp3',
-    explodeElite: './assets/sfx/explode_elite.mp3',
-    hit:     './assets/sfx/hit.mp3',
-    coin:    './assets/sfx/coin.mp3',
-    heal:    './assets/sfx/heal.mp3',
-    levelup: './assets/sfx/levelup.mp3',
-    dash:    './assets/sfx/dash.mp3',
-    gameover:'./assets/sfx/gameover.mp3',
-    victory: './assets/sfx/victory.mp3',
+    shoot:   './assets/sfx/shoot.wav',
+    explode: './assets/sfx/explode.wav',
+    explodeElite: './assets/sfx/explode_elite.wav',
+    hit:     './assets/sfx/hit.wav',
+    coin:    './assets/sfx/coin.wav',
+    heal:    './assets/sfx/heal.wav',
+    levelup: './assets/sfx/levelup.wav',
+    dash:    './assets/sfx/dash.wav',
+    gameover:'./assets/sfx/gameover.wav',
+    victory: './assets/sfx/victory.wav',
   };
 
   await Promise.allSettled(
@@ -40,7 +40,7 @@ export async function initAudio() {
   );
 
   // Set up music element
-  musicEl = new Audio('./assets/music/theme.mp3');
+  musicEl = new Audio('./assets/music/theme.wav');
   musicEl.loop    = true;
   musicEl.volume  = musicVolume;
   musicEl.preload = 'auto';
