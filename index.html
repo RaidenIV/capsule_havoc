@@ -9,65 +9,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;900&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="./styles/main.css">
 </head>
-<body class="mode-menu">
-<!-- ── Main Menu Screen ─────────────────────────────────────────────────────── -->
-<div id="menu-screen" class="screen">
-  <div class="menu-card">
-    <div class="menu-title">CAPSULE HAVOC</div>
-    <div class="menu-subtitle">Bullet Heaven</div>
-
-    <div class="menu-buttons">
-      <button id="menu-start" class="menu-btn primary">START</button>
-      <button id="menu-scores" class="menu-btn">HIGH SCORES</button>
-      <button id="menu-settings" class="menu-btn">SETTINGS</button>
-    </div>
-
-    <div id="menu-panel-scores" class="menu-panel" aria-hidden="true">
-      <div class="menu-panel-hdr">
-        <div class="menu-panel-title">High Scores</div>
-        <button class="menu-panel-close" data-menu-close="scores">CLOSE</button>
-      </div>
-      <div id="score-list" class="score-list"></div>
-      <div class="menu-panel-actions">
-        <button id="scores-clear" class="menu-btn danger small">CLEAR</button>
-      </div>
-    </div>
-
-    <div id="menu-panel-settings" class="menu-panel" aria-hidden="true">
-      <div class="menu-panel-hdr">
-        <div class="menu-panel-title">Audio Settings</div>
-        <button class="menu-panel-close" data-menu-close="settings">CLOSE</button>
-      </div>
-
-      <div class="settings-grid">
-        <label class="setting-row">
-          <span class="setting-label">Mute</span>
-          <input id="audio-mute" type="checkbox">
-        </label>
-
-        <label class="setting-row">
-          <span class="setting-label">Music</span>
-          <input id="audio-music" type="range" min="0" max="1" step="0.01">
-          <span id="audio-music-val" class="setting-val">1.00</span>
-        </label>
-
-        <label class="setting-row">
-          <span class="setting-label">SFX</span>
-          <input id="audio-sfx" type="range" min="0" max="1" step="0.01">
-          <span id="audio-sfx-val" class="setting-val">1.00</span>
-        </label>
-      </div>
-    </div>
-
-    <div class="menu-footer">
-      <span class="menu-hint">Press START to begin</span>
-    </div>
-  </div>
-</div>
-
-<!-- ── Game Screen (everything below) ───────────────────────────────────────── -->
-<div id="game-screen" class="screen">
-
+<body class="mode-menu">\n\n<div id="menu-screen" class="menu-screen show">\n  <div class="menu-card">\n    <div class="menu-title">CAPSULE HAVOC</div>\n    <div class="menu-sub">Bullet Heaven Prototype</div>\n\n    <div class="menu-page active" data-page="main">\n      <button class="menu-btn primary" id="menu-start">START</button>\n      <button class="menu-btn" id="menu-scores">HIGH SCORES</button>\n      <button class="menu-btn" id="menu-settings">SETTINGS</button>\n      <div class="menu-muted">WASD · SHIFT DASH · TAB SETTINGS</div>\n    </div>\n\n    <div class="menu-page" data-page="scores">\n      <div class="menu-hdr-row"><div class="menu-hdr">HIGH SCORES</div></div>\n      <div id="scores-list" class="scores-list"></div>\n      <div class="menu-row">\n        <button class="menu-btn small" id="menu-back-scores">BACK</button>\n        <button class="menu-btn small danger" id="menu-clear-scores">CLEAR</button>\n      </div>\n    </div>\n\n    <div class="menu-page" data-page="settings">\n      <div class="menu-hdr-row"><div class="menu-hdr">AUDIO</div></div>\n      <div class="menu-form">\n        <label class="menu-check"><input type="checkbox" id="menu-mute"> <span>Mute</span></label>\n        <div class="menu-field">\n          <div class="menu-field-row"><span>Music</span><span id="menu-music-val">40%</span></div>\n          <input type="range" id="menu-music" min="0" max="1" step="0.01" value="0.4">\n        </div>\n        <div class="menu-field">\n          <div class="menu-field-row"><span>SFX</span><span id="menu-sfx-val">100%</span></div>\n          <input type="range" id="menu-sfx" min="0" max="1" step="0.01" value="1.0">\n        </div>\n      </div>\n      <div class="menu-row">\n        <button class="menu-btn small" id="menu-back-settings">BACK</button>\n      </div>\n    </div>\n  </div>\n</div>\n
 
 <!-- ── HUD ── -->
 <div id="ui">
@@ -313,7 +255,5 @@
 
 <script type="module" src="./src/main.js"></script>
 
-
-</div>
 </body>
 </html>
