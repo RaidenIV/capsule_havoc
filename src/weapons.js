@@ -124,10 +124,10 @@ export function updateBullets(worldDelta) {
         updateEliteBar(e);
         scene.remove(b.mesh); state.bullets.splice(i, 1); hit = true;
         if (e.hp <= 0) {
-          playSound(e.isElite ? 'explodeElite' : 'explode', 0.7, 0.9 + Math.random() * 0.2);
+          playSound(e.eliteType ? 'explodeElite' : 'explode', 0.7, 0.9 + Math.random() * 0.2);
           killEnemy(j);
         } else {
-          playSound(e.isElite ? 'elite_hit' : 'standard_hit', 0.4, 0.95 + Math.random() * 0.1);
+          playSound(e.eliteType ? 'elite_hit' : 'standard_hit', 0.4, 0.95 + Math.random() * 0.1);
         }
         break;
       }
@@ -198,10 +198,14 @@ export function updateOrbitBullets(worldDelta) {
           state.orbitHitActive.add(key);
           e.hp -= dmg;
           spawnEnemyDamageNum(dmg, e);
-          playSound('hit', 0.25, 0.85 + Math.random() * 0.3);
           e.staggerTimer = 0.12;
           updateEliteBar(e);
-          if (e.hp <= 0) { killEnemy(j); break; }
+          if (e.hp <= 0) {
+            playSound(e.eliteType ? 'explodeElite' : 'explode', 0.7, 0.9 + Math.random() * 0.2);
+            killEnemy(j); break;
+          } else {
+            playSound(e.eliteType ? 'elite_hit' : 'standard_hit', 0.4, 0.95 + Math.random() * 0.1);
+          }
         } else if (!inContact && was) {
           state.orbitHitActive.delete(key);
         }
