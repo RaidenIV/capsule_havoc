@@ -8,16 +8,22 @@ import * as THREE from 'three';
 let _togglePanel   = null;
 let _restartGame   = null;
 let _togglePause   = null;
+let _onFirstKey    = null;
+let _firstKeyFired = false;
 
-export function initInput({ togglePanel, restartGame, togglePause }) {
+export function initInput({ togglePanel, restartGame, togglePause, onFirstKey }) {
   _togglePanel  = togglePanel;
   _restartGame  = restartGame;
   _togglePause  = togglePause;
+  _onFirstKey   = onFirstKey || null;
 }
 
 const _dv = new THREE.Vector3();
 
 window.addEventListener('keydown', e => {
+  // Resume AudioContext on first interaction (browser autoplay policy)
+  if (!_firstKeyFired && _onFirstKey) { _onFirstKey(); _firstKeyFired = true; }
+
   if (e.key === 'Tab') { e.preventDefault(); if (_togglePanel) _togglePanel(); return; }
 
   if (e.key === 'Escape' && !state.gameOver) {
