@@ -14,13 +14,14 @@ import { triggerVictory, restartGame, startCountdown } from './gameFlow.js';
 import { initInput }       from './input.js';
 import { tick }            from './loop.js';
 import { togglePanel, togglePause, updatePauseBtn } from './panel/index.js';
-import { initAudio, resumeAudioContext } from './audio.js';
+import { initAudio, resumeAudioContext, playSound } from './audio.js';
 import { initMenuUI } from './ui/menu.js';
 
 // ── Wire cross-module callbacks (breaks enemies ↔ weapons circular deps) ──────
 setVictoryCallback(triggerVictory);
 
 setLevelUpCallback((newLevel) => {
+  playSound('levelup', 0.8);
   syncOrbitBullets();
   ELITE_TYPES.filter(et => et.minLevel <= newLevel)
              .forEach(et => spawnLevelElites(et));
