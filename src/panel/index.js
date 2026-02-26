@@ -26,6 +26,7 @@ import { updateXP } from '../xp.js';
 import { XP_THRESHOLDS } from '../constants.js';
 import { syncOrbitBullets } from '../weapons.js';
 import { restartGame } from '../gameFlow.js';
+import { pauseMusic, resumeMusic } from '../gameFlow.js';
 import { clock } from '../loop.js';
 
 // ── DOM refs ──────────────────────────────────────────────────────────────────
@@ -161,10 +162,12 @@ export function togglePanel() {
     state.paused = true;
     pauseEl.classList.add('show');
     clock.getDelta();
+    pauseMusic();
     loadPanel();
   } else {
     state.paused = false;
     pauseEl.classList.remove('show');
+    resumeMusic();
   }
   updatePauseBtn();
   state.keys.w = state.keys.a = state.keys.s = state.keys.d = false;
@@ -180,7 +183,8 @@ export function updatePauseBtn() {
 }
 export function togglePause() {
   state.paused = !state.paused;
-  if (!state.paused) clock.getDelta();
+  if (!state.paused) { clock.getDelta(); resumeMusic(); }
+  else { pauseMusic(); }
   updatePauseBtn();
   state.keys.w = state.keys.a = state.keys.s = state.keys.d = false;
 }
