@@ -3,6 +3,7 @@ import { state } from './state.js';
 import { DASH_DURATION, DASH_COOLDOWN } from './constants.js';
 import { ISO_FWD, ISO_RIGHT } from './renderer.js';
 import * as THREE from 'three';
+import { playSound } from './audio.js';
 
 // Injected callbacks to avoid circular imports
 let _togglePanel   = null;
@@ -57,6 +58,7 @@ window.addEventListener('keydown', e => {
       state.dashTimer     = DASH_DURATION;
       state.dashCooldown  = DASH_COOLDOWN;
       state.dashGhostTimer = 0;
+      playSound('dash', 0.55, 0.95 + Math.random() * 0.1);
     }
   }
 });
