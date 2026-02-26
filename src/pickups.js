@@ -5,6 +5,7 @@ import { state } from './state.js';
 import { PLAYER_MAX_HP, HEALTH_PICKUP_CHANCE, HEALTH_RESTORE } from './constants.js';
 import { playerGroup, updateHealthBar } from './player.js';
 import { spawnHealNum } from './damageNumbers.js';
+import { playSound } from './audio.js';
 
 // ── Coin ──────────────────────────────────────────────────────────────────────
 const coinGeo     = new THREE.CylinderGeometry(0.22, 0.22, 0.08, 12);
@@ -86,6 +87,7 @@ export function updatePickups(worldDelta, playerLevel, elapsed) {
       state.coinPickups.splice(i, 1);
       state.coins += cp.value;
       if (coinCountEl) coinCountEl.textContent = state.coins;
+      playSound('coin', 0.5, 0.95 + Math.random() * 0.15);
       continue;
     }
     if (dist < attractDist) cp.attracting = true;
@@ -113,7 +115,7 @@ export function updatePickups(worldDelta, playerLevel, elapsed) {
       const healed = Math.min(HEALTH_RESTORE, PLAYER_MAX_HP - state.playerHP);
       state.playerHP = Math.min(PLAYER_MAX_HP, state.playerHP + HEALTH_RESTORE);
       updateHealthBar();
-      if (healed > 0) spawnHealNum(healed);
+      if (healed > 0) { spawnHealNum(healed); playSound('heal', 0.6, 1.0); }
       continue;
     }
     if (dist < ATTRACT_DIST_HP) hp.attracting = true;
