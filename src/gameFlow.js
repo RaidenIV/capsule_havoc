@@ -8,6 +8,7 @@ import { spawnEnemyAtEdge, removeCSS2DFromGroup } from './enemies.js';
 import { destroyOrbitBullets, syncOrbitBullets } from './weapons.js';
 import { _particleMeshPool } from './particles.js';
 import { startMusic, stopMusic, pauseMusic, resumeMusic } from './audio.js';
+import { recordRun } from './ui/highScores.js';
 
 export { pauseMusic, resumeMusic }; // re-export so panel/index.js can use them
 
@@ -18,43 +19,6 @@ const gameOverEl   = document.getElementById('game-over');
 const finalStatsEl = document.getElementById('final-stats');
 const countdownEl  = document.getElementById('countdown');
 const countdownNum = document.getElementById('countdown-num');
-
-const HIGH_SCORE_KEY = 'capsule_havoc_high_scores_v1';
-
-function safeParseJSON(str, fallback) {
-  try { return JSON.parse(str); } catch { return fallback; }
-}
-
-export function computeScore() {
-  // Simple, deterministic: kills are king; coins matter; time survived adds a smaller bonus.
-  const timeBonus = Math.floor(state.elapsed);
-  return Math.max(0, Math.floor(state.kills * 100 + state.coins * 10 + timeBonus));
-}
-
-export function getHighScores() {
-  const arr = safeParseJSON(localStorage.getItem(HIGH_SCORE_KEY) || '[]', []);
-  return Array.isArray(arr) ? arr : [];
-}
-
-export function clearHighScores() {
-  localStorage.removeItem(HIGH_SCORE_KEY);
-}
-
-export function recordHighScore(resultLabel) {
-  const entry = {
-    score: computeScore(),
-    kills: state.kills,
-    coins: state.coins,
-    time: Math.floor(state.elapsed),
-    result: resultLabel,
-    ts: Date.now()
-  };
-
-  const list = getHighScores();
-  list.push(entry);
-  list.sort((a,b) => b.score - a.score || b.ts - a.ts);
-  localStorage.setItem(HIGH_SCORE_KEY, JSON.stringify(list.slice(0, 10)));
-}
 
 export function formatTime(secs) {
   const m = Math.floor(secs / 60).toString().padStart(2, '0');
@@ -105,25 +69,26 @@ export function startCountdown(onDone) {
 export function triggerGameOver() {
   state.gameOver = true;
   stopMusic();
-  recordHighScore('DESTROYED');
   finalStatsEl.textContent = `${formatTime(state.elapsed)} — ${state.kills} destroyed — ${state.coins} coins`;
+  recordRun({ kills: state.kills, elapsed: state.elapsed, coins: state.coins, victory: false });
   gameOverEl.classList.add('show');
 }
 
 export function triggerVictory() {
   state.gameOver = true;
   stopMusic();
-  recordHighScore('VICTORY');
   const h1 = document.querySelector('#game-over h1');
   h1.textContent  = 'VICTORY';
   h1.style.color  = '#ffe066';
   h1.style.textShadow = '0 0 60px rgba(255,224,102,0.9)';
   finalStatsEl.textContent = `All 100 enemies defeated! ${formatTime(state.elapsed)} — ${state.coins} coins`;
+  recordRun({ kills: state.kills, elapsed: state.elapsed, coins: state.coins, victory: true });
   gameOverEl.classList.add('show');
 }
 
 // ── Full restart ──────────────────────────────────────────────────────────────
 export function restartGame(opts = {}) {
+  const startCountdownNow = (opts.startCountdown !== false);
   state.gameSession++;
 
   state.enemies.forEach(e => { removeCSS2DFromGroup(e.grp); scene.remove(e.grp); });
@@ -185,11 +150,5 @@ export function restartGame(opts = {}) {
     for (let i = 0; i < 20; i++) spawnEnemyAtEdge();
   }
 
-  if (opts.startCountdown === false) {
-    // show player UI immediately (used by menu flows)
-    playerMesh.visible = true; hbObj.visible = true; dashBarObj.visible = true;
-    startMusic();
-  } else {
-    startCountdown();
-  }
+  if (startCountdownNow) startCountdown();
 }
