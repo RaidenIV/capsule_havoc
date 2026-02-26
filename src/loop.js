@@ -1,6 +1,6 @@
 // ─── loop.js ──────────────────────────────────────────────────────────────────
 import * as THREE from 'three';
-import { renderer, camera, labelRenderer } from './renderer.js';
+import { renderer, scene, camera, labelRenderer } from './renderer.js';
 import { renderBloom, consumeExplBloomDirty } from './bloom.js';
 import { state } from './state.js';
 import { PLAYER_MAX_HP } from './constants.js';
