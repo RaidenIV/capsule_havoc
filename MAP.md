@@ -4,118 +4,24 @@
 
 ```
 capsule-havoc/
-├── index.html
-│   └─ HTML shell + importmap + top-level UI mount points.
-│      Contains the menu screen markup (Start / High Scores / Settings) and the game HUD containers.
-│
+├── index.html                 ← HTML shell + menu/game screens
 ├── styles/
-│   └── main.css
-│       └─ All CSS for the project: layout, HUD, overlays, control panel styling, and menu screens.
-│          Includes “screen mode” rules (menu vs playing), z-index layering, and responsive tweaks.
-│
+│   └── main.css               ← All styling (menu + HUD + panel)
 └── src/
-    ├── main.js
-    │   └─ App entry point. Initializes subsystems, wires modules together, and controls boot flow.
-    │      In v3: starts in Menu mode and only begins a run after Start is clicked.
-    │
-    ├── constants.js
-    │   └─ Compile-time tuning constants: sizes, speeds, timings, spawn limits, damage scalars,
-    │      chunk/map parameters, and other fixed configuration values.
-    │
-    ├── state.js
-    │   └─ Single mutable runtime state container shared across modules:
-    │      game flags (paused/gameOver/victory), timers, score, player/enemy arrays,
-    │      UI mode (menu/playing), and references to key scene objects.
-    │
-    ├── renderer.js
-    │   └─ Three.js renderer setup: WebGLRenderer, camera, scene, resize handling,
-    │      optional CSS2D renderer, environment/background configuration.
-    │
-    ├── bloom.js
-    │   └─ Custom post-processing bloom pipeline (Gaussian, multi-layer).
-    │      Owns bloom passes, thresholds/strength, and per-layer composition.
-    │
-    ├── lighting.js
-    │   └─ Scene lighting definitions + updates: key/fill/rim lights,
-    │      animated orbit lights, and any lighting-related runtime sync.
-    │
-    ├── terrain.js
-    │   └─ Procedural map/arena generation: chunk creation, props placement,
-    │      collider generation, LOS helpers, steering/avoidance data used by AI.
-    │
-    ├── materials.js
-    │   └─ Centralized materials + geometries: capsule/enemy meshes, floor/ground material,
-    │      emissive/bloom-related material parameters, and sync helpers (e.g., syncEnemyMats).
-    │
-    ├── player.js
-    │   └─ Player entity implementation: mesh creation, movement/dash logic,
-    │      health/dash UI bars, dash ghost visuals, and per-frame player updates.
-    │
-    ├── enemies.js
-    │   └─ Enemy lifecycle: spawn logic, stagger rules, movement/steering toward player,
-    │      enemy shooting, hit/kill handling, and killEnemy() side effects (drops/score/etc.).
-    │
-    ├── weapons.js
-    │   └─ Weapon system: auto-shoot controller, player bullets, orbit bullets,
-    │      enemy bullets, projectile pooling/cleanup, and weapon-specific tuning hooks.
-    │
-    ├── pickups.js
-    │   └─ Pickup entities (coins/health packs): spawn rules, magnet/attract behavior,
-    │      collision collection, and applying rewards (HP/score/xp).
-    │
-    ├── particles.js
-    │   └─ Explosion/impact particle pool: spawn bursts, update particles each frame,
-    │      and manage recycling (performance-friendly particle reuse).
-    │
-    ├── damageNumbers.js
-    │   └─ Floating combat text: damage/heal numbers rendered as canvas sprites,
-    │      pooling, animation (rise/fade), and spawning helpers.
-    │
-    ├── xp.js
-    │   └─ XP/level progression system: XP gain, level-ups, accessors for weapon/enemy configs,
-    │      and scaling rules tied to difficulty progression.
-    │
-    ├── input.js
-    │   └─ Keyboard (and possibly pointer) input listeners: key down/up tracking,
-    │      exposing a queryable input state used by player/controls.
-    │
-    ├── loop.js
-    │   └─ Main tick() game loop: fixed/variable timestep handling, calling per-module updates,
-    │      rendering, and respecting pause/menu gating.
-    │
-    ├── gameFlow.js
-    │   └─ High-level run flow: countdown, start/end transitions, victory/gameover triggers,
-    │      restartGame(), and run finalization (including high score recording in v3).
-    │
-    ├── audio.js
-    │   └─ Audio system: music + SFX routing, volume/mute control functions,
-    │      persistence hooks used by Settings, and any unlock/resume logic for web audio.
-    │
-    ├── panel/
+    ├── main.js                ← App bootstrap; starts in menu, starts game on Start
+    ├── state.js               ← Shared runtime state (incl. uiMode)
+    ├── loop.js                ← Main game loop (update + render)
+    ├── gameFlow.js            ← Countdown, game over/victory, restart, score finalization
+    ├── audio.js               ← Music/SFX + volume/mute controls
+    ├── ui/                    ← Menu system (modular)
+    │   ├── menu.js            ← Navigation + Start button logic
+    │   ├── scores.js          ← High Scores screen UI
+    │   ├── highScores.js      ← High score storage (localStorage)
+    │   ├── settings.js        ← Audio settings screen UI
+    │   └── storage.js         ← localStorage helpers
+    ├── panel/                 ← In-game dev/tuning panel
     │   └── index.js
-    │       └─ In-game control panel UI: open/close, tabs, sliders, real-time sync into materials,
-    │          lighting/bloom controls, reset/export/import JSON, and other dev-tuning controls.
-    │
-    └── ui/
-        ├── menu.js
-        │   └─ Menu screen controller (Start / High Scores / Settings navigation),
-        │      drives mode switching between menu screens and gameplay.
-        │
-        ├── scores.js
-        │   └─ High Scores screen renderer: builds the list UI, formats entries,
-        │      handles Back / Clear actions via highScores.js.
-        │
-        ├── highScores.js
-        │   └─ High score persistence: addScore(), getScores(), clearScores(),
-        │      sorting and truncation rules, localStorage storage key management.
-        │
-        ├── settings.js
-        │   └─ Settings screen logic: binds UI inputs to audio.js (mute/music/sfx),
-        │      loads/saves settings via storage.js and updates live audio state.
-        │
-        └── storage.js
-            └─ Lightweight JSON localStorage helpers: get/set with defaults,
-               schema-safe parsing, and simple namespacing for keys.
+    └── (game modules…)        ← renderer, terrain, player, enemies, weapons, etc.
 ```
 
 ---
