@@ -129,54 +129,78 @@ export function consumeExplBloomDirty() {
   _explBloomDirty = false;
 }
 
-// ── Helper: one Gaussian blur pass (H then V, repeated iterations times) ─────
-function gaussianBlur(srcTarget, pingA, pingB, iterations = 3) {
-  for (let i = 0; i < iterations; i++) {
-    blurMat.uniforms.tDiffuse.value = i === 0 ? srcTarget.texture : rtPingB.texture;
-    blurMat.uniforms.uDir.value.set(1, 0);
-    fsPass(blurMat, pingA);
-    blurMat.uniforms.tDiffuse.value = pingA.texture;
-    blurMat.uniforms.uDir.value.set(0, 1);
-    fsPass(blurMat, pingB);
-  }
-  return pingB;
-}
+// Black 1×1 fallback texture used when a bloom layer is disabled
+const nullTex = new THREE.DataTexture(new Uint8Array([0, 0, 0, 255]), 1, 1);
+nullTex.needsUpdate = true;
+compositeMat.uniforms.tBloomExpl.value = nullTex; // safe default before first explosion
 
 // ── Main render function — called once per tick ───────────────────────────────
 export function renderBloom() {
-  // 1) Full scene → rtScene
+  // 1) Full scene → rtScene (layer 0 only)
+  camera.layers.set(0);
   renderer.setRenderTarget(rtScene);
   renderer.clear();
-  camera.layers.set(0);
   renderer.render(scene, camera);
 
-  // 2) Bullet-only pass (layer 1)
+  // 2) Bullet bloom (layer 1)
   if (bulletBloom.enabled) {
+    camera.layers.set(1);
     renderer.setRenderTarget(rtBulletScene);
     renderer.clear();
-    camera.layers.set(1);
     renderer.render(scene, camera);
-    threshMat.uniforms.tDiffuse.value = rtBulletScene.texture;
+
+    threshMat.uniforms.tDiffuse.value  = rtBulletScene.texture;
     threshMat.uniforms.threshold.value = bulletBloom.threshold;
     fsPass(threshMat, rtBulletBright);
-    gaussianBlur(rtBulletBright, rtBulletPingA, rtBulletPingB);
+
+    blurMat.uniforms.uTexelSize.value.set(1 / BW, 1 / BH);
+    for (let i = 0; i < 3; i++) {
+      blurMat.uniforms.tDiffuse.value = i === 0 ? rtBulletBright.texture : rtBulletPingB.texture;
+      blurMat.uniforms.uDir.value.set(1, 0);
+      fsPass(blurMat, rtBulletPingA);
+      blurMat.uniforms.tDiffuse.value = rtBulletPingA.texture;
+      blurMat.uniforms.uDir.value.set(0, 1);
+      fsPass(blurMat, rtBulletPingB);
+    }
+
+    compositeMat.uniforms.bulletStrength.value = bulletBloom.strength;
+    compositeMat.uniforms.tBloomBullet.value   = rtBulletPingB.texture;
+    camera.layers.set(0);
+  } else {
+    compositeMat.uniforms.tBloomBullet.value   = nullTex;
+    compositeMat.uniforms.bulletStrength.value = 0.0;
   }
 
   // 3) Explosion / dash layer (layer 2)
+  camera.layers.set(2);
   renderer.setRenderTarget(rtExplScene);
   renderer.clear();
-  camera.layers.set(2);
   renderer.render(scene, camera);
-  threshMat.uniforms.tDiffuse.value = rtExplScene.texture;
+
+  threshMat.uniforms.tDiffuse.value  = rtExplScene.texture;
   threshMat.uniforms.threshold.value = _activeExplThreshold;
   fsPass(threshMat, rtExplBright);
-  gaussianBlur(rtExplBright, rtExplPingA, rtExplPingB);
 
-  // 4) Global bloom (layer 0 = full scene already in rtScene)
+  blurMat.uniforms.uTexelSize.value.set(1 / BW, 1 / BH);
+  for (let i = 0; i < 3; i++) {
+    blurMat.uniforms.tDiffuse.value = i === 0 ? rtExplBright.texture : rtExplPingB.texture;
+    blurMat.uniforms.uDir.value.set(1, 0);
+    fsPass(blurMat, rtExplPingA);
+    blurMat.uniforms.tDiffuse.value = rtExplPingA.texture;
+    blurMat.uniforms.uDir.value.set(0, 1);
+    fsPass(blurMat, rtExplPingB);
+  }
+
+  compositeMat.uniforms.tBloomExpl.value  = rtExplPingB.texture;
+  compositeMat.uniforms.explStrength.value = _activeExplStrength;
+  camera.layers.set(0);
+
+  // 4) Global bloom (from rtScene, layer 0)
   threshMat.uniforms.tDiffuse.value  = rtScene.texture;
   threshMat.uniforms.threshold.value = globalBloom.threshold;
   fsPass(threshMat, rtBright);
-  // Reuse rtPingA / rtPingB for global blur (after bullet pass is done)
+
+  blurMat.uniforms.uTexelSize.value.set(1 / BW, 1 / BH);
   for (let i = 0; i < 3; i++) {
     blurMat.uniforms.tDiffuse.value = i === 0 ? rtBright.texture : rtPingB.texture;
     blurMat.uniforms.uDir.value.set(1, 0);
@@ -187,11 +211,9 @@ export function renderBloom() {
   }
 
   // 5) Composite to screen
-  compositeMat.uniforms.tScene.value       = rtScene.texture;
-  compositeMat.uniforms.tBloom.value       = rtPingB.texture;
-  compositeMat.uniforms.tBloomBullet.value = bulletBloom.enabled ? rtBulletPingB.texture : rtBulletScene.texture;
-  compositeMat.uniforms.tBloomExpl.value   = rtExplPingB.texture;
-  compositeMat.uniforms.strength.value     = globalBloom.strength;
+  compositeMat.uniforms.tScene.value   = rtScene.texture;
+  compositeMat.uniforms.tBloom.value   = rtPingB.texture;
+  compositeMat.uniforms.strength.value = globalBloom.strength;
   renderer.setRenderTarget(null);
   renderer.clear();
   fsPass(compositeMat, null);
