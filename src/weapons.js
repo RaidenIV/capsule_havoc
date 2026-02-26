@@ -20,6 +20,7 @@ function makeOrbitMat(color) {
   return new THREE.MeshPhysicalMaterial({
     color, emissive: color, emissiveIntensity: 2.0,
     metalness: 1.0, roughness: 0.0, clearcoat: 1.0, clearcoatRoughness: 0.0,
+    depthTest: false, depthWrite: false,
   });
 }
 
