@@ -240,6 +240,8 @@ export function updateEnemies(delta, worldDelta, elapsed) {
       const push = (minD - dist) * 0.55;
       e.grp.position.x -= nx * push; e.grp.position.z -= nz * push;
       playerGroup.position.x += nx * push; playerGroup.position.z += nz * push;
+      // Play hit sound on contact (throttled via contactDmgTimer, invincible or not)
+      if (state.contactDmgTimer <= 0) playSound('player_hit', 0.6, 0.95 + Math.random() * 0.1);
       if (!state.invincible) {
         const dmg = ENEMY_CONTACT_DPS * worldDelta;
         state.playerHP -= dmg;
@@ -252,6 +254,10 @@ export function updateEnemies(delta, worldDelta, elapsed) {
         }
         updateHealthBar();
         if (state.playerHP <= 0) return 'DEAD';
+      } else {
+        // Still tick the timer when invincible so sound stays throttled
+        state.contactDmgTimer -= worldDelta;
+        if (state.contactDmgTimer <= 0) state.contactDmgTimer = 0.35;
       }
     }
   }
