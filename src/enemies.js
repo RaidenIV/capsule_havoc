@@ -145,6 +145,7 @@ export function killEnemy(j) {
 
 // ── Update ────────────────────────────────────────────────────────────────────
 export function updateEnemies(delta, worldDelta, elapsed) {
+  let contactThisFrame = false;
   for (let i = state.enemies.length - 1; i >= 0; i--) {
     const e = state.enemies[i];
     if (e.dead) continue;
@@ -236,6 +237,7 @@ export function updateEnemies(delta, worldDelta, elapsed) {
     const er = enemyGeoParams.radius * (e.scaleMult || 1) * 1.02;
     const minD = pr + er;
     if (dist < minD && dist > 1e-6) {
+      contactThisFrame = true;
       const nx = dx/dist, nz = dz/dist;
       const push = (minD - dist) * 0.55;
       e.grp.position.x -= nx * push; e.grp.position.z -= nz * push;
@@ -261,6 +263,10 @@ export function updateEnemies(delta, worldDelta, elapsed) {
       }
     }
   }
+
+  // Reset contact sound timer when player is not touching any enemy,
+  // so the sound plays immediately on the next contact
+  if (!contactThisFrame) state.contactDmgTimer = 0;
 
   // ── Enemy/enemy separation ─────────────────────────────────────────────────
   for (let i = 0; i < state.enemies.length; i++) {
