@@ -34,9 +34,12 @@ export function startCountdown(onDone) {
   const hudEls = ['ui', 'coin-hud', 'xp-hud'].map(id => document.getElementById(id));
   hudEls.forEach(el => { if (el) el.style.visibility = 'hidden'; });
 
-  // Hide enemies during countdown
-  state.enemies.forEach(e => { e.grp.visible = false; });
+  // Hide any bullets already in scene
+  state.bullets.forEach(b => { b.mesh.visible = false; });
+  state.orbitRings.forEach(r => r.meshes.forEach(m => { m.visible = false; }));
 
+  // Hide enemies
+  state.enemies.forEach(e => { e.grp.visible = false; });
   const steps = [
     { text: '3',       size: '120px', color: '#00e5ff', shadow: '0 0 40px rgba(0,229,255,0.8)' },
     { text: '2',       size: '120px', color: '#00e5ff', shadow: '0 0 40px rgba(0,229,255,0.8)' },
@@ -66,8 +69,12 @@ export function startCountdown(onDone) {
         countdownEl.classList.remove('show');
         state.paused = false;
         playerMesh.visible = hbObj.visible = dashBarObj.visible = true;
-        // Restore HUD and enemies
+        // Restore HUD
         hudEls.forEach(el => { if (el) el.style.visibility = ''; });
+        // Restore bullets and orbit rings
+        state.bullets.forEach(b => { b.mesh.visible = true; });
+        state.orbitRings.forEach(r => r.meshes.forEach(m => { m.visible = true; }));
+        // Restore enemies
         state.enemies.forEach(e => { e.grp.visible = true; });
         startMusic();
         if (onDone) onDone();
