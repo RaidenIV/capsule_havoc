@@ -153,10 +153,6 @@ canvas { display: block; }
   background: rgba(0,229,255,0.1); border-color: rgba(0,229,255,0.3); color: #00e5ff;
 }
 .pause-action-btn.resume:hover { background: rgba(0,229,255,0.18); box-shadow: 0 0 20px rgba(0,229,255,0.15); }
-.pause-action-btn.restart {
-  background: rgba(255,255,255,0.04); border-color: rgba(255,255,255,0.1); color: rgba(255,255,255,0.6);
-}
-.pause-action-btn.restart:hover { background: rgba(255,255,255,0.09); color: #fff; }
 .pause-action-btn.settings {
   background: rgba(255,255,255,0.04); border-color: rgba(255,255,255,0.1); color: rgba(255,255,255,0.6);
 }
