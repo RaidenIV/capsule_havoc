@@ -12,44 +12,77 @@
 <body class="mode-menu">
 
 <div id="menu-screen" class="menu-screen show">
-  <div class="menu-card">
-    <div class="menu-title">CAPSULE HAVOC</div>
-    <div class="menu-sub">Bullet Heaven Prototype</div>
 
-    <div class="menu-page active" data-page="main">
-      <button class="menu-btn primary" id="menu-start">START</button>
-      <button class="menu-btn" id="menu-scores">HIGH SCORES</button>
-      <button class="menu-btn" id="menu-settings">SETTINGS</button>
-      <div class="menu-muted">WASD · SHIFT DASH · TAB SETTINGS</div>
-    </div>
+  <!-- animated background layers -->
+  <div class="menu-bg-grid"></div>
+  <div class="menu-bg-vignette"></div>
+  <div class="menu-orb menu-orb-1"></div>
+  <div class="menu-orb menu-orb-2"></div>
 
-    <div class="menu-page" data-page="scores">
-      <div class="menu-hdr-row"><div class="menu-hdr">HIGH SCORES</div></div>
-      <div id="scores-list" class="scores-list"></div>
-      <div class="menu-row">
-        <button class="menu-btn small" id="menu-back-scores">BACK</button>
-        <button class="menu-btn small danger" id="menu-clear-scores">CLEAR</button>
+  <div class="menu-layout">
+
+    <!-- LEFT — branding -->
+    <div class="menu-brand">
+      <div class="menu-eyebrow">▶ BULLET HEAVEN</div>
+      <h1 class="menu-title">CAPSULE<br>HAVOC</h1>
+      <div class="menu-tagline">Survive. Level up. Dominate.</div>
+      <div class="menu-controls-hint">
+        <span>WASD</span> Move &nbsp;·&nbsp;
+        <span>SHIFT</span> Dash &nbsp;·&nbsp;
+        <span>TAB</span> Settings
       </div>
     </div>
 
-    <div class="menu-page" data-page="settings">
-      <div class="menu-hdr-row"><div class="menu-hdr">AUDIO</div></div>
-      <div class="menu-form">
-        <label class="menu-check"><input type="checkbox" id="menu-mute"> <span>Mute</span></label>
-        <div class="menu-field">
-          <div class="menu-field-row"><span>Music</span><span id="menu-music-val">40%</span></div>
-          <input type="range" id="menu-music" min="0" max="1" step="0.01" value="0.4">
+    <!-- RIGHT — pages -->
+    <div class="menu-panel">
+
+      <div class="menu-page active" data-page="main">
+        <button class="menu-btn primary" id="menu-start">
+          <span class="menu-btn-icon">▶</span> START GAME
+        </button>
+        <button class="menu-btn" id="menu-scores">
+          <span class="menu-btn-icon">◈</span> HIGH SCORES
+        </button>
+        <button class="menu-btn" id="menu-settings">
+          <span class="menu-btn-icon">◎</span> SETTINGS
+        </button>
+        <div class="menu-version">v0.3 · PROTOTYPE</div>
+      </div>
+
+      <div class="menu-page" data-page="scores">
+        <div class="menu-page-hdr">
+          <div class="menu-page-hdr-title">HIGH SCORES</div>
         </div>
-        <div class="menu-field">
-          <div class="menu-field-row"><span>SFX</span><span id="menu-sfx-val">100%</span></div>
-          <input type="range" id="menu-sfx" min="0" max="1" step="0.01" value="1.0">
+        <div id="scores-list" class="scores-list"></div>
+        <div class="menu-row">
+          <button class="menu-btn small" id="menu-back-scores">← BACK</button>
+          <button class="menu-btn small danger" id="menu-clear-scores">✕ CLEAR</button>
         </div>
       </div>
-      <div class="menu-row">
-        <button class="menu-btn small" id="menu-back-settings">BACK</button>
+
+      <div class="menu-page" data-page="settings">
+        <div class="menu-page-hdr">
+          <div class="menu-page-hdr-title">SETTINGS</div>
+        </div>
+        <div class="menu-section-label">AUDIO</div>
+        <div class="menu-form">
+          <label class="menu-check"><input type="checkbox" id="menu-mute"> <span>Mute All</span></label>
+          <div class="menu-field">
+            <div class="menu-field-row"><span>Music Volume</span><span id="menu-music-val">40%</span></div>
+            <input type="range" id="menu-music" min="0" max="1" step="0.01" value="0.4">
+          </div>
+          <div class="menu-field">
+            <div class="menu-field-row"><span>SFX Volume</span><span id="menu-sfx-val">100%</span></div>
+            <input type="range" id="menu-sfx" min="0" max="1" step="0.01" value="1.0">
+          </div>
+        </div>
+        <div class="menu-row">
+          <button class="menu-btn small" id="menu-back-settings">← BACK</button>
+        </div>
       </div>
-    </div>
-  </div>
+
+    </div><!-- /menu-panel -->
+  </div><!-- /menu-layout -->
 </div>
 
 
