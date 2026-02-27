@@ -56,19 +56,20 @@ updateXP(0);
 state.uiMode = 'menu';
 state.paused = true;
 
-// Keep menu hidden until splash finishes
+// Keep menu hidden until splash finishes (if splash element exists)
 const menuScreenEl = document.getElementById('menu-screen');
-menuScreenEl.style.visibility = 'hidden';
+const splashEl     = document.getElementById('splash-screen');
 
-// Splash: fade in (0.6s) + hold = 2s total visible, then fade out (0.5s)
-const splashEl = document.getElementById('splash-screen');
-setTimeout(() => {
-  splashEl.classList.add('fade-out');
-  splashEl.addEventListener('animationend', () => {
-    splashEl.remove();
-    menuScreenEl.style.visibility = '';
-  }, { once: true });
-}, 2000);
+if (splashEl && menuScreenEl) {
+  menuScreenEl.style.visibility = 'hidden';
+  setTimeout(() => {
+    splashEl.classList.add('fade-out');
+    splashEl.addEventListener('animationend', () => {
+      splashEl.remove();
+      menuScreenEl.style.visibility = '';
+    }, { once: true });
+  }, 2000);
+}
 
 const menuUI = initMenuUI({
   onStart: async () => {
