@@ -41,27 +41,26 @@ export function startCountdown(onDone) {
   playSound('countdown', 0.9, 1.0); // play once when countdown begins
 
   function showStep() {
-    const s = steps[idx];
-    countdownNum.style.fontSize   = s.size;
-    countdownNum.style.color      = s.color;
-    countdownNum.style.textShadow = s.shadow;
-    countdownNum.textContent      = s.text;
-    countdownNum.style.animation  = 'none';
-    void countdownNum.offsetWidth;
-    countdownNum.style.animation  = '';
-    idx++;
-    const delay = s.text === 'SURVIVE' ? 900 : 800;
-    if (idx < steps.length) {
-      setTimeout(showStep, delay);
-    } else {
-      setTimeout(() => {
-        countdownEl.classList.remove('show');
-        state.paused = false;
-        playerMesh.visible = hbObj.visible = dashBarObj.visible = true;
-        startMusic();
-        if (onDone) onDone();
-      }, delay);
+    if (idx >= steps.length) {
+      countdownEl.classList.remove('show');
+      state.paused = false;
+      playerMesh.visible = hbObj.visible = dashBarObj.visible = true;
+      startMusic();
+      if (onDone) onDone();
+      return;
     }
+    const s = steps[idx];
+    idx++;
+    // Each step: 80ms hidden + 920ms visible = exactly 1s. 4 steps = 4s total.
+    countdownNum.style.opacity = '0';
+    setTimeout(() => {
+      countdownNum.style.fontSize   = s.size;
+      countdownNum.style.color      = s.color;
+      countdownNum.style.textShadow = s.shadow;
+      countdownNum.textContent      = s.text;
+      countdownNum.style.opacity    = '1';
+      setTimeout(showStep, 920);
+    }, 80);
   }
   showStep();
 }
