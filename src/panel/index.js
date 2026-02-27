@@ -202,49 +202,52 @@ g('pause-btn').addEventListener('click', togglePause);
 // ── Pause menu controls ───────────────────────────────────────────────────────
 function pct(v) { return Math.round(v * 100) + '%'; }
 
-// Drives the colored fill on a range input by updating its background gradient
+// Drives the coloured fill on a range input via background gradient
 function fillRange(el, v) {
   const p = (Math.max(0, Math.min(1, v)) * 100).toFixed(1);
-  el.style.background = `linear-gradient(to right, #00e5ff ${p}%, rgba(255,255,255,0.1) ${p}%)`;
+  el.style.background =
+    `linear-gradient(to right, #00e5ff ${p}%, rgba(255,255,255,0.1) ${p}%)`;
+}
+
+// Show/hide the two pages inside the pause menu
+function showPausePage(name) {
+  g('pause-page-main')    ?.classList.toggle('active', name === 'main');
+  g('pause-page-settings')?.classList.toggle('active', name === 'settings');
+  const title = g('pause-menu-title');
+  if (title) title.textContent = name === 'settings' ? 'SETTINGS' : 'PAUSED';
 }
 
 function syncPauseMenuFromEngine() {
+  // Always return to main page when the menu opens
+  showPausePage('main');
+
   const music = g('pm-music');
-  if (music) {
-    const v = getMusicVolume();
-    music.value = v; fillRange(music, v);
-    g('pm-music-val').textContent = pct(v);
-  }
+  if (music) { const v = getMusicVolume(); music.value = v; fillRange(music, v); g('pm-music-val').textContent = pct(v); }
   const sfx = g('pm-sfx');
-  if (sfx) {
-    const v = getSfxVolume();
-    sfx.value = v; fillRange(sfx, v);
-    g('pm-sfx-val').textContent = pct(v);
-  }
+  if (sfx)   { const v = getSfxVolume();   sfx.value   = v; fillRange(sfx,   v); g('pm-sfx-val').textContent   = pct(v); }
   document.querySelectorAll('.sfx-range').forEach(el => {
-    const name = el.dataset.sfx;
-    const v = getSoundVolume(name);
+    const v = getSoundVolume(el.dataset.sfx);
     el.value = v; fillRange(el, v);
-    const valEl = g('pm-sfx-' + name + '-val');
+    const valEl = g('pm-sfx-' + el.dataset.sfx + '-val');
     if (valEl) valEl.textContent = pct(v);
   });
 }
 
-// Master music slider
+// Master music
 g('pm-music')?.addEventListener('input', () => {
   const v = parseFloat(g('pm-music').value);
   setMusicVolume(v); fillRange(g('pm-music'), v);
-  g('pm-music-val').textContent = pct(getMusicVolume());
+  g('pm-music-val').textContent = pct(v);
 });
 
-// Master SFX slider — scales all individual SFX together
+// Master SFX
 g('pm-sfx')?.addEventListener('input', () => {
   const v = parseFloat(g('pm-sfx').value);
   setSfxVolume(v); fillRange(g('pm-sfx'), v);
-  g('pm-sfx-val').textContent = pct(getSfxVolume());
+  g('pm-sfx-val').textContent = pct(v);
 });
 
-// Individual SFX sliders
+// Individual SFX
 document.querySelectorAll('.sfx-range').forEach(el => {
   el.addEventListener('input', () => {
     const v = parseFloat(el.value);
@@ -254,10 +257,16 @@ document.querySelectorAll('.sfx-range').forEach(el => {
   });
 });
 
-// Resume button inside pause menu
+// Resume
 g('pause-resume-btn')?.addEventListener('click', () => {
   if (state.paused) togglePause();
 });
+
+// Settings page
+g('pause-settings-btn')?.addEventListener('click', () => showPausePage('settings'));
+
+// Back to main page
+g('pause-back-btn')?.addEventListener('click', () => showPausePage('main'));
 
 // Quit to main menu
 g('pause-quit-btn')?.addEventListener('click', () => {
