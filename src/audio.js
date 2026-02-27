@@ -202,3 +202,76 @@ export function setMusicVolume(v) {
 export function getMuted()       { return muted; }
 export function getSfxVolume()   { return sfxVolume; }
 export function getMusicVolume() { return musicVolume; }
+
+
+// ── Menu audio UI wiring (main menu) ───────────────────────────────────────────
+// Safe to call even if the menu isn't present (e.g., during gameplay).
+function clamp01(v){ return Math.max(0, Math.min(1, v)); }
+function pct(v){ return Math.round(clamp01(v) * 100) + '%'; }
+
+function bindMenuAudioUI(){
+  const muteEl  = document.getElementById('menu-mute');
+  const mRange  = document.getElementById('menu-music');
+  const sRange  = document.getElementById('menu-sfx');
+  const mValEl  = document.getElementById('menu-music-val');
+  const sValEl  = document.getElementById('menu-sfx-val');
+  const mNum    = document.getElementById('menu-music-num');
+  const sNum    = document.getElementById('menu-sfx-num');
+
+  if (!muteEl && !mRange && !sRange) return;
+
+  const sync = () => {
+    if (muteEl) muteEl.checked = getMuted();
+    if (mRange) mRange.value = getMusicVolume();
+    if (sRange) sRange.value = getSfxVolume();
+    if (mValEl) mValEl.textContent = pct(getMusicVolume());
+    if (sValEl) sValEl.textContent = pct(getSfxVolume());
+    if (mNum) mNum.value = (+getMusicVolume()).toFixed(2);
+    if (sNum) sNum.value = (+getSfxVolume()).toFixed(2);
+  };
+
+  muteEl?.addEventListener('change', () => {
+    setMuted(!!muteEl.checked);
+    sync();
+  });
+
+  mRange?.addEventListener('input', () => {
+    const v = clamp01(parseFloat(mRange.value || '0'));
+    setMusicVolume(v);
+    if (mValEl) mValEl.textContent = pct(v);
+    if (mNum) mNum.value = (+v).toFixed(2);
+  });
+  mNum?.addEventListener('change', () => {
+    const v = clamp01(parseFloat(mNum.value || '0'));
+    if (mRange) {
+      mRange.value = v;
+      mRange.dispatchEvent(new Event('input', { bubbles: true }));
+    } else {
+      setMusicVolume(v);
+      if (mValEl) mValEl.textContent = pct(v);
+    }
+  });
+
+  sRange?.addEventListener('input', () => {
+    const v = clamp01(parseFloat(sRange.value || '0'));
+    setSfxVolume(v);
+    if (sValEl) sValEl.textContent = pct(v);
+    if (sNum) sNum.value = (+v).toFixed(2);
+  });
+  sNum?.addEventListener('change', () => {
+    const v = clamp01(parseFloat(sNum.value || '0'));
+    if (sRange) {
+      sRange.value = v;
+      sRange.dispatchEvent(new Event('input', { bubbles: true }));
+    } else {
+      setSfxVolume(v);
+      if (sValEl) sValEl.textContent = pct(v);
+    }
+  });
+
+  sync();
+}
+
+if (typeof document !== 'undefined') {
+  document.addEventListener('DOMContentLoaded', bindMenuAudioUI, { once: true });
+}
