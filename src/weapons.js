@@ -59,6 +59,7 @@ export function syncOrbitBullets() {
     for (let i = 0; i < def.count; i++) {
       const mesh = new THREE.Mesh(bulletGeo, makeOrbitMat(def.color));
       mesh.layers.enable(1);
+      mesh.renderOrder = 999;
       scene.add(mesh);
       meshes.push(mesh);
     }
