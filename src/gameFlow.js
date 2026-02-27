@@ -102,7 +102,7 @@ export function triggerVictory() {
   h1.textContent  = 'VICTORY';
   h1.style.color  = '#ffe066';
   h1.style.textShadow = '0 0 60px rgba(255,224,102,0.9)';
-  finalStatsEl.textContent = `All 100 enemies defeated! ${formatTime(state.elapsed)} — ${state.coins} coins`;
+  finalStatsEl.textContent = `All 10 waves cleared! ${formatTime(state.elapsed)} — ${state.coins} coins`;
   recordRun({ kills: state.kills, elapsed: state.elapsed, coins: state.coins, victory: true });
   gameOverEl.classList.add('show');
 }
@@ -167,9 +167,11 @@ export function restartGame(opts = {}) {
   if (h1) { h1.textContent = 'DESTROYED'; h1.style.color = ''; h1.style.textShadow = ''; }
   document.querySelectorAll('.lvl-cb').forEach(lb => lb.classList.remove('active'));
 
-  if (!opts.skipInitialSpawn) {
-    for (let i = 0; i < 20; i++) spawnEnemyAtEdge();
-  }
+  // Wave system spawns enemies via the main loop.
+  state.waveIndex = 1;
+  state.wavePhase = 'standard';
+  state.waveRemainingToSpawn = 0;
+  state.bossRemainingToSpawn = 0;
 
   if (startCountdownNow) startCountdown();
 }
