@@ -16,15 +16,39 @@ let _musicWanted = false; // true when music should be playing
 // ── Resume AudioContext after user gesture (required by browsers) ─────────────
 export function resumeAudioContext() {
   if (ctx.state === 'suspended') ctx.resume();
-    // If splash audio was blocked on load, retry on first user gesture
-  if (window.__splashAudioPending && window.__splashAudio) {
-    window.__splashAudio.play().catch(() => {});
-    window.__splashAudioPending = false;
-  }
-// If music was requested before a user gesture, play it now
   if (_musicWanted && !muted && musicEl && musicEl.paused) {
     musicEl.play().catch(() => {});
   }
+}
+
+// ── Splash sound — plays as soon as AudioContext is running ───────────────────
+export function playSplashSound() {
+  let played = false;
+
+  function tryPlay() {
+    if (played) return;
+    const buf = sounds['splash'];
+    if (!buf) return; // not loaded yet — will retry via statechange
+    if (ctx.state !== 'running') return; // still locked — will retry via statechange
+    played = true;
+    const src  = ctx.createBufferSource();
+    const gain = ctx.createGain();
+    src.buffer = buf;
+    gain.gain.value = 1.0;
+    src.connect(gain);
+    gain.connect(ctx.destination);
+    src.start();
+  }
+
+  // Try immediately (works if AudioContext already running, e.g. returning visitor)
+  tryPlay();
+
+  // Also retry the moment AudioContext unlocks (first user gesture)
+  ctx.addEventListener('statechange', function handler() {
+    if (played) { ctx.removeEventListener('statechange', handler); return; }
+    tryPlay();
+    if (played) ctx.removeEventListener('statechange', handler);
+  });
 }
 
 // Whenever the AudioContext transitions to 'running' (e.g. after any user gesture),
@@ -38,6 +62,7 @@ ctx.addEventListener('statechange', () => {
 // ── Load all SFX up front ─────────────────────────────────────────────────────
 export async function initAudio() {
   const sfxFiles = {
+    splash:       './assets/sfx/splash.wav',
     countdown:    './assets/sfx/countdown.wav',
     shoot:        './assets/sfx/shoot.wav',
     player_hit:   './assets/sfx/player_hit.wav',
