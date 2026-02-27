@@ -115,7 +115,8 @@ export function updatePickups(worldDelta, playerLevel, elapsed) {
       const healed = Math.min(HEALTH_RESTORE, PLAYER_MAX_HP - state.playerHP);
       state.playerHP = Math.min(PLAYER_MAX_HP, state.playerHP + HEALTH_RESTORE);
       updateHealthBar();
-      if (healed > 0) { spawnHealNum(healed); playSound('heal', 0.6, 1.0); }
+      playSound('heal', 0.6, 1.0);
+      if (healed > 0) spawnHealNum(healed);
       continue;
     }
     if (dist < ATTRACT_DIST_HP) hp.attracting = true;
