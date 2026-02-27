@@ -16,7 +16,12 @@ let _musicWanted = false; // true when music should be playing
 // ── Resume AudioContext after user gesture (required by browsers) ─────────────
 export function resumeAudioContext() {
   if (ctx.state === 'suspended') ctx.resume();
-  // If music was requested before a user gesture, play it now
+    // If splash audio was blocked on load, retry on first user gesture
+  if (window.__splashAudioPending && window.__splashAudio) {
+    window.__splashAudio.play().catch(() => {});
+    window.__splashAudioPending = false;
+  }
+// If music was requested before a user gesture, play it now
   if (_musicWanted && !muted && musicEl && musicEl.paused) {
     musicEl.play().catch(() => {});
   }
