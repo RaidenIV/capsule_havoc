@@ -4,7 +4,7 @@ import { state } from './state.js';
 
 // ── Geometry params (mutated by control panel) ────────────────────────────────
 export const playerGeoParams = { radius: 0.4,   length: 1.2,  capSegs: 8, radial: 16 };
-export const enemyGeoParams  = { radius: 0.4,   length: 1.2,  capSegs: 8, radial: 16 };
+export const enemyGeoParams  = { radius: playerGeoParams.radius * 0.75, length: playerGeoParams.length * 0.75, capSegs: 8, radial: 16 };
 export const bulletGeoParams = { radius: 0.045, length: 0.55, capSegs: 4, radial:  6 };
 
 // ── Geometries ────────────────────────────────────────────────────────────────
