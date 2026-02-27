@@ -20,6 +20,7 @@ function makeOrbitMat(color) {
   return new THREE.MeshPhysicalMaterial({
     color, emissive: color, emissiveIntensity: 2.0,
     metalness: 1.0, roughness: 0.0, clearcoat: 1.0, clearcoatRoughness: 0.0,
+    depthTest: true, depthWrite: true,
   });
 }
 
@@ -57,6 +58,7 @@ export function syncOrbitBullets() {
     const meshes = [];
     for (let i = 0; i < def.count; i++) {
       const mesh = new THREE.Mesh(bulletGeo, makeOrbitMat(def.color));
+      mesh.layers.enable(1);
       scene.add(mesh);
       meshes.push(mesh);
     }
@@ -78,6 +80,7 @@ export function shootBulletWave() {
     const vx = Math.cos(angle) * BULLET_SPEED;
     const vz = Math.sin(angle) * BULLET_SPEED;
     const mesh = new THREE.Mesh(bulletGeo, bulletMat);
+    mesh.layers.enable(1);
     _bulletDir.set(vx, 0, vz).normalize();
     _bulletQ.setFromUnitVectors(_bulletUp, _bulletDir);
     mesh.quaternion.copy(_bulletQ);
