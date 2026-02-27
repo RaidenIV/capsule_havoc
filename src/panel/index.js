@@ -257,7 +257,7 @@ g('pause-resume-btn')?.addEventListener('click', () => {
   if (state.paused) togglePause();
 });
 
-// Restart — unpause state cleanly then restart
+// Restart
 g('pause-restart-btn')?.addEventListener('click', () => {
   pauseEl.classList.remove('show');
   state.paused = false;
