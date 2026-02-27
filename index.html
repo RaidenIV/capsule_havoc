@@ -75,11 +75,23 @@
         <div class="menu-form">
           <label class="menu-check"><input type="checkbox" id="menu-mute"> <span>Mute All</span></label>
           <div class="menu-field">
-            <div class="menu-field-row"><span>Music Volume</span><span id="menu-music-val">40%</span></div>
+            <div class="menu-field-row">
+              <span>Music Volume</span>
+              <span class="menu-valwrap">
+                <span id="menu-music-val">40%</span>
+                <input type="number" class="menu-num" id="menu-music-num" min="0" max="1" step="0.01" value="0.40">
+              </span>
+            </div>
             <input type="range" id="menu-music" min="0" max="1" step="0.01" value="0.4">
           </div>
           <div class="menu-field">
-            <div class="menu-field-row"><span>SFX Volume</span><span id="menu-sfx-val">100%</span></div>
+            <div class="menu-field-row">
+              <span>SFX Volume</span>
+              <span class="menu-valwrap">
+                <span id="menu-sfx-val">100%</span>
+                <input type="number" class="menu-num" id="menu-sfx-num" min="0" max="1" step="0.01" value="1.00">
+              </span>
+            </div>
             <input type="range" id="menu-sfx" min="0" max="1" step="0.01" value="1.0">
           </div>
         </div>
@@ -142,44 +154,42 @@
 
       <!-- ── Page: Settings ── -->
       <div class="pause-page" id="pause-page-settings">
-
-        <div class="pause-settings-section">
-          <div class="pause-settings-section-label">MASTER</div>
-          <div class="pause-slider-row">
-            <span class="pause-slider-label">Master</span>
-            <input type="range" class="pause-range" id="pm-master" min="0" max="1" step="0.01" value="1.0">
-            <span class="pause-slider-val" id="pm-master-val">100%</span>
-          </div>
-        </div>
-
         <button class="pause-action-btn audio" id="pause-audio-btn">AUDIO</button>
 
         <div class="pause-settings-footer">
           <button class="pause-action-btn back" id="pause-back-btn">BACK</button>
         </div>
-
       </div><!-- /pause-page-settings -->
 
       <!-- ── Page: Audio ── -->
       <div class="pause-page" id="pause-page-audio">
 
         <div class="pause-settings-section">
-          <div class="pause-settings-section-label">INDIVIDUAL SFX</div>
-          <div class="pause-slider-row"><span class="pause-slider-label">Shoot</span>        <input type="range" class="pause-range sfx-range" id="pm-sfx-shoot"        data-sfx="shoot"        min="0" max="1" step="0.01" value="1"><span class="pause-slider-val" id="pm-sfx-shoot-val">100%</span></div>
-          <div class="pause-slider-row"><span class="pause-slider-label">Player Hit</span>   <input type="range" class="pause-range sfx-range" id="pm-sfx-player_hit"    data-sfx="player_hit"   min="0" max="1" step="0.01" value="1"><span class="pause-slider-val" id="pm-sfx-player_hit-val">100%</span></div>
-          <div class="pause-slider-row"><span class="pause-slider-label">Standard Hit</span> <input type="range" class="pause-range sfx-range" id="pm-sfx-standard_hit"  data-sfx="standard_hit" min="0" max="1" step="0.01" value="1"><span class="pause-slider-val" id="pm-sfx-standard_hit-val">100%</span></div>
-          <div class="pause-slider-row"><span class="pause-slider-label">Elite Hit</span>    <input type="range" class="pause-range sfx-range" id="pm-sfx-elite_hit"     data-sfx="elite_hit"    min="0" max="1" step="0.01" value="1"><span class="pause-slider-val" id="pm-sfx-elite_hit-val">100%</span></div>
-          <div class="pause-slider-row"><span class="pause-slider-label">Elite Shoot</span>  <input type="range" class="pause-range sfx-range" id="pm-sfx-elite_shoot"   data-sfx="elite_shoot"  min="0" max="1" step="0.01" value="1"><span class="pause-slider-val" id="pm-sfx-elite_shoot-val">100%</span></div>
-          <div class="pause-slider-row"><span class="pause-slider-label">Explode</span>      <input type="range" class="pause-range sfx-range" id="pm-sfx-explode"       data-sfx="explode"      min="0" max="1" step="0.01" value="1"><span class="pause-slider-val" id="pm-sfx-explode-val">100%</span></div>
-          <div class="pause-slider-row"><span class="pause-slider-label">Explode Elite</span><input type="range" class="pause-range sfx-range" id="pm-sfx-explodeElite"  data-sfx="explodeElite" min="0" max="1" step="0.01" value="1"><span class="pause-slider-val" id="pm-sfx-explodeElite-val">100%</span></div>
-          <div class="pause-slider-row"><span class="pause-slider-label">Coin</span>         <input type="range" class="pause-range sfx-range" id="pm-sfx-coin"          data-sfx="coin"         min="0" max="1" step="0.01" value="1"><span class="pause-slider-val" id="pm-sfx-coin-val">100%</span></div>
-          <div class="pause-slider-row"><span class="pause-slider-label">Heal</span>         <input type="range" class="pause-range sfx-range" id="pm-sfx-heal"          data-sfx="heal"         min="0" max="1" step="0.01" value="1"><span class="pause-slider-val" id="pm-sfx-heal-val">100%</span></div>
-          <div class="pause-slider-row"><span class="pause-slider-label">Level Up</span>     <input type="range" class="pause-range sfx-range" id="pm-sfx-levelup"       data-sfx="levelup"      min="0" max="1" step="0.01" value="1"><span class="pause-slider-val" id="pm-sfx-levelup-val">100%</span></div>
-          <div class="pause-slider-row"><span class="pause-slider-label">Dash</span>         <input type="range" class="pause-range sfx-range" id="pm-sfx-dash"          data-sfx="dash"         min="0" max="1" step="0.01" value="1"><span class="pause-slider-val" id="pm-sfx-dash-val">100%</span></div>
-          <div class="pause-slider-row"><span class="pause-slider-label">Countdown</span>    <input type="range" class="pause-range sfx-range" id="pm-sfx-countdown"     data-sfx="countdown"    min="0" max="1" step="0.01" value="1"><span class="pause-slider-val" id="pm-sfx-countdown-val">100%</span></div>
-          <div class="pause-slider-row"><span class="pause-slider-label">Game Over</span>    <input type="range" class="pause-range sfx-range" id="pm-sfx-gameover"      data-sfx="gameover"     min="0" max="1" step="0.01" value="1"><span class="pause-slider-val" id="pm-sfx-gameover-val">100%</span></div>
-          <div class="pause-slider-row"><span class="pause-slider-label">Victory</span>      <input type="range" class="pause-range sfx-range" id="pm-sfx-victory"       data-sfx="victory"      min="0" max="1" step="0.01" value="1"><span class="pause-slider-val" id="pm-sfx-victory-val">100%</span></div>
+          <div class="pause-settings-section-label">AUDIO</div>
+
+          <div class="pause-slider-row">
+            <span class="pause-slider-label">Master</span>
+            <input type="range" class="pause-range" id="pm-master" min="0" max="1" step="0.01" value="1.0">
+            <input type="number" class="pause-num" id="pm-master-num" min="0" max="1" step="0.01" value="1.00">
+            <span class="pause-slider-val" id="pm-master-val">100%</span>
+          </div>
+
+          <div class="pause-slider-row">
+            <span class="pause-slider-label">Music</span>
+            <input type="range" class="pause-range" id="pm-music" min="0" max="1" step="0.01" value="0.4">
+            <input type="number" class="pause-num" id="pm-music-num" min="0" max="1" step="0.01" value="0.40">
+            <span class="pause-slider-val" id="pm-music-val">40%</span>
+          </div>
+
+          <div class="pause-slider-row">
+            <span class="pause-slider-label">SFX</span>
+            <input type="range" class="pause-range" id="pm-sfx" min="0" max="1" step="0.01" value="1.0">
+            <input type="number" class="pause-num" id="pm-sfx-num" min="0" max="1" step="0.01" value="1.00">
+            <span class="pause-slider-val" id="pm-sfx-val">100%</span>
+          </div>
         </div>
+
+        <button class="pause-action-btn audio" id="pause-sfxmixer-btn">SFX MIXER</button>
 
         <div class="pause-settings-footer">
           <button class="pause-action-btn back" id="pause-audio-back-btn">BACK</button>
@@ -187,6 +197,104 @@
         </div>
 
       </div><!-- /pause-page-audio -->
+
+      <!-- ── Page: SFX Mixer ── -->
+      <div class="pause-page" id="pause-page-sfxmixer">
+
+        <div class="pause-settings-section">
+          <div class="pause-settings-section-label">INDIVIDUAL SFX</div>
+          <div class="pause-slider-row">
+            <span class="pause-slider-label">Shoot</span>
+            <input type="range" class="pause-range sfx-range" id="pm-sfx-shoot" data-sfx="shoot" min="0" max="1" step="0.01" value="1">
+            <input type="number" class="pause-num" id="pm-sfx-shoot-num" min="0" max="1" step="0.01" value="1.00">
+            <span class="pause-slider-val" id="pm-sfx-shoot-val">100%</span>
+          </div>
+          <div class="pause-slider-row">
+            <span class="pause-slider-label">Player Hit</span>
+            <input type="range" class="pause-range sfx-range" id="pm-sfx-player_hit" data-sfx="player_hit" min="0" max="1" step="0.01" value="1">
+            <input type="number" class="pause-num" id="pm-sfx-player_hit-num" min="0" max="1" step="0.01" value="1.00">
+            <span class="pause-slider-val" id="pm-sfx-player_hit-val">100%</span>
+          </div>
+          <div class="pause-slider-row">
+            <span class="pause-slider-label">Standard Hit</span>
+            <input type="range" class="pause-range sfx-range" id="pm-sfx-standard_hit" data-sfx="standard_hit" min="0" max="1" step="0.01" value="1">
+            <input type="number" class="pause-num" id="pm-sfx-standard_hit-num" min="0" max="1" step="0.01" value="1.00">
+            <span class="pause-slider-val" id="pm-sfx-standard_hit-val">100%</span>
+          </div>
+          <div class="pause-slider-row">
+            <span class="pause-slider-label">Elite Hit</span>
+            <input type="range" class="pause-range sfx-range" id="pm-sfx-elite_hit" data-sfx="elite_hit" min="0" max="1" step="0.01" value="1">
+            <input type="number" class="pause-num" id="pm-sfx-elite_hit-num" min="0" max="1" step="0.01" value="1.00">
+            <span class="pause-slider-val" id="pm-sfx-elite_hit-val">100%</span>
+          </div>
+          <div class="pause-slider-row">
+            <span class="pause-slider-label">Elite Shoot</span>
+            <input type="range" class="pause-range sfx-range" id="pm-sfx-elite_shoot" data-sfx="elite_shoot" min="0" max="1" step="0.01" value="1">
+            <input type="number" class="pause-num" id="pm-sfx-elite_shoot-num" min="0" max="1" step="0.01" value="1.00">
+            <span class="pause-slider-val" id="pm-sfx-elite_shoot-val">100%</span>
+          </div>
+          <div class="pause-slider-row">
+            <span class="pause-slider-label">Explode</span>
+            <input type="range" class="pause-range sfx-range" id="pm-sfx-explode" data-sfx="explode" min="0" max="1" step="0.01" value="1">
+            <input type="number" class="pause-num" id="pm-sfx-explode-num" min="0" max="1" step="0.01" value="1.00">
+            <span class="pause-slider-val" id="pm-sfx-explode-val">100%</span>
+          </div>
+          <div class="pause-slider-row">
+            <span class="pause-slider-label">Explode Elite</span>
+            <input type="range" class="pause-range sfx-range" id="pm-sfx-explodeElite" data-sfx="explodeElite" min="0" max="1" step="0.01" value="1">
+            <input type="number" class="pause-num" id="pm-sfx-explodeElite-num" min="0" max="1" step="0.01" value="1.00">
+            <span class="pause-slider-val" id="pm-sfx-explodeElite-val">100%</span>
+          </div>
+          <div class="pause-slider-row">
+            <span class="pause-slider-label">Coin</span>
+            <input type="range" class="pause-range sfx-range" id="pm-sfx-coin" data-sfx="coin" min="0" max="1" step="0.01" value="1">
+            <input type="number" class="pause-num" id="pm-sfx-coin-num" min="0" max="1" step="0.01" value="1.00">
+            <span class="pause-slider-val" id="pm-sfx-coin-val">100%</span>
+          </div>
+          <div class="pause-slider-row">
+            <span class="pause-slider-label">Heal</span>
+            <input type="range" class="pause-range sfx-range" id="pm-sfx-heal" data-sfx="heal" min="0" max="1" step="0.01" value="1">
+            <input type="number" class="pause-num" id="pm-sfx-heal-num" min="0" max="1" step="0.01" value="1.00">
+            <span class="pause-slider-val" id="pm-sfx-heal-val">100%</span>
+          </div>
+          <div class="pause-slider-row">
+            <span class="pause-slider-label">Level Up</span>
+            <input type="range" class="pause-range sfx-range" id="pm-sfx-levelup" data-sfx="levelup" min="0" max="1" step="0.01" value="1">
+            <input type="number" class="pause-num" id="pm-sfx-levelup-num" min="0" max="1" step="0.01" value="1.00">
+            <span class="pause-slider-val" id="pm-sfx-levelup-val">100%</span>
+          </div>
+          <div class="pause-slider-row">
+            <span class="pause-slider-label">Dash</span>
+            <input type="range" class="pause-range sfx-range" id="pm-sfx-dash" data-sfx="dash" min="0" max="1" step="0.01" value="1">
+            <input type="number" class="pause-num" id="pm-sfx-dash-num" min="0" max="1" step="0.01" value="1.00">
+            <span class="pause-slider-val" id="pm-sfx-dash-val">100%</span>
+          </div>
+          <div class="pause-slider-row">
+            <span class="pause-slider-label">Countdown</span>
+            <input type="range" class="pause-range sfx-range" id="pm-sfx-countdown" data-sfx="countdown" min="0" max="1" step="0.01" value="1">
+            <input type="number" class="pause-num" id="pm-sfx-countdown-num" min="0" max="1" step="0.01" value="1.00">
+            <span class="pause-slider-val" id="pm-sfx-countdown-val">100%</span>
+          </div>
+          <div class="pause-slider-row">
+            <span class="pause-slider-label">Game Over</span>
+            <input type="range" class="pause-range sfx-range" id="pm-sfx-gameover" data-sfx="gameover" min="0" max="1" step="0.01" value="1">
+            <input type="number" class="pause-num" id="pm-sfx-gameover-num" min="0" max="1" step="0.01" value="1.00">
+            <span class="pause-slider-val" id="pm-sfx-gameover-val">100%</span>
+          </div>
+          <div class="pause-slider-row">
+            <span class="pause-slider-label">Victory</span>
+            <input type="range" class="pause-range sfx-range" id="pm-sfx-victory" data-sfx="victory" min="0" max="1" step="0.01" value="1">
+            <input type="number" class="pause-num" id="pm-sfx-victory-num" min="0" max="1" step="0.01" value="1.00">
+            <span class="pause-slider-val" id="pm-sfx-victory-val">100%</span>
+          </div>
+        </div>
+
+        <div class="pause-settings-footer">
+          <button class="pause-action-btn back" id="pause-sfxmixer-back-btn">BACK</button>
+          <button class="pause-export-btn" id="pm-export-btn-2">EXPORT JSON</button>
+        </div>
+
+      </div><!-- /pause-page-sfxmixer -->
 
     </div><!-- /pause-menu-body -->
   </div><!-- /pause-menu -->
