@@ -104,7 +104,7 @@ canvas { display: block; }
 }
 
 .pause-menu {
-  width: min(380px, calc(100vw - 32px));
+  width: min(360px, calc(100vw - 32px));
   max-height: calc(100vh - 48px);
   border-radius: 16px;
   border: 1px solid rgba(0,229,255,0.15);
@@ -120,7 +120,7 @@ canvas { display: block; }
 .pause-menu-hdr {
   padding: 20px 24px 16px;
   border-bottom: 1px solid rgba(255,255,255,0.07);
-  flex-shrink: 0;
+  flex-shrink: 0; text-align: center;
 }
 .pause-menu-title {
   font-family: var(--mono); font-size: 13px; font-weight: 900;
@@ -138,39 +138,47 @@ canvas { display: block; }
 .pause-page { display: none; flex-direction: column; gap: 10px; }
 .pause-page.active { display: flex; }
 
-/* ── Action buttons ── */
+/* ── All action buttons — centered text, no icons ── */
 .pause-action-btn {
   width: 100%; padding: 14px 20px;
   border-radius: 10px; border: 1px solid rgba(255,255,255,0.1);
-  background: rgba(255,255,255,0.05); color: rgba(255,255,255,0.75);
+  background: rgba(255,255,255,0.05); color: rgba(255,255,255,0.7);
   font-family: Inter, system-ui, sans-serif;
-  font-size: 12px; font-weight: 700; letter-spacing: 0.1em;
-  cursor: pointer; transition: all 0.15s; text-align: left;
+  font-size: 12px; font-weight: 700; letter-spacing: 0.12em;
+  text-transform: uppercase; text-align: center;
+  cursor: pointer; transition: all 0.15s;
 }
 .pause-action-btn:hover { background: rgba(255,255,255,0.1); color: #fff; }
+
 .pause-action-btn.resume {
   background: rgba(0,229,255,0.1); border-color: rgba(0,229,255,0.3); color: #00e5ff;
 }
 .pause-action-btn.resume:hover { background: rgba(0,229,255,0.18); box-shadow: 0 0 20px rgba(0,229,255,0.15); }
+
+.pause-action-btn.restart {
+  background: rgba(255,255,255,0.04); border-color: rgba(255,255,255,0.1); color: rgba(255,255,255,0.6);
+}
+.pause-action-btn.restart:hover { background: rgba(255,255,255,0.09); color: #fff; }
+
 .pause-action-btn.settings {
-  background: rgba(255,255,255,0.04); border-color: rgba(255,255,255,0.1); color: rgba(255,255,255,0.65);
+  background: rgba(255,255,255,0.04); border-color: rgba(255,255,255,0.1); color: rgba(255,255,255,0.6);
 }
 .pause-action-btn.settings:hover { background: rgba(255,255,255,0.09); color: #fff; }
+
 .pause-action-btn.quit {
   background: rgba(255,80,80,0.08); border-color: rgba(255,80,80,0.2); color: rgba(255,130,130,0.8);
 }
 .pause-action-btn.quit:hover { background: rgba(255,80,80,0.16); border-color: rgba(255,80,80,0.4); color: #ff8080; }
+
 .pause-action-btn.back {
-  background: rgba(255,255,255,0.04); border-color: rgba(255,255,255,0.1); color: rgba(255,255,255,0.5);
-  flex: 1;
+  flex: 1; background: rgba(255,255,255,0.04); border-color: rgba(255,255,255,0.1); color: rgba(255,255,255,0.5);
 }
 .pause-action-btn.back:hover { background: rgba(255,255,255,0.09); color: #fff; }
 
 /* ── Settings page sections ── */
 .pause-settings-section {
   display: flex; flex-direction: column; gap: 10px;
-  padding: 16px;
-  border-radius: 10px;
+  padding: 16px; border-radius: 10px;
   border: 1px solid rgba(255,255,255,0.07);
   background: rgba(255,255,255,0.02);
 }
@@ -178,8 +186,7 @@ canvas { display: block; }
 
 .pause-settings-section-label {
   font-size: 9px; font-weight: 800; letter-spacing: 0.25em;
-  text-transform: uppercase; color: rgba(0,229,255,0.5);
-  margin-bottom: 4px;
+  text-transform: uppercase; color: rgba(0,229,255,0.5); margin-bottom: 4px;
 }
 
 /* ── Slider rows ── */
@@ -201,7 +208,6 @@ canvas { display: block; }
   -webkit-appearance: none; appearance: none;
   width: 100%; height: 4px; border-radius: 2px;
   background: rgba(255,255,255,0.1); outline: none; cursor: pointer;
-  transition: background 0s;
 }
 .pause-range::-webkit-slider-thumb {
   -webkit-appearance: none; appearance: none;
@@ -213,8 +219,7 @@ canvas { display: block; }
 .pause-range::-webkit-slider-thumb:hover { transform: scale(1.2); }
 .pause-range::-moz-range-thumb {
   width: 14px; height: 14px; border-radius: 50%; border: none;
-  background: #00e5ff; cursor: pointer;
-  box-shadow: 0 0 8px rgba(0,229,255,0.6);
+  background: #00e5ff; cursor: pointer; box-shadow: 0 0 8px rgba(0,229,255,0.6);
 }
 
 /* ── Settings footer ── */
@@ -228,7 +233,7 @@ canvas { display: block; }
   border: 1px solid rgba(255,255,255,0.1);
   background: rgba(255,255,255,0.04); color: rgba(255,255,255,0.45);
   font-family: Inter, system-ui, sans-serif;
-  font-size: 11px; font-weight: 700; letter-spacing: 0.08em;
+  font-size: 11px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase;
   cursor: pointer; transition: all 0.15s; text-align: center;
 }
 .pause-export-btn:hover { background: rgba(255,255,255,0.08); border-color: rgba(255,255,255,0.2); color: rgba(255,255,255,0.8); }
