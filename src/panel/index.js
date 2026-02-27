@@ -365,6 +365,14 @@ g('pause-resume-btn')?.addEventListener('click', () => {
 });
 
 
+
+// Restart
+g('pause-restart-btn')?.addEventListener('click', () => {
+  // Close pause overlay first (so input + loop resume cleanly)
+  if (state.paused) togglePause();
+  restartGame();
+});
+
 // Settings page
 g('pause-settings-btn')?.addEventListener('click', () => showPausePage('settings'));
 
