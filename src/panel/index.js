@@ -27,7 +27,8 @@ import { XP_THRESHOLDS } from '../constants.js';
 import { syncOrbitBullets } from '../weapons.js';
 import { restartGame } from '../gameFlow.js';
 import { pauseMusic, resumeMusic } from '../gameFlow.js';
-import { setSfxVolume, setMusicVolume, setMuted, getMuted, getSfxVolume, getMusicVolume } from '../audio.js';
+import { setSfxVolume, setMusicVolume, setMuted, getMuted, getSfxVolume, getMusicVolume,
+         setSoundVolume, getSoundVolume, getAllSoundVolumes } from '../audio.js';
 import { clock } from '../loop.js';
 
 // ── DOM refs ──────────────────────────────────────────────────────────────────
@@ -191,12 +192,73 @@ export function updatePauseBtn() {
 }
 export function togglePause() {
   state.paused = !state.paused;
-  if (!state.paused) { clock.getDelta(); resumeMusic(); }
-  else { pauseMusic(); }
+  if (!state.paused) { clock.getDelta(); resumeMusic(); syncPauseMenuFromEngine(); }
+  else { pauseMusic(); syncPauseMenuFromEngine(); }
   updatePauseBtn();
   state.keys.w = state.keys.a = state.keys.s = state.keys.d = false;
 }
 g('pause-btn').addEventListener('click', togglePause);
+
+// ── Pause menu controls ───────────────────────────────────────────────────────
+function pct(v) { return Math.round(v * 100) + '%'; }
+
+function syncPauseMenuFromEngine() {
+  const music = g('pm-music'); if (music) { music.value = getMusicVolume(); g('pm-music-val').textContent = pct(getMusicVolume()); }
+  const sfx   = g('pm-sfx');   if (sfx)   { sfx.value   = getSfxVolume();   g('pm-sfx-val').textContent   = pct(getSfxVolume()); }
+  document.querySelectorAll('.sfx-range').forEach(el => {
+    const name = el.dataset.sfx;
+    el.value = getSoundVolume(name);
+    const valEl = g('pm-sfx-' + name + '-val');
+    if (valEl) valEl.textContent = pct(getSoundVolume(name));
+  });
+}
+
+// Master music slider
+g('pm-music')?.addEventListener('input', () => {
+  setMusicVolume(parseFloat(g('pm-music').value));
+  g('pm-music-val').textContent = pct(getMusicVolume());
+});
+
+// Master SFX slider — scales all individual SFX together
+g('pm-sfx')?.addEventListener('input', () => {
+  setSfxVolume(parseFloat(g('pm-sfx').value));
+  g('pm-sfx-val').textContent = pct(getSfxVolume());
+});
+
+// Individual SFX sliders
+document.querySelectorAll('.sfx-range').forEach(el => {
+  el.addEventListener('input', () => {
+    setSoundVolume(el.dataset.sfx, parseFloat(el.value));
+    const valEl = g('pm-sfx-' + el.dataset.sfx + '-val');
+    if (valEl) valEl.textContent = pct(getSoundVolume(el.dataset.sfx));
+  });
+});
+
+// Resume button inside pause menu
+g('pause-resume-btn')?.addEventListener('click', () => {
+  if (state.paused) togglePause();
+});
+
+// Quit to main menu
+g('pause-quit-btn')?.addEventListener('click', () => {
+  if (typeof window.showMainMenu === 'function') window.showMainMenu();
+});
+
+// Export audio settings JSON
+g('pm-export-btn')?.addEventListener('click', () => {
+  const snap = {
+    music: getMusicVolume(),
+    sfxMaster: getSfxVolume(),
+    sfxIndividual: getAllSoundVolumes(),
+    exportedAt: new Date().toISOString(),
+  };
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([JSON.stringify(snap, null, 2)], { type: 'application/json' }));
+  a.download = 'capsule-havoc-audio.json';
+  a.click();
+  URL.revokeObjectURL(a.href);
+  showNotif('Audio Settings Exported!');
+});
 
 // ── Toast notification ────────────────────────────────────────────────────────
 let _notifTimer = null;
