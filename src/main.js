@@ -29,9 +29,8 @@ setLevelUpCallback((newLevel) => {
 });
 
 // ── Wire input callbacks ──────────────────────────────────────────────────────
-const countdownActive = () => !!document.getElementById('countdown')?.classList.contains('show');
 const guardedTogglePanel = () => { if (state.uiMode === 'playing') togglePanel(); };
-const guardedTogglePause = () => { if (state.uiMode === 'playing' && !countdownActive()) togglePause(); };
+const guardedTogglePause = () => { if (state.uiMode === 'playing') togglePause(); };
 
 initInput({
   togglePanel: guardedTogglePanel,
@@ -56,6 +55,20 @@ updateXP(0);
 // Show menu first; defer tick()/spawns/countdown until Start is pressed.
 state.uiMode = 'menu';
 state.paused = true;
+
+// Keep menu hidden until splash finishes
+const menuScreenEl = document.getElementById('menu-screen');
+menuScreenEl.style.visibility = 'hidden';
+
+// Splash: fade in (0.6s) + hold = 2s total visible, then fade out (0.5s)
+const splashEl = document.getElementById('splash-screen');
+setTimeout(() => {
+  splashEl.classList.add('fade-out');
+  splashEl.addEventListener('animationend', () => {
+    splashEl.remove();
+    menuScreenEl.style.visibility = '';
+  }, { once: true });
+}, 2000);
 
 const menuUI = initMenuUI({
   onStart: async () => {
