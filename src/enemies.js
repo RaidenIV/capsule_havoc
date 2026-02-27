@@ -47,8 +47,10 @@ export function spawnEnemy(x, z, eliteType = null) {
   grp.add(mesh);
   scene.add(grp);
 
-  const hp       = Math.round(getEnemyHP() * hpMult);
-  const fireRate = eliteType ? (ELITE_FIRE_RATE[eliteType.minLevel] ?? 2.0) : null;
+  const baseHP   = getEnemyHP();
+  const fixedHp  = eliteType?.fixedHp;
+  const hp       = fixedHp != null ? Math.round(fixedHp) : Math.round(baseHP * hpMult);
+  const fireRate = eliteType ? (eliteType.fireRate ?? (ELITE_FIRE_RATE[eliteType.minLevel] ?? 2.0)) : null;
 
   let eliteBarFill = null;
   if (eliteType) {
@@ -69,6 +71,7 @@ export function spawnEnemy(x, z, eliteType = null) {
   state.enemies.push({
     grp, mesh, mat, hp, maxHp: hp, dead: false,
     scaleMult, expMult, coinMult, eliteType, eliteBarFill,
+    isBoss: !!eliteType?.isBoss,
     fireRate, shootTimer: fireRate ? Math.random() * fireRate : 0,
     staggerTimer: 0, baseColor: new THREE.Color(color),
     spawnFlashTimer: SPAWN_FLASH_DURATION, matDirty: true,
@@ -136,10 +139,8 @@ export function killEnemy(j) {
   const xpGained  = Math.round(getXPPerKill() * (e.expMult || 1));
   const prevLevel = state.playerLevel;
   updateXP(xpGained);
-
   if (state.playerLevel > prevLevel) {
     if (_onLevelUp) _onLevelUp(state.playerLevel);
-    if (state.playerLevel >= 10 && _triggerVictory) { _triggerVictory(); return; }
   }
 }
 
