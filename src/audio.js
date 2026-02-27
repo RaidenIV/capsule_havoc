@@ -63,6 +63,8 @@ ctx.addEventListener('statechange', () => {
 export async function initAudio() {
   const sfxFiles = {
     splash:       './assets/sfx/splash.wav',
+    menu:         './assets/sfx/menu.wav',
+    menu_select:  './assets/sfx/menu_select.wav',
     countdown:    './assets/sfx/countdown.wav',
     shoot:        './assets/sfx/shoot.wav',
     player_hit:   './assets/sfx/player_hit.wav',
