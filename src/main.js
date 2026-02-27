@@ -15,6 +15,7 @@ import { initInput }       from './input.js';
 import { tick }            from './loop.js';
 import { togglePanel, togglePause, updatePauseBtn } from './panel/index.js';
 import { initAudio, resumeAudioContext, playSound } from './audio.js';
+import { stopMusic } from './audio.js';
 import { initMenuUI } from './ui/menu.js';
 
 // ── Wire cross-module callbacks (breaks enemies ↔ weapons circular deps) ──────
@@ -77,3 +78,13 @@ const menuUI = initMenuUI({
     requestAnimationFrame(() => requestAnimationFrame(() => startCountdown()));
   }
 });
+
+// ── Expose showMainMenu for the pause menu quit button ────────────────────────
+// Defined after menuUI so the closure captures it correctly.
+window.showMainMenu = () => {
+  stopMusic();
+  state.gameOver = false;
+  state.paused   = true;
+  state.uiMode   = 'menu';
+  menuUI.showMenu();
+};
