@@ -58,7 +58,8 @@ export function syncOrbitBullets() {
     const meshes = [];
     for (let i = 0; i < def.count; i++) {
       const mesh = new THREE.Mesh(bulletGeo, makeOrbitMat(def.color));
-      mesh.layers.enable(1);
+      // Do NOT enable bloom layer (1) — bloom ignores depth and bleeds through walls.
+      // The emissive material keeps them visually bright without the halo bleed.
       mesh.renderOrder = 999;
       scene.add(mesh);
       meshes.push(mesh);
