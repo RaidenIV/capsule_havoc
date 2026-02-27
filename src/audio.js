@@ -96,8 +96,9 @@ export function playSound(name, volume = 1.0, pitch = 1.0) {
 export function startMusic() {
   if (!musicEl) return;
   _musicWanted = true;
+  if (!muted && !musicEl.paused) return; // already playing, don't restart
   musicEl.currentTime = 0;
-  if (!muted) musicEl.play().catch(() => {}); // may silently fail before user gesture - resumeAudioContext handles it
+  if (!muted) musicEl.play().catch(() => {});
 }
 
 export function pauseMusic() {
