@@ -4,6 +4,7 @@
 import { renderHighScores } from './scores.js';
 import { clearHighScores } from './highScores.js';
 import { bindAudioSettingsUI, applySavedAudioSettings } from './settings.js';
+import { playSound } from '../audio.js';
 
 export function initMenuUI({ onStart }) {
   const menu = document.getElementById('menu-screen');
@@ -57,6 +58,12 @@ export function initMenuUI({ onStart }) {
   btnClearScores.addEventListener('click', () => {
     clearHighScores();
     renderHighScores(scoresList);
+  });
+
+  // Hover + click sounds on all menu buttons
+  menu.querySelectorAll('button').forEach(btn => {
+    btn.addEventListener('mouseenter', () => playSound('menu',        0.4));
+    btn.addEventListener('click',      () => playSound('menu_select', 0.5));
   });
 
   // default
