@@ -233,13 +233,9 @@ function syncPauseMenuFromEngine() {
     const valEl = g('pm-sfx-' + el.dataset.sfx + '-val');
     if (valEl) valEl.textContent = pct(v);
   });
-}  document.querySelectorAll('.sfx-range').forEach(el => {
-    const v = getSoundVolume(el.dataset.sfx);
-    el.value = v; fillRange(el, v);
-    const valEl = g('pm-sfx-' + el.dataset.sfx + '-val');
-    if (valEl) valEl.textContent = pct(v);
-  });
-}// Master (sets Music + SFX master together)
+}
+
+// Master (sets Music + SFX master together)
 g('pm-master')?.addEventListener('input', () => {
   const v = parseFloat(g('pm-master').value);
   setMusicVolume(v);
