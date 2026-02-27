@@ -28,7 +28,7 @@ import { syncOrbitBullets } from '../weapons.js';
 import { restartGame } from '../gameFlow.js';
 import { pauseMusic, resumeMusic } from '../gameFlow.js';
 import { setSfxVolume, setMusicVolume, setMuted, getMuted, getSfxVolume, getMusicVolume,
-         setSoundVolume, getSoundVolume, getAllSoundVolumes } from '../audio.js';
+         setSoundVolume, getSoundVolume, getAllSoundVolumes, playSound } from '../audio.js';
 import { clock } from '../loop.js';
 
 // ── DOM refs ──────────────────────────────────────────────────────────────────
@@ -210,9 +210,18 @@ function fillRange(el, v) {
 function showPausePage(name) {
   g('pause-page-main')    ?.classList.toggle('active', name === 'main');
   g('pause-page-settings')?.classList.toggle('active', name === 'settings');
+  g('pause-page-audio')   ?.classList.toggle('active', name === 'audio');
   const title = g('pause-menu-title');
-  if (title) title.textContent = name === 'settings' ? 'SETTINGS' : 'PAUSED';
+  if (title) title.textContent =
+    name === 'settings' ? 'SETTINGS' :
+    name === 'audio'    ? 'AUDIO'    : 'PAUSED';
 }
+
+// Wire hover + click sounds on all pause menu buttons
+document.querySelectorAll('.pause-action-btn, .pause-export-btn').forEach(btn => {
+  btn.addEventListener('mouseenter', () => playSound('menu',        0.4));
+  btn.addEventListener('click',      () => playSound('menu_select', 0.5));
+});
 
 function syncPauseMenuFromEngine() {
   showPausePage('main');
@@ -262,8 +271,14 @@ g('pause-resume-btn')?.addEventListener('click', () => {
 // Settings page
 g('pause-settings-btn')?.addEventListener('click', () => showPausePage('settings'));
 
-// Back to main page
+// Audio page
+g('pause-audio-btn')?.addEventListener('click', () => showPausePage('audio'));
+
+// Back to main page (from settings)
 g('pause-back-btn')?.addEventListener('click', () => showPausePage('main'));
+
+// Back to settings page (from audio)
+g('pause-audio-back-btn')?.addEventListener('click', () => showPausePage('settings'));
 
 // Quit to main menu
 g('pause-quit-btn')?.addEventListener('click', () => {
