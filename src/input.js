@@ -37,10 +37,6 @@ window.addEventListener('keydown', e => {
     if (!state.panelOpen) { if (_togglePause) _togglePause(); }
     return;
   }
-  if (e.key.toLowerCase() === 'r' && (state.gameOver || !state.paused)) {
-    if (_restartGame) _restartGame();
-    return;
-  }
   if (e.key.toLowerCase() === 'm') {
     toggleMute();
     return;
