@@ -25,7 +25,12 @@ window.addEventListener('keydown', e => {
   // Resume AudioContext on first interaction (browser autoplay policy)
   if (!_firstKeyFired && _onFirstKey) { _onFirstKey(); _firstKeyFired = true; }
 
-  if (e.key === 'Tab') { e.preventDefault(); if (_togglePanel) _togglePanel(); return; }
+  if (e.key === 'Tab') {
+    e.preventDefault();
+    const countdownShowing = document.getElementById('countdown')?.classList.contains('show');
+    if (!countdownShowing && _togglePanel) _togglePanel();
+    return;
+  }
 
   if (e.key === 'Escape' && !state.gameOver) {
     e.preventDefault();
