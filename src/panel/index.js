@@ -216,32 +216,37 @@ function showPausePage(name) {
 
 function syncPauseMenuFromEngine() {
   showPausePage('main');
-  const music = g('pm-music');
-  if (music) { const v = getMusicVolume(); music.value = v; fillRange(music, v); g('pm-music-val').textContent = pct(v); }
-  const sfx = g('pm-sfx');
-  if (sfx)   { const v = getSfxVolume();   sfx.value   = v; fillRange(sfx,   v); g('pm-sfx-val').textContent   = pct(v); }
+
+  const master = g('pm-master');
+  if (master) {
+    const mv = getMusicVolume();
+    const sv = getSfxVolume();
+    const v  = (mv + sv) * 0.5; // derived display value
+    master.value = v;
+    fillRange(master, v);
+    g('pm-master-val').textContent = pct(v);
+  }
+
   document.querySelectorAll('.sfx-range').forEach(el => {
     const v = getSoundVolume(el.dataset.sfx);
     el.value = v; fillRange(el, v);
     const valEl = g('pm-sfx-' + el.dataset.sfx + '-val');
     if (valEl) valEl.textContent = pct(v);
   });
-}
-
-// Master music
-g('pm-music')?.addEventListener('input', () => {
-  const v = parseFloat(g('pm-music').value);
-  setMusicVolume(v); fillRange(g('pm-music'), v);
-  g('pm-music-val').textContent = pct(v);
+}  document.querySelectorAll('.sfx-range').forEach(el => {
+    const v = getSoundVolume(el.dataset.sfx);
+    el.value = v; fillRange(el, v);
+    const valEl = g('pm-sfx-' + el.dataset.sfx + '-val');
+    if (valEl) valEl.textContent = pct(v);
+  });
+}// Master (sets Music + SFX master together)
+g('pm-master')?.addEventListener('input', () => {
+  const v = parseFloat(g('pm-master').value);
+  setMusicVolume(v);
+  setSfxVolume(v);
+  fillRange(g('pm-master'), v);
+  g('pm-master-val').textContent = pct(v);
 });
-
-// Master SFX
-g('pm-sfx')?.addEventListener('input', () => {
-  const v = parseFloat(g('pm-sfx').value);
-  setSfxVolume(v); fillRange(g('pm-sfx'), v);
-  g('pm-sfx-val').textContent = pct(v);
-});
-
 // Individual SFX
 document.querySelectorAll('.sfx-range').forEach(el => {
   el.addEventListener('input', () => {
@@ -257,13 +262,6 @@ g('pause-resume-btn')?.addEventListener('click', () => {
   if (state.paused) togglePause();
 });
 
-// Restart
-g('pause-restart-btn')?.addEventListener('click', () => {
-  pauseEl.classList.remove('show');
-  state.paused = false;
-  updatePauseBtn();
-  restartGame();
-});
 
 // Settings page
 g('pause-settings-btn')?.addEventListener('click', () => showPausePage('settings'));
@@ -279,6 +277,7 @@ g('pause-quit-btn')?.addEventListener('click', () => {
 // Export audio settings JSON
 g('pm-export-btn')?.addEventListener('click', () => {
   const snap = {
+    master: (getMusicVolume() + getSfxVolume()) * 0.5,
     music: getMusicVolume(),
     sfxMaster: getSfxVolume(),
     sfxIndividual: getAllSoundVolumes(),
