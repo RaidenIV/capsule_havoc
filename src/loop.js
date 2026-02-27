@@ -3,7 +3,7 @@ import * as THREE from 'three';
 import { renderer, scene, camera, labelRenderer } from './renderer.js';
 import { renderBloom, consumeExplBloomDirty } from './bloom.js';
 import { state } from './state.js';
-import { PLAYER_MAX_HP } from './constants.js';
+import { PLAYER_MAX_HP, WAVE_CONFIG, STANDARD_ENEMY_SIZE_MULT } from './constants.js';
 import { updateSunPosition, updateOrbitLights } from './lighting.js';
 import { updateChunks } from './terrain.js';
 import { updatePlayer, updateDashStreaks } from './player.js';
@@ -13,7 +13,7 @@ import { updatePickups } from './pickups.js';
 import { updateParticles } from './particles.js';
 import { updateDamageNums } from './damageNumbers.js';
 import { getFireInterval } from './xp.js';
-import { triggerGameOver, formatTime } from './gameFlow.js';
+import { triggerGameOver, triggerVictory, formatTime } from './gameFlow.js';
 import { playerGroup } from './player.js';
 
 const timerEl  = document.getElementById('timer-value');
@@ -23,6 +23,79 @@ const fpsValEl = document.getElementById('fpsVal');
 
 export const clock = new THREE.Clock();
 let fpsEMA = 60;
+function _getWaveDef() {
+  return WAVE_CONFIG[Math.min(Math.max(state.waveIndex, 1), WAVE_CONFIG.length) - 1];
+}
+
+function _initWaveState() {
+  const def = _getWaveDef();
+  state.wavePhase = 'standard';
+  state.waveRemainingToSpawn = def.standardCount;
+  state.bossRemainingToSpawn = 0;
+  state.waveActiveCap = Math.min(80, 40 + state.waveIndex * 4);
+}
+
+function _beginBossPhase() {
+  const def = _getWaveDef();
+  state.wavePhase = 'boss';
+  state.bossRemainingToSpawn = def.boss.count;
+}
+
+function _advanceWaveIfCleared(triggerVictory) {
+  if (state.enemies.length !== 0) return;
+
+  if (state.wavePhase === 'standard') {
+    if (state.waveRemainingToSpawn <= 0) _beginBossPhase();
+    return;
+  }
+
+  if (state.wavePhase === 'boss') {
+    if (state.bossRemainingToSpawn > 0) return;
+
+    if (state.waveIndex >= WAVE_CONFIG.length) {
+      triggerVictory();
+      return;
+    }
+    state.waveIndex++;
+    _initWaveState();
+  }
+}
+
+function _spawnWaveBatch() {
+  const def = _getWaveDef();
+
+  const activeCap = state.waveActiveCap ?? 60;
+  const room = Math.max(0, activeCap - state.enemies.length);
+  if (room <= 0) return;
+
+  if (state.wavePhase === 'standard') {
+    const n = Math.min(room, 12, state.waveRemainingToSpawn);
+    for (let i = 0; i < n; i++) spawnEnemyAtEdge(null);
+    state.waveRemainingToSpawn -= n;
+    return;
+  }
+
+  if (state.wavePhase === 'boss') {
+    const n = Math.min(room, state.bossRemainingToSpawn);
+    if (n <= 0) return;
+
+    const bossSizeMult = def.boss.size / STANDARD_ENEMY_SIZE_MULT;
+
+    for (let i = 0; i < n; i++) {
+      spawnEnemyAtEdge({
+        isBoss: true,
+        color: def.boss.color,
+        sizeMult: bossSizeMult,
+        fixedHp: def.boss.health,
+        expMult: def.boss.expMult,
+        coinMult: def.boss.expMult,
+        fireRate: null,
+      });
+    }
+    state.bossRemainingToSpawn -= n;
+  }
+}
+
 
 export function tick() {
   requestAnimationFrame(tick);
@@ -59,12 +132,17 @@ export function tick() {
   );
   camera.lookAt(playerGroup.position);
 
-  // Periodic enemy trickle
+  // Wave-driven spawns
+  if (!state.waveIndex) state.waveIndex = 1;
+  if (state.waveRemainingToSpawn == null || state.wavePhase == null) _initWaveState();
+  if (state.waveRemainingToSpawn === 0 && state.bossRemainingToSpawn === 0 && state.enemies.length === 0 && state.elapsed < 0.2) {
+    _initWaveState();
+  }
+
   state.spawnTickTimer -= delta;
   if (state.spawnTickTimer <= 0) {
-    const toSpawn = Math.min(state.maxEnemies - state.enemies.length, 10);
-    for (let s = 0; s < toSpawn; s++) spawnEnemyAtEdge();
-    state.spawnTickTimer = 0.5;
+    _spawnWaveBatch();
+    state.spawnTickTimer = 0.35;
   }
 
   // Auto-shoot (runs on real delta so fire rate is unaffected by slowmo)
@@ -82,6 +160,8 @@ export function tick() {
 
   const enemyResult = updateEnemies(delta, worldDelta, state.elapsed);
   if (enemyResult === 'DEAD') { triggerGameOver(); return; }
+
+  _advanceWaveIfCleared(triggerVictory);
 
   updatePickups(worldDelta, state.playerLevel, state.elapsed);
   updateParticles(worldDelta);
