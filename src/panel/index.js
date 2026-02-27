@@ -202,14 +202,11 @@ g('pause-btn').addEventListener('click', togglePause);
 // ── Pause menu controls ───────────────────────────────────────────────────────
 function pct(v) { return Math.round(v * 100) + '%'; }
 
-// Drives the coloured fill on a range input via background gradient
 function fillRange(el, v) {
   const p = (Math.max(0, Math.min(1, v)) * 100).toFixed(1);
-  el.style.background =
-    `linear-gradient(to right, #00e5ff ${p}%, rgba(255,255,255,0.1) ${p}%)`;
+  el.style.background = `linear-gradient(to right, #00e5ff ${p}%, rgba(255,255,255,0.1) ${p}%)`;
 }
 
-// Show/hide the two pages inside the pause menu
 function showPausePage(name) {
   g('pause-page-main')    ?.classList.toggle('active', name === 'main');
   g('pause-page-settings')?.classList.toggle('active', name === 'settings');
@@ -218,9 +215,7 @@ function showPausePage(name) {
 }
 
 function syncPauseMenuFromEngine() {
-  // Always return to main page when the menu opens
   showPausePage('main');
-
   const music = g('pm-music');
   if (music) { const v = getMusicVolume(); music.value = v; fillRange(music, v); g('pm-music-val').textContent = pct(v); }
   const sfx = g('pm-sfx');
@@ -260,6 +255,14 @@ document.querySelectorAll('.sfx-range').forEach(el => {
 // Resume
 g('pause-resume-btn')?.addEventListener('click', () => {
   if (state.paused) togglePause();
+});
+
+// Restart — unpause state cleanly then restart
+g('pause-restart-btn')?.addEventListener('click', () => {
+  pauseEl.classList.remove('show');
+  state.paused = false;
+  updatePauseBtn();
+  restartGame();
 });
 
 // Settings page
