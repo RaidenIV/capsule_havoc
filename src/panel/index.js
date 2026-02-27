@@ -202,66 +202,163 @@ g('pause-btn').addEventListener('click', togglePause);
 // ── Pause menu controls ───────────────────────────────────────────────────────
 function pct(v) { return Math.round(v * 100) + '%'; }
 
+function clamp01(v) { return Math.max(0, Math.min(1, v)); }
+
 function fillRange(el, v) {
-  const p = (Math.max(0, Math.min(1, v)) * 100).toFixed(1);
+  const p = (clamp01(v) * 100).toFixed(1);
   el.style.background = `linear-gradient(to right, #00e5ff ${p}%, rgba(255,255,255,0.1) ${p}%)`;
 }
 
 function showPausePage(name) {
-  g('pause-page-main')    ?.classList.toggle('active', name === 'main');
-  g('pause-page-settings')?.classList.toggle('active', name === 'settings');
-  g('pause-page-audio')   ?.classList.toggle('active', name === 'audio');
+  g('pause-page-main')     ?.classList.toggle('active', name === 'main');
+  g('pause-page-settings') ?.classList.toggle('active', name === 'settings');
+  g('pause-page-audio')    ?.classList.toggle('active', name === 'audio');
+  g('pause-page-sfxmixer') ?.classList.toggle('active', name === 'sfxmixer');
+
   const title = g('pause-menu-title');
-  if (title) title.textContent =
-    name === 'settings' ? 'SETTINGS' :
-    name === 'audio'    ? 'AUDIO'    : 'PAUSED';
+  if (title) {
+    if (name === 'main')     title.textContent = 'PAUSED';
+    if (name === 'settings') title.textContent = 'SETTINGS';
+    if (name === 'audio')    title.textContent = 'AUDIO';
+    if (name === 'sfxmixer') title.textContent = 'SFX MIXER';
+  }
 }
+
+function setNum(id, v) { const el = g(id); if (el) el.value = (+v).toFixed(2); }
+
+function syncPauseMenuFromEngine() {
+  showPausePage('main');
+
+  const mv = getMusicVolume();
+  const sv = getSfxVolume();
+  const masterV = (mv + sv) * 0.5;
+
+  // Master / Music / SFX
+  const master = g('pm-master');
+  if (master) {
+    master.value = masterV;
+    fillRange(master, masterV);
+    g('pm-master-val').textContent = pct(masterV);
+    setNum('pm-master-num', masterV);
+  }
+
+  const music = g('pm-music');
+  if (music) {
+    music.value = mv;
+    fillRange(music, mv);
+    g('pm-music-val').textContent = pct(mv);
+    setNum('pm-music-num', mv);
+  }
+
+  const sfx = g('pm-sfx');
+  if (sfx) {
+    sfx.value = sv;
+    fillRange(sfx, sv);
+    g('pm-sfx-val').textContent = pct(sv);
+    setNum('pm-sfx-num', sv);
+  }
+
+  // Individual SFX (mixer page)
+  document.querySelectorAll('.sfx-range').forEach(el => {
+    const v = getSoundVolume(el.dataset.sfx);
+    el.value = v; fillRange(el, v);
+    const valEl = g('pm-sfx-' + el.dataset.sfx + '-val');
+    if (valEl) valEl.textContent = pct(v);
+    const numEl = g('pm-sfx-' + el.dataset.sfx + '-num');
+    if (numEl) numEl.value = (+v).toFixed(2);
+  });
+}
+
+function updateDerivedMaster() {
+  const mv = getMusicVolume();
+  const sv = getSfxVolume();
+  const v  = (mv + sv) * 0.5;
+  const master = g('pm-master');
+  if (!master) return;
+  master.value = v;
+  fillRange(master, v);
+  g('pm-master-val').textContent = pct(v);
+  setNum('pm-master-num', v);
+}
+
+// Master (sets Music + SFX masters together)
+g('pm-master')?.addEventListener('input', () => {
+  const v = clamp01(parseFloat(g('pm-master').value || '0'));
+  setMusicVolume(v);
+  setSfxVolume(v);
+
+  // keep the other sliders in lock-step
+  const music = g('pm-music'); if (music) { music.value = v; fillRange(music, v); g('pm-music-val').textContent = pct(v); setNum('pm-music-num', v); }
+  const sfx   = g('pm-sfx');   if (sfx)   { sfx.value   = v; fillRange(sfx, v);   g('pm-sfx-val').textContent   = pct(v); setNum('pm-sfx-num', v); }
+
+  fillRange(g('pm-master'), v);
+  g('pm-master-val').textContent = pct(v);
+  setNum('pm-master-num', v);
+});
+g('pm-master-num')?.addEventListener('change', () => {
+  const v = clamp01(parseFloat(g('pm-master-num').value || '0'));
+  g('pm-master').value = v;
+  g('pm-master').dispatchEvent(new Event('input', { bubbles: true }));
+});
+
+// Music
+g('pm-music')?.addEventListener('input', () => {
+  const v = clamp01(parseFloat(g('pm-music').value || '0'));
+  setMusicVolume(v);
+  fillRange(g('pm-music'), v);
+  g('pm-music-val').textContent = pct(v);
+  setNum('pm-music-num', v);
+  updateDerivedMaster();
+});
+g('pm-music-num')?.addEventListener('change', () => {
+  const v = clamp01(parseFloat(g('pm-music-num').value || '0'));
+  g('pm-music').value = v;
+  g('pm-music').dispatchEvent(new Event('input', { bubbles: true }));
+});
+
+// SFX master
+g('pm-sfx')?.addEventListener('input', () => {
+  const v = clamp01(parseFloat(g('pm-sfx').value || '0'));
+  setSfxVolume(v);
+  fillRange(g('pm-sfx'), v);
+  g('pm-sfx-val').textContent = pct(v);
+  setNum('pm-sfx-num', v);
+  updateDerivedMaster();
+});
+g('pm-sfx-num')?.addEventListener('change', () => {
+  const v = clamp01(parseFloat(g('pm-sfx-num').value || '0'));
+  g('pm-sfx').value = v;
+  g('pm-sfx').dispatchEvent(new Event('input', { bubbles: true }));
+});
+
+// Individual SFX
+document.querySelectorAll('.sfx-range').forEach(el => {
+  el.addEventListener('input', () => {
+    const v = clamp01(parseFloat(el.value || '0'));
+    setSoundVolume(el.dataset.sfx, v);
+    fillRange(el, v);
+    const valEl = g('pm-sfx-' + el.dataset.sfx + '-val');
+    if (valEl) valEl.textContent = pct(v);
+    const numEl = g('pm-sfx-' + el.dataset.sfx + '-num');
+    if (numEl) numEl.value = (+v).toFixed(2);
+  });
+});
+document.querySelectorAll('.pause-num[id^="pm-sfx-"][id$="-num"]').forEach(num => {
+  num.addEventListener('change', () => {
+    const id = num.id.replace('-num','');
+    const range = g(id);
+    if (!range) return;
+    const v = clamp01(parseFloat(num.value || '0'));
+    range.value = v;
+    range.dispatchEvent(new Event('input', { bubbles: true }));
+  });
+});
 
 // Wire hover + click sounds on all pause menu buttons
 document.querySelectorAll('.pause-action-btn, .pause-export-btn').forEach(btn => {
   btn.addEventListener('mouseenter', () => playSound('menu',        0.4));
   btn.addEventListener('click',      () => playSound('menu_select', 0.5));
 });
-
-function syncPauseMenuFromEngine() {
-  showPausePage('main');
-
-  const master = g('pm-master');
-  if (master) {
-    const mv = getMusicVolume();
-    const sv = getSfxVolume();
-    const v  = (mv + sv) * 0.5; // derived display value
-    master.value = v;
-    fillRange(master, v);
-    g('pm-master-val').textContent = pct(v);
-  }
-
-  document.querySelectorAll('.sfx-range').forEach(el => {
-    const v = getSoundVolume(el.dataset.sfx);
-    el.value = v; fillRange(el, v);
-    const valEl = g('pm-sfx-' + el.dataset.sfx + '-val');
-    if (valEl) valEl.textContent = pct(v);
-  });
-}
-
-// Master (sets Music + SFX master together)
-g('pm-master')?.addEventListener('input', () => {
-  const v = parseFloat(g('pm-master').value);
-  setMusicVolume(v);
-  setSfxVolume(v);
-  fillRange(g('pm-master'), v);
-  g('pm-master-val').textContent = pct(v);
-});
-// Individual SFX
-document.querySelectorAll('.sfx-range').forEach(el => {
-  el.addEventListener('input', () => {
-    const v = parseFloat(el.value);
-    setSoundVolume(el.dataset.sfx, v); fillRange(el, v);
-    const valEl = g('pm-sfx-' + el.dataset.sfx + '-val');
-    if (valEl) valEl.textContent = pct(v);
-  });
-});
-
 // Resume
 g('pause-resume-btn')?.addEventListener('click', () => {
   if (state.paused) togglePause();
@@ -274,11 +371,17 @@ g('pause-settings-btn')?.addEventListener('click', () => showPausePage('settings
 // Audio page
 g('pause-audio-btn')?.addEventListener('click', () => showPausePage('audio'));
 
+// SFX Mixer page
+g('pause-sfxmixer-btn')?.addEventListener('click', () => showPausePage('sfxmixer'));
+
 // Back to main page (from settings)
 g('pause-back-btn')?.addEventListener('click', () => showPausePage('main'));
 
 // Back to settings page (from audio)
 g('pause-audio-back-btn')?.addEventListener('click', () => showPausePage('settings'));
+
+// Back to audio page (from mixer)
+g('pause-sfxmixer-back-btn')?.addEventListener('click', () => showPausePage('audio'));
 
 // Quit to main menu
 g('pause-quit-btn')?.addEventListener('click', () => {
@@ -301,6 +404,8 @@ g('pm-export-btn')?.addEventListener('click', () => {
   URL.revokeObjectURL(a.href);
   showNotif('Audio Settings Exported!');
 });
+
+g('pm-export-btn-2')?.addEventListener('click', () => g('pm-export-btn')?.click());
 
 // ── Toast notification ────────────────────────────────────────────────────────
 let _notifTimer = null;
