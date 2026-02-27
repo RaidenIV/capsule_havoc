@@ -14,7 +14,7 @@ import { triggerVictory, restartGame, startCountdown } from './gameFlow.js';
 import { initInput }       from './input.js';
 import { tick }            from './loop.js';
 import { togglePanel, togglePause, updatePauseBtn } from './panel/index.js';
-import { initAudio, resumeAudioContext, playSound } from './audio.js';
+import { initAudio, resumeAudioContext, playSound, playSplashSound } from './audio.js';
 import { stopMusic } from './audio.js';
 import { initMenuUI } from './ui/menu.js';
 
@@ -63,28 +63,15 @@ const splashEl     = document.getElementById('splash-screen');
 if (splashEl && menuScreenEl) {
   menuScreenEl.style.visibility = 'hidden';
 
-  // Play splash SFX (best-effort; may be blocked until first user gesture)
-  try {
-    const a = new Audio('./assets/sfx/splash.wav');
-    a.preload = 'auto';
-    a.volume = 1.0;
-    const p = a.play();
-    if (p && typeof p.catch === 'function') {
-      p.catch(() => {
-        window.__splashAudio = a;
-        window.__splashAudioPending = true;
-      });
-    }
-  } catch (_) {}
+  // Play splash sound — fires immediately if AudioContext is already running,
+  // or as soon as the user's first gesture unlocks it
+  playSplashSound();
 
   setTimeout(() => {
     splashEl.classList.add('fade-out');
     splashEl.addEventListener('animationend', () => {
       splashEl.remove();
       menuScreenEl.style.visibility = '';
-      // Cancel any pending splash audio so it doesn't replay on first user gesture
-      window.__splashAudioPending = false;
-      window.__splashAudio = null;
     }, { once: true });
   }, 2000);
 }
