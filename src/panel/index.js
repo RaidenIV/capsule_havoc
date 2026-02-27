@@ -202,35 +202,55 @@ g('pause-btn').addEventListener('click', togglePause);
 // ── Pause menu controls ───────────────────────────────────────────────────────
 function pct(v) { return Math.round(v * 100) + '%'; }
 
+// Drives the colored fill on a range input by updating its background gradient
+function fillRange(el, v) {
+  const p = (Math.max(0, Math.min(1, v)) * 100).toFixed(1);
+  el.style.background = `linear-gradient(to right, #00e5ff ${p}%, rgba(255,255,255,0.1) ${p}%)`;
+}
+
 function syncPauseMenuFromEngine() {
-  const music = g('pm-music'); if (music) { music.value = getMusicVolume(); g('pm-music-val').textContent = pct(getMusicVolume()); }
-  const sfx   = g('pm-sfx');   if (sfx)   { sfx.value   = getSfxVolume();   g('pm-sfx-val').textContent   = pct(getSfxVolume()); }
+  const music = g('pm-music');
+  if (music) {
+    const v = getMusicVolume();
+    music.value = v; fillRange(music, v);
+    g('pm-music-val').textContent = pct(v);
+  }
+  const sfx = g('pm-sfx');
+  if (sfx) {
+    const v = getSfxVolume();
+    sfx.value = v; fillRange(sfx, v);
+    g('pm-sfx-val').textContent = pct(v);
+  }
   document.querySelectorAll('.sfx-range').forEach(el => {
     const name = el.dataset.sfx;
-    el.value = getSoundVolume(name);
+    const v = getSoundVolume(name);
+    el.value = v; fillRange(el, v);
     const valEl = g('pm-sfx-' + name + '-val');
-    if (valEl) valEl.textContent = pct(getSoundVolume(name));
+    if (valEl) valEl.textContent = pct(v);
   });
 }
 
 // Master music slider
 g('pm-music')?.addEventListener('input', () => {
-  setMusicVolume(parseFloat(g('pm-music').value));
+  const v = parseFloat(g('pm-music').value);
+  setMusicVolume(v); fillRange(g('pm-music'), v);
   g('pm-music-val').textContent = pct(getMusicVolume());
 });
 
 // Master SFX slider — scales all individual SFX together
 g('pm-sfx')?.addEventListener('input', () => {
-  setSfxVolume(parseFloat(g('pm-sfx').value));
+  const v = parseFloat(g('pm-sfx').value);
+  setSfxVolume(v); fillRange(g('pm-sfx'), v);
   g('pm-sfx-val').textContent = pct(getSfxVolume());
 });
 
 // Individual SFX sliders
 document.querySelectorAll('.sfx-range').forEach(el => {
   el.addEventListener('input', () => {
-    setSoundVolume(el.dataset.sfx, parseFloat(el.value));
+    const v = parseFloat(el.value);
+    setSoundVolume(el.dataset.sfx, v); fillRange(el, v);
     const valEl = g('pm-sfx-' + el.dataset.sfx + '-val');
-    if (valEl) valEl.textContent = pct(getSoundVolume(el.dataset.sfx));
+    if (valEl) valEl.textContent = pct(v);
   });
 });
 
