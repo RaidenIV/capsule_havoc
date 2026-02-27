@@ -29,6 +29,14 @@ export function formatTime(secs) {
 // ── Countdown overlay ─────────────────────────────────────────────────────────
 export function startCountdown(onDone) {
   playerMesh.visible = false; hbObj.visible = false; dashBarObj.visible = false;
+
+  // Hide HUD during countdown
+  const hudEls = ['ui', 'coin-hud', 'xp-hud'].map(id => document.getElementById(id));
+  hudEls.forEach(el => { if (el) el.style.visibility = 'hidden'; });
+
+  // Hide enemies during countdown
+  state.enemies.forEach(e => { e.grp.visible = false; });
+
   const steps = [
     { text: '3',       size: '120px', color: '#00e5ff', shadow: '0 0 40px rgba(0,229,255,0.8)' },
     { text: '2',       size: '120px', color: '#00e5ff', shadow: '0 0 40px rgba(0,229,255,0.8)' },
@@ -41,26 +49,30 @@ export function startCountdown(onDone) {
   playSound('countdown', 0.9, 1.0); // play once when countdown begins
 
   function showStep() {
-    if (idx >= steps.length) {
-      countdownEl.classList.remove('show');
-      state.paused = false;
-      playerMesh.visible = hbObj.visible = dashBarObj.visible = true;
-      startMusic();
-      if (onDone) onDone();
-      return;
-    }
     const s = steps[idx];
+    countdownNum.style.fontSize   = s.size;
+    countdownNum.style.color      = s.color;
+    countdownNum.style.textShadow = s.shadow;
+    countdownNum.textContent      = s.text;
+    countdownNum.style.animation  = 'none';
+    void countdownNum.offsetWidth;
+    countdownNum.style.animation  = '';
     idx++;
-    // Each step: 80ms hidden + 920ms visible = exactly 1s. 4 steps = 4s total.
-    countdownNum.style.opacity = '0';
-    setTimeout(() => {
-      countdownNum.style.fontSize   = s.size;
-      countdownNum.style.color      = s.color;
-      countdownNum.style.textShadow = s.shadow;
-      countdownNum.textContent      = s.text;
-      countdownNum.style.opacity    = '1';
-      setTimeout(showStep, 920);
-    }, 80);
+    const delay = s.text === 'SURVIVE' ? 900 : 800;
+    if (idx < steps.length) {
+      setTimeout(showStep, delay);
+    } else {
+      setTimeout(() => {
+        countdownEl.classList.remove('show');
+        state.paused = false;
+        playerMesh.visible = hbObj.visible = dashBarObj.visible = true;
+        // Restore HUD and enemies
+        hudEls.forEach(el => { if (el) el.style.visibility = ''; });
+        state.enemies.forEach(e => { e.grp.visible = true; });
+        startMusic();
+        if (onDone) onDone();
+      }, delay);
+    }
   }
   showStep();
 }
