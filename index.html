@@ -129,7 +129,6 @@
       <!-- ── Page: Main ── -->
       <div class="pause-page active" id="pause-page-main">
         <button class="pause-action-btn resume"   id="pause-resume-btn">RESUME</button>
-        <button class="pause-action-btn restart"  id="pause-restart-btn">RESTART</button>
         <button class="pause-action-btn settings" id="pause-settings-btn">SETTINGS</button>
         <button class="pause-action-btn quit"     id="pause-quit-btn">QUIT TO MENU</button>
       </div>
@@ -140,15 +139,12 @@
         <div class="pause-settings-section">
           <div class="pause-settings-section-label">MASTER</div>
           <div class="pause-slider-row">
-            <span class="pause-slider-label">Music</span>
-            <input type="range" class="pause-range" id="pm-music" min="0" max="1" step="0.01" value="0.4">
-            <span class="pause-slider-val" id="pm-music-val">40%</span>
+            <span class="pause-slider-label">Master</span>
+            <input type="range" class="pause-range" id="pm-master" min="0" max="1" step="0.01" value="1.0">
+            <span class="pause-slider-val" id="pm-master-val">100%</span>
           </div>
-          <div class="pause-slider-row">
-            <span class="pause-slider-label">SFX (all)</span>
-            <input type="range" class="pause-range" id="pm-sfx" min="0" max="1" step="0.01" value="1.0">
-            <span class="pause-slider-val" id="pm-sfx-val">100%</span>
-          </div>
+        </div>
+
         </div>
 
         <div class="pause-settings-section">
