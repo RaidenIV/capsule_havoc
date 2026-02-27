@@ -62,6 +62,11 @@ const menuUI = initMenuUI({
     menuUI.hideMenu();
     state.uiMode = 'playing';
 
+    // Always clear the pause overlay when starting — it may still have 'show'
+    // from a previous pause → quit → start cycle
+    document.getElementById('pause-overlay').classList.remove('show');
+    state.paused = false;
+
     // Ensure audio is ready before countdown ends (musicEl exists)
     await initAudio();
 
@@ -86,5 +91,6 @@ window.showMainMenu = () => {
   state.gameOver = false;
   state.paused   = true;
   state.uiMode   = 'menu';
+  document.getElementById('pause-overlay').classList.remove('show');
   menuUI.showMenu();
 };
