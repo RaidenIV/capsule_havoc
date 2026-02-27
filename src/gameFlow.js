@@ -7,12 +7,10 @@ import { updateXP } from './xp.js';
 import { spawnEnemyAtEdge, removeCSS2DFromGroup } from './enemies.js';
 import { destroyOrbitBullets, syncOrbitBullets } from './weapons.js';
 import { _particleMeshPool } from './particles.js';
-import { startMusic, stopMusic, playSound } from './audio.js';
+import { startMusic, stopMusic, pauseMusic, resumeMusic, playSound } from './audio.js';
 import { recordRun } from './ui/highScores.js';
 
-// Music intentionally continues during pause — these are no-ops exported for panel/index.js
-export function pauseMusic() {}
-export function resumeMusic() {}
+export { pauseMusic, resumeMusic }; // re-export so panel/index.js can use them
 
 const timerEl      = document.getElementById('timer-value');
 const killsEl      = document.getElementById('kills-value');
@@ -40,6 +38,7 @@ export function startCountdown(onDone) {
   let idx = 0;
   countdownEl.classList.add('show');
   state.paused = true;
+  playSound('countdown', 0.9, 1.0); // play once when countdown begins
 
   function showStep() {
     const s = steps[idx];
@@ -50,9 +49,6 @@ export function startCountdown(onDone) {
     countdownNum.style.animation  = 'none';
     void countdownNum.offsetWidth;
     countdownNum.style.animation  = '';
-    // Play beep for 3/2/1, louder accent for SURVIVE
-    if (s.text !== 'SURVIVE') playSound('countdown', 0.8, 1.0);
-    else playSound('countdown', 1.0, 1.3);
     idx++;
     const delay = s.text === 'SURVIVE' ? 900 : 800;
     if (idx < steps.length) {
