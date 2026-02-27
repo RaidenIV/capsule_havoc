@@ -12,77 +12,44 @@
 <body class="mode-menu">
 
 <div id="menu-screen" class="menu-screen show">
+  <div class="menu-card">
+    <div class="menu-title">CAPSULE HAVOC</div>
+    <div class="menu-sub">Bullet Heaven Prototype</div>
 
-  <!-- animated background layers -->
-  <div class="menu-bg-grid"></div>
-  <div class="menu-bg-vignette"></div>
-  <div class="menu-orb menu-orb-1"></div>
-  <div class="menu-orb menu-orb-2"></div>
+    <div class="menu-page active" data-page="main">
+      <button class="menu-btn primary" id="menu-start">START</button>
+      <button class="menu-btn" id="menu-scores">HIGH SCORES</button>
+      <button class="menu-btn" id="menu-settings">SETTINGS</button>
+      <div class="menu-muted">WASD · SHIFT DASH · TAB SETTINGS</div>
+    </div>
 
-  <div class="menu-layout">
-
-    <!-- LEFT — branding -->
-    <div class="menu-brand">
-      <div class="menu-eyebrow">▶ BULLET HEAVEN</div>
-      <h1 class="menu-title">CAPSULE<br>HAVOC</h1>
-      <div class="menu-tagline">Survive. Level up. Dominate.</div>
-      <div class="menu-controls-hint">
-        <span>WASD</span> Move &nbsp;·&nbsp;
-        <span>SHIFT</span> Dash &nbsp;·&nbsp;
-        <span>TAB</span> Settings
+    <div class="menu-page" data-page="scores">
+      <div class="menu-hdr-row"><div class="menu-hdr">HIGH SCORES</div></div>
+      <div id="scores-list" class="scores-list"></div>
+      <div class="menu-row">
+        <button class="menu-btn small" id="menu-back-scores">BACK</button>
+        <button class="menu-btn small danger" id="menu-clear-scores">CLEAR</button>
       </div>
     </div>
 
-    <!-- RIGHT — pages -->
-    <div class="menu-panel">
-
-      <div class="menu-page active" data-page="main">
-        <button class="menu-btn primary" id="menu-start">
-          <span class="menu-btn-icon">▶</span> START GAME
-        </button>
-        <button class="menu-btn" id="menu-scores">
-          <span class="menu-btn-icon">◈</span> HIGH SCORES
-        </button>
-        <button class="menu-btn" id="menu-settings">
-          <span class="menu-btn-icon">◎</span> SETTINGS
-        </button>
-        <div class="menu-version">v0.3 · PROTOTYPE</div>
-      </div>
-
-      <div class="menu-page" data-page="scores">
-        <div class="menu-page-hdr">
-          <div class="menu-page-hdr-title">HIGH SCORES</div>
+    <div class="menu-page" data-page="settings">
+      <div class="menu-hdr-row"><div class="menu-hdr">AUDIO</div></div>
+      <div class="menu-form">
+        <label class="menu-check"><input type="checkbox" id="menu-mute"> <span>Mute</span></label>
+        <div class="menu-field">
+          <div class="menu-field-row"><span>Music</span><span id="menu-music-val">40%</span></div>
+          <input type="range" id="menu-music" min="0" max="1" step="0.01" value="0.4">
         </div>
-        <div id="scores-list" class="scores-list"></div>
-        <div class="menu-row">
-          <button class="menu-btn small" id="menu-back-scores">← BACK</button>
-          <button class="menu-btn small danger" id="menu-clear-scores">✕ CLEAR</button>
+        <div class="menu-field">
+          <div class="menu-field-row"><span>SFX</span><span id="menu-sfx-val">100%</span></div>
+          <input type="range" id="menu-sfx" min="0" max="1" step="0.01" value="1.0">
         </div>
       </div>
-
-      <div class="menu-page" data-page="settings">
-        <div class="menu-page-hdr">
-          <div class="menu-page-hdr-title">SETTINGS</div>
-        </div>
-        <div class="menu-section-label">AUDIO</div>
-        <div class="menu-form">
-          <label class="menu-check"><input type="checkbox" id="menu-mute"> <span>Mute All</span></label>
-          <div class="menu-field">
-            <div class="menu-field-row"><span>Music Volume</span><span id="menu-music-val">40%</span></div>
-            <input type="range" id="menu-music" min="0" max="1" step="0.01" value="0.4">
-          </div>
-          <div class="menu-field">
-            <div class="menu-field-row"><span>SFX Volume</span><span id="menu-sfx-val">100%</span></div>
-            <input type="range" id="menu-sfx" min="0" max="1" step="0.01" value="1.0">
-          </div>
-        </div>
-        <div class="menu-row">
-          <button class="menu-btn small" id="menu-back-settings">← BACK</button>
-        </div>
+      <div class="menu-row">
+        <button class="menu-btn small" id="menu-back-settings">BACK</button>
       </div>
-
-    </div><!-- /menu-panel -->
-  </div><!-- /menu-layout -->
+    </div>
+  </div>
 </div>
 
 
@@ -117,7 +84,73 @@
 <div id="tab-hint">TAB — SETTINGS</div>
 
 <!-- ── Pause overlay ── -->
-<div id="pause-overlay"><span>PAUSED</span></div>
+<div id="pause-overlay">
+  <div class="pause-menu">
+
+    <div class="pause-menu-hdr">
+      <div class="pause-menu-title">PAUSED</div>
+    </div>
+
+    <div class="pause-menu-body">
+
+      <!-- Actions -->
+      <div class="pause-actions">
+        <button class="pause-action-btn resume" id="pause-resume-btn">▶ RESUME</button>
+        <button class="pause-action-btn quit"   id="pause-quit-btn">⏏ QUIT TO MENU</button>
+      </div>
+
+      <div class="pause-divider"></div>
+
+      <!-- Audio settings -->
+      <div class="pause-section-label">AUDIO SETTINGS</div>
+
+      <div class="pause-audio-grid">
+
+        <!-- Master controls -->
+        <div class="pause-audio-group">
+          <div class="pause-audio-group-label">MASTER</div>
+          <div class="pause-slider-row">
+            <span class="pause-slider-label">Music</span>
+            <input type="range" class="pause-range" id="pm-music" min="0" max="1" step="0.01" value="0.4">
+            <span class="pause-slider-val" id="pm-music-val">40%</span>
+          </div>
+          <div class="pause-slider-row">
+            <span class="pause-slider-label">SFX (all)</span>
+            <input type="range" class="pause-range" id="pm-sfx" min="0" max="1" step="0.01" value="1.0">
+            <span class="pause-slider-val" id="pm-sfx-val">100%</span>
+          </div>
+        </div>
+
+        <!-- Per-SFX controls -->
+        <div class="pause-audio-group">
+          <div class="pause-audio-group-label">INDIVIDUAL SFX</div>
+          <div class="pause-sfx-grid">
+            <div class="pause-slider-row"><span class="pause-slider-label">Shoot</span>        <input type="range" class="pause-range sfx-range" id="pm-sfx-shoot"        data-sfx="shoot"        min="0" max="1" step="0.01" value="1"><span class="pause-slider-val" id="pm-sfx-shoot-val">100%</span></div>
+            <div class="pause-slider-row"><span class="pause-slider-label">Player Hit</span>   <input type="range" class="pause-range sfx-range" id="pm-sfx-player_hit"    data-sfx="player_hit"   min="0" max="1" step="0.01" value="1"><span class="pause-slider-val" id="pm-sfx-player_hit-val">100%</span></div>
+            <div class="pause-slider-row"><span class="pause-slider-label">Standard Hit</span> <input type="range" class="pause-range sfx-range" id="pm-sfx-standard_hit"  data-sfx="standard_hit" min="0" max="1" step="0.01" value="1"><span class="pause-slider-val" id="pm-sfx-standard_hit-val">100%</span></div>
+            <div class="pause-slider-row"><span class="pause-slider-label">Elite Hit</span>    <input type="range" class="pause-range sfx-range" id="pm-sfx-elite_hit"     data-sfx="elite_hit"    min="0" max="1" step="0.01" value="1"><span class="pause-slider-val" id="pm-sfx-elite_hit-val">100%</span></div>
+            <div class="pause-slider-row"><span class="pause-slider-label">Elite Shoot</span>  <input type="range" class="pause-range sfx-range" id="pm-sfx-elite_shoot"   data-sfx="elite_shoot"  min="0" max="1" step="0.01" value="1"><span class="pause-slider-val" id="pm-sfx-elite_shoot-val">100%</span></div>
+            <div class="pause-slider-row"><span class="pause-slider-label">Explode</span>      <input type="range" class="pause-range sfx-range" id="pm-sfx-explode"       data-sfx="explode"      min="0" max="1" step="0.01" value="1"><span class="pause-slider-val" id="pm-sfx-explode-val">100%</span></div>
+            <div class="pause-slider-row"><span class="pause-slider-label">Explode Elite</span><input type="range" class="pause-range sfx-range" id="pm-sfx-explodeElite"  data-sfx="explodeElite" min="0" max="1" step="0.01" value="1"><span class="pause-slider-val" id="pm-sfx-explodeElite-val">100%</span></div>
+            <div class="pause-slider-row"><span class="pause-slider-label">Coin</span>         <input type="range" class="pause-range sfx-range" id="pm-sfx-coin"          data-sfx="coin"         min="0" max="1" step="0.01" value="1"><span class="pause-slider-val" id="pm-sfx-coin-val">100%</span></div>
+            <div class="pause-slider-row"><span class="pause-slider-label">Heal</span>         <input type="range" class="pause-range sfx-range" id="pm-sfx-heal"          data-sfx="heal"         min="0" max="1" step="0.01" value="1"><span class="pause-slider-val" id="pm-sfx-heal-val">100%</span></div>
+            <div class="pause-slider-row"><span class="pause-slider-label">Level Up</span>     <input type="range" class="pause-range sfx-range" id="pm-sfx-levelup"       data-sfx="levelup"      min="0" max="1" step="0.01" value="1"><span class="pause-slider-val" id="pm-sfx-levelup-val">100%</span></div>
+            <div class="pause-slider-row"><span class="pause-slider-label">Dash</span>         <input type="range" class="pause-range sfx-range" id="pm-sfx-dash"          data-sfx="dash"         min="0" max="1" step="0.01" value="1"><span class="pause-slider-val" id="pm-sfx-dash-val">100%</span></div>
+            <div class="pause-slider-row"><span class="pause-slider-label">Countdown</span>    <input type="range" class="pause-range sfx-range" id="pm-sfx-countdown"     data-sfx="countdown"    min="0" max="1" step="0.01" value="1"><span class="pause-slider-val" id="pm-sfx-countdown-val">100%</span></div>
+            <div class="pause-slider-row"><span class="pause-slider-label">Game Over</span>    <input type="range" class="pause-range sfx-range" id="pm-sfx-gameover"      data-sfx="gameover"     min="0" max="1" step="0.01" value="1"><span class="pause-slider-val" id="pm-sfx-gameover-val">100%</span></div>
+            <div class="pause-slider-row"><span class="pause-slider-label">Victory</span>      <input type="range" class="pause-range sfx-range" id="pm-sfx-victory"       data-sfx="victory"      min="0" max="1" step="0.01" value="1"><span class="pause-slider-val" id="pm-sfx-victory-val">100%</span></div>
+          </div>
+        </div>
+
+      </div><!-- /pause-audio-grid -->
+
+      <div class="pause-divider"></div>
+
+      <button class="pause-export-btn" id="pm-export-btn">⬇ EXPORT AUDIO SETTINGS (JSON)</button>
+
+    </div><!-- /pause-menu-body -->
+  </div><!-- /pause-menu -->
+</div>
 
 <!-- ── Countdown overlay ── -->
 <div id="countdown"><div id="countdown-num"></div></div>
