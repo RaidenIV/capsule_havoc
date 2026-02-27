@@ -82,6 +82,9 @@ if (splashEl && menuScreenEl) {
     splashEl.addEventListener('animationend', () => {
       splashEl.remove();
       menuScreenEl.style.visibility = '';
+      // Cancel any pending splash audio so it doesn't replay on first user gesture
+      window.__splashAudioPending = false;
+      window.__splashAudio = null;
     }, { once: true });
   }, 2000);
 }
