@@ -74,7 +74,30 @@ export async function initAudio() {
   }
 }
 
-// ── Play a named SFX ──────────────────────────────────────────────────────────
+// ── Per-sound volume overrides (multiplied on top of global sfxVolume) ────────
+const soundVolumes = {
+  countdown:    1.0,
+  shoot:        1.0,
+  player_hit:   1.0,
+  elite_hit:    1.0,
+  elite_shoot:  1.0,
+  standard_hit: 1.0,
+  explode:      1.0,
+  explodeElite: 1.0,
+  coin:         1.0,
+  heal:         1.0,
+  levelup:      1.0,
+  dash:         1.0,
+  gameover:     1.0,
+  victory:      1.0,
+};
+
+export function getSoundVolume(name)      { return soundVolumes[name] ?? 1.0; }
+export function setSoundVolume(name, v)   { soundVolumes[name] = Math.max(0, Math.min(1, v)); }
+export function getAllSoundVolumes()       { return { ...soundVolumes }; }
+export function setAllSoundVolumes(map)   { Object.keys(map).forEach(k => setSoundVolume(k, map[k])); }
+
+
 // name:   key from sfxFiles above
 // volume: 0.0 – 1.0  (multiplied by global sfxVolume)
 // pitch:  playback rate, 1.0 = normal, vary slightly for variety
@@ -86,7 +109,7 @@ export function playSound(name, volume = 1.0, pitch = 1.0) {
   const gain = ctx.createGain();
   src.buffer = buf;
   src.playbackRate.value = pitch;
-  gain.gain.value = Math.min(1, volume * sfxVolume);
+  gain.gain.value = Math.min(1, volume * sfxVolume * (soundVolumes[name] ?? 1.0));
   src.connect(gain);
   gain.connect(ctx.destination);
   src.start();
