@@ -62,6 +62,21 @@ const splashEl     = document.getElementById('splash-screen');
 
 if (splashEl && menuScreenEl) {
   menuScreenEl.style.visibility = 'hidden';
+
+  // Play splash SFX (best-effort; may be blocked until first user gesture)
+  try {
+    const a = new Audio('./assets/sfx/splash.wav');
+    a.preload = 'auto';
+    a.volume = 1.0;
+    const p = a.play();
+    if (p && typeof p.catch === 'function') {
+      p.catch(() => {
+        window.__splashAudio = a;
+        window.__splashAudioPending = true;
+      });
+    }
+  } catch (_) {}
+
   setTimeout(() => {
     splashEl.classList.add('fade-out');
     splashEl.addEventListener('animationend', () => {
