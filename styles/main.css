@@ -119,7 +119,7 @@ canvas { display: block; }
 #pause-overlay {
   position: fixed; inset: 0;
   display: flex; align-items: center; justify-content: center;
-  background: rgba(0,0,0,0); pointer-events: none; z-index: 8;
+  background: rgba(0,0,0,0); pointer-events: none; z-index: 100;
   opacity: 0; transition: opacity 0.25s, background 0.25s;
 }
 #pause-overlay.show {
@@ -190,6 +190,10 @@ canvas { display: block; }
   flex: 1; background: rgba(255,255,255,0.04); border-color: rgba(255,255,255,0.1); color: rgba(255,255,255,0.5);
 }
 .pause-action-btn.back:hover { background: rgba(255,255,255,0.09); color: #fff; }
+.pause-action-btn.audio {
+  background: rgba(255,255,255,0.04); border-color: rgba(255,255,255,0.1); color: rgba(255,255,255,0.6);
+}
+.pause-action-btn.audio:hover { background: rgba(255,255,255,0.09); color: #fff; }
 
 /* ── Settings sections ── */
 .pause-settings-section {
@@ -198,7 +202,7 @@ canvas { display: block; }
   border: 1px solid rgba(255,255,255,0.07);
   background: rgba(255,255,255,0.02);
 }
-.pause-settings-section + .pause-settings-section { margin-top: 10px; }
+.pause-settings-section + .pause-settings-section { margin-top: 20px; }
 .pause-settings-section-label {
   font-size: 9px; font-weight: 800; letter-spacing: 0.25em;
   text-transform: uppercase; color: rgba(0,229,255,0.5); margin-bottom: 4px;
