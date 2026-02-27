@@ -3,12 +3,11 @@
 // then kicks off the game loop.
 
 import { state }           from './state.js';
-import { ELITE_TYPES }     from './constants.js';
 import { onRendererResize } from './renderer.js';
 import { onBloomResize }   from './bloom.js';
 import { updateXP }        from './xp.js';
 import { updateHealthBar } from './player.js';
-import { spawnEnemyAtEdge, spawnLevelElites, setLevelUpCallback, setVictoryCallback } from './enemies.js';
+import { spawnEnemyAtEdge, setLevelUpCallback, setVictoryCallback } from './enemies.js';
 import { syncOrbitBullets } from './weapons.js';
 import { triggerVictory, restartGame, startCountdown } from './gameFlow.js';
 import { initInput }       from './input.js';
@@ -24,8 +23,6 @@ setVictoryCallback(triggerVictory);
 setLevelUpCallback((newLevel) => {
   playSound('levelup', 0.8);
   syncOrbitBullets();
-  ELITE_TYPES.filter(et => et.minLevel <= newLevel)
-             .forEach(et => spawnLevelElites(et));
 });
 
 // ── Wire input callbacks ──────────────────────────────────────────────────────
