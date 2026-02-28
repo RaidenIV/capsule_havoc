@@ -356,45 +356,24 @@ function _makeBladeMat() {
   });
 }
 
-function _makeTipSparkle(pos) {
-  const g = new THREE.Group();
-  g.position.copy(pos);
-  for (let i = 0; i < 8; i++) {
-    const angle = (i / 8) * Math.PI * 2;
-    const len   = 0.12 + Math.random() * 0.18;
-    const geo   = new THREE.PlaneGeometry(len, 0.05);
-    geo.translate(len * 0.5, 0, 0);
-    const mat = new THREE.MeshBasicMaterial({
-      color: i % 2 === 0 ? 0xffffff : 0x44bbff,
-      transparent: true, opacity: 0.9,
-      depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide,
-    });
-    const m = new THREE.Mesh(geo, mat);
-    m.rotation.z = angle;
-    m.layers.enable(2);
-    g.add(m);
-  }
-  g.layers.enable(2);
-  return g;
-}
-
-// Convert our bearing angle (atan2(moveX,moveZ)) to mesh rotation.y
-// so that the blade extends toward the bearing direction
 function _bearingToRotY(a) { return a - Math.PI / 2; }
 
 // ── performSlash ──────────────────────────────────────────────────────────────
+// SLASH_Y_OFFSET: half of player capsule height (radius 0.4 + half-length 0.6 = 1.0)
+const SLASH_Y_OFFSET = 1.0;
+
 export function performSlash() {
   const facing = Math.atan2(state.lastMoveX, state.lastMoveZ);
   const half   = SLASH_VISUAL_ARC * 0.5;
   const startA = facing - half;
-  const endA   = facing + half;
+
+  const slashY = playerGroup.position.y + SLASH_Y_OFFSET;
 
   // Arc trail mesh (full arc, revealed progressively via shader)
   const arcGeo  = _buildArcGeo(SLASH_INNER_R, SLASH_RADIUS, startA, SLASH_VISUAL_ARC);
   const trailMat = _makeTrailMat();
   const trailMesh = new THREE.Mesh(arcGeo, trailMat);
-  trailMesh.position.copy(playerGroup.position);
-  trailMesh.position.y = 0.08;
+  trailMesh.position.set(playerGroup.position.x, slashY, playerGroup.position.z);
   trailMesh.layers.enable(2);
   scene.add(trailMesh);
 
@@ -402,20 +381,18 @@ export function performSlash() {
   const bladeGeo  = _buildBladeGeo(SLASH_INNER_R, SLASH_RADIUS);
   const bladeMat  = _makeBladeMat();
   const bladeMesh = new THREE.Mesh(bladeGeo, bladeMat);
-  bladeMesh.position.copy(playerGroup.position);
-  bladeMesh.position.y = 0.14;
+  bladeMesh.position.set(playerGroup.position.x, slashY + 0.06, playerGroup.position.z);
   bladeMesh.rotation.y = _bearingToRotY(startA);
   bladeMesh.layers.enable(2);
   scene.add(bladeMesh);
 
-  // Tip sparkle position (at blade tip on the leading edge)
   const dmg = Math.round(SLASH_DAMAGE * (getBulletDamage() / 10));
 
   state.slashEffects.push({
     trailMesh, arcGeo, trailMat,
     bladeMesh, bladeGeo, bladeMat,
-    startA, endA,
-    tipSparkle: null, sparkleLife: 0,
+    startA,
+    endA: facing + half,
     life:    SLASH_DURATION,
     maxLife: SLASH_DURATION,
     elapsed: 0,
@@ -436,54 +413,31 @@ export function updateSlashEffects(worldDelta) {
     if (s.life <= 0) {
       scene.remove(s.trailMesh); s.arcGeo.dispose();   s.trailMat.dispose();
       scene.remove(s.bladeMesh); s.bladeGeo.dispose(); s.bladeMat.dispose();
-      if (s.tipSparkle) {
-        scene.remove(s.tipSparkle);
-        s.tipSparkle.children.forEach(c => { c.geometry.dispose(); c.material.dispose(); });
-      }
       state.slashEffects.splice(i, 1);
       continue;
     }
 
-    // Swing progress: 0→1 over SLASH_SWING_TIME, ease-out
-    const rawSwing  = Math.min(1, s.elapsed / SLASH_SWING_TIME);
-    const swing     = 1 - Math.pow(1 - rawSwing, 2.0); // ease-out
+    // Track player position every frame
+    const slashY = playerGroup.position.y + SLASH_Y_OFFSET;
+    s.trailMesh.position.set(playerGroup.position.x, slashY,        playerGroup.position.z);
+    s.bladeMesh.position.set(playerGroup.position.x, slashY + 0.06, playerGroup.position.z);
 
-    // Overall fade: holds at 1 while swinging, then 1→0 over SLASH_FADE_TIME
+    // Swing progress: 0→1 over SLASH_SWING_TIME, ease-out
+    const rawSwing = Math.min(1, s.elapsed / SLASH_SWING_TIME);
+    const swing    = 1 - Math.pow(1 - rawSwing, 2.0);
+
+    // Fade: holds at 1 while swinging, then 1→0 over SLASH_FADE_TIME
     const fade = s.life <= SLASH_FADE_TIME
       ? Math.pow(s.life / SLASH_FADE_TIME, 0.65)
       : 1.0;
 
-    // Update trail shader
     s.trailMat.uniforms.uProgress.value = swing;
     s.trailMat.uniforms.uFade.value     = fade;
 
     // Rotate blade to current leading edge
     const currentAngle = s.startA + swing * SLASH_VISUAL_ARC;
     s.bladeMesh.rotation.y = _bearingToRotY(currentAngle);
-    s.bladeMat.uniforms.uFade.value = swing < 1.0 ? fade : fade * 0.6; // blade dims after peak
-
-    // Tip sparkle at peak
-    if (!s.tipSparkle && swing >= 0.98) {
-      const tx = playerGroup.position.x + Math.sin(s.endA) * SLASH_RADIUS;
-      const tz = playerGroup.position.z + Math.cos(s.endA) * SLASH_RADIUS;
-      s.tipSparkle  = _makeTipSparkle(new THREE.Vector3(tx, 0.18, tz));
-      s.sparkleLife = 0.12;
-      scene.add(s.tipSparkle);
-    }
-
-    if (s.tipSparkle) {
-      s.sparkleLife -= worldDelta;
-      const sf = Math.max(0, s.sparkleLife / 0.12);
-      s.tipSparkle.children.forEach(c => {
-        c.material.opacity = sf * 0.9;
-        c.scale.setScalar(1 + (1 - sf) * 1.8);
-      });
-      if (s.sparkleLife <= 0) {
-        scene.remove(s.tipSparkle);
-        s.tipSparkle.children.forEach(c => { c.geometry.dispose(); c.material.dispose(); });
-        s.tipSparkle = null;
-      }
-    }
+    s.bladeMat.uniforms.uFade.value = swing < 1.0 ? fade : fade * 0.6;
 
     // Damage at 50% through swing
     if (!s.hitDone && swing >= 0.5) {
