@@ -5,7 +5,7 @@ import { scene } from './renderer.js';
 import { state } from './state.js';
 import {
   ENEMY_SPEED, ENEMY_CONTACT_DPS, ENEMY_BULLET_SPEED, ENEMY_BULLET_LIFETIME,
-  STAGGER_DURATION, SPAWN_FLASH_DURATION, ELITE_FIRE_RATE, ELITE_TYPES, PLAYER_MAX_HP,
+  STAGGER_DURATION, SPAWN_FLASH_DURATION, ELITE_FIRE_RATE, PLAYER_MAX_HP, STANDARD_ENEMY_SIZE_MULT,
 } from './constants.js';
 import {
   enemyGeo, enemyMat, enemyGeoParams, bulletGeoParams,
@@ -25,15 +25,15 @@ const _eBulletDir = new THREE.Vector3();
 const _eBulletQ   = new THREE.Quaternion();
 
 // ── Spawn ─────────────────────────────────────────────────────────────────────
-export function spawnEnemy(x, z, eliteType = null) {
+export function spawnEnemy(x, z, cfg = null) {
   const grp = new THREE.Group();
   grp.position.set(x, 0, z);
 
-  const color     = eliteType ? eliteType.color : 0x888888;
-  const scaleMult = eliteType ? eliteType.sizeMult : 1;
-  const hpMult    = eliteType ? eliteType.hpMult   : 1;
-  const expMult   = eliteType ? eliteType.expMult  : 1;
-  const coinMult  = eliteType ? eliteType.coinMult : 1;
+  const isBoss    = !!(cfg && cfg.isBoss);
+  const color     = cfg?.color ?? 0x888888;
+  const scaleMult = cfg?.sizeMult ?? STANDARD_ENEMY_SIZE_MULT;
+  const expMult   = cfg?.expMult  ?? 1;
+  const coinMult  = cfg?.coinMult ?? 1;
 
   const mat = enemyMat.clone();
   mat.color.set(color);
@@ -47,13 +47,26 @@ export function spawnEnemy(x, z, eliteType = null) {
   grp.add(mesh);
   scene.add(grp);
 
-  const baseHP   = getEnemyHP();
-  const fixedHp  = eliteType?.fixedHp;
-  const hp       = fixedHp != null ? Math.round(fixedHp) : Math.round(baseHP * hpMult);
-  const fireRate = eliteType ? (eliteType.fireRate ?? (ELITE_FIRE_RATE[eliteType.minLevel] ?? 2.0)) : null;
+  const hp = (cfg && typeof cfg.health === 'number')
+    ? Math.round(cfg.health)
+    : Math.round(getEnemyHP());
+  const fireRate = isBoss ? (cfg.fireRate ?? 1.6) : null;
+
+  const mat = enemyMat.clone();
+  mat.color.set(color);
+  const geo = new THREE.CapsuleGeometry(
+    enemyGeoParams.radius * scaleMult, enemyGeoParams.length * scaleMult,
+    enemyGeoParams.capSegs, enemyGeoParams.radial
+  );
+  const mesh = new THREE.Mesh(geo, mat);
+  mesh.position.y = (enemyGeoParams.radius + enemyGeoParams.length / 2) * scaleMult;
+  mesh.castShadow = true;
+  grp.add(mesh);
+  scene.add(grp);
+
 
   let eliteBarFill = null;
-  if (eliteType) {
+  if (isBoss) {
     const bWrap = document.createElement('div');
     bWrap.className = 'elite-bar-wrap';
     bWrap.style.width = Math.round(40 + scaleMult * 30) + 'px';
@@ -70,8 +83,7 @@ export function spawnEnemy(x, z, eliteType = null) {
 
   state.enemies.push({
     grp, mesh, mat, hp, maxHp: hp, dead: false,
-    scaleMult, expMult, coinMult, eliteType, eliteBarFill,
-    isBoss: !!eliteType?.isBoss,
+    scaleMult, expMult, coinMult, isBoss, eliteBarFill,
     fireRate, shootTimer: fireRate ? Math.random() * fireRate : 0,
     staggerTimer: 0, baseColor: new THREE.Color(color),
     spawnFlashTimer: SPAWN_FLASH_DURATION, matDirty: true,
@@ -81,23 +93,24 @@ export function spawnEnemy(x, z, eliteType = null) {
   mat.transparent = true; mat.opacity = 0; mesh.castShadow = false;
 }
 
-export function spawnEnemyAtEdge(eliteType = null) {
+export function spawnEnemyAtEdge(cfg = null) {
   if (state.enemies.length >= state.maxEnemies) return;
   const angle = Math.random() * Math.PI * 2;
   const r     = 28 + Math.random() * 5;
   spawnEnemy(
     playerGroup.position.x + Math.cos(angle) * r,
     playerGroup.position.z + Math.sin(angle) * r,
-    eliteType
+    cfg
   );
 }
 
-export function spawnLevelElites(eliteType) {
+export function spawnBossPack(bossCfg) {
   const session = state.gameSession;
-  const WINDOW  = 8000;
-  for (let i = 0; i < eliteType.count; i++) {
+  const WINDOW  = 2500;
+  const count = bossCfg?.count ?? 1;
+  for (let i = 0; i < count; i++) {
     setTimeout(() => {
-      if (!state.gameOver && state.gameSession === session) spawnEnemyAtEdge(eliteType);
+      if (!state.gameOver && state.gameSession === session) spawnEnemyAtEdge(bossCfg);
     }, Math.random() * WINDOW);
   }
 }
@@ -126,7 +139,7 @@ const killsEl = document.getElementById('kills-value');
 
 export function killEnemy(j) {
   const e = state.enemies[j];
-  spawnExplosion(e.grp.position, e.eliteType);
+  spawnExplosion(e.grp.position, e.isBoss ? { color: e.baseColor.getHex(), sizeMult: e.scaleMult } : null);
   removeCSS2DFromGroup(e.grp);
   scene.remove(e.grp);
   e.dead = true;
@@ -138,8 +151,7 @@ export function killEnemy(j) {
 
   const xpGained  = Math.round(getXPPerKill() * (e.expMult || 1));
   const prevLevel = state.playerLevel;
-  updateXP(xpGained);
-  if (state.playerLevel > prevLevel) {
+  updateXP(xpGained);  if (state.playerLevel > prevLevel) {
     if (_onLevelUp) _onLevelUp(state.playerLevel);
   }
 }
