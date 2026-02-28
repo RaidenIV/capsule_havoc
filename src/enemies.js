@@ -52,19 +52,6 @@ export function spawnEnemy(x, z, cfg = null) {
     : Math.round(getEnemyHP());
   const fireRate = isBoss ? (cfg.fireRate ?? 1.6) : null;
 
-  const mat = enemyMat.clone();
-  mat.color.set(color);
-  const geo = new THREE.CapsuleGeometry(
-    enemyGeoParams.radius * scaleMult, enemyGeoParams.length * scaleMult,
-    enemyGeoParams.capSegs, enemyGeoParams.radial
-  );
-  const mesh = new THREE.Mesh(geo, mat);
-  mesh.position.y = (enemyGeoParams.radius + enemyGeoParams.length / 2) * scaleMult;
-  mesh.castShadow = true;
-  grp.add(mesh);
-  scene.add(grp);
-
-
   let eliteBarFill = null;
   if (isBoss) {
     const bWrap = document.createElement('div');
