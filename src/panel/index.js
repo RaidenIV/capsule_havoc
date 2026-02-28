@@ -185,6 +185,7 @@ export function updatePauseBtn() {
 }
 export function togglePause() {
   state.paused = !state.paused;
+  pauseEl?.classList.toggle('show', state.paused);
   if (!state.paused) { clock.getDelta(); resumeMusic(); syncPauseMenuFromEngine(); }
   else { pauseMusic(); syncPauseMenuFromEngine(); }
   updatePauseBtn();
