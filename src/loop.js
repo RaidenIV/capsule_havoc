@@ -1,91 +1,57 @@
 // ─── loop.js ──────────────────────────────────────────────────────────────────
 import * as THREE from 'three';
-import { scene, camera, labelRenderer } from './renderer.js';
+import { renderer, scene, camera, labelRenderer } from './renderer.js';
 import { renderBloom, consumeExplBloomDirty } from './bloom.js';
 import { state } from './state.js';
-import { WAVE_CONFIG } from './constants.js';
+import { PLAYER_MAX_HP } from './constants.js';
 import { updateSunPosition, updateOrbitLights } from './lighting.js';
 import { updateChunks } from './terrain.js';
-import { updatePlayer, updateDashStreaks, playerGroup } from './player.js';
+import { updatePlayer, updateDashStreaks } from './player.js';
 import { updateEnemies, spawnEnemyAtEdge } from './enemies.js';
-import { shootBulletWave, updateBullets, updateEnemyBullets, updateOrbitBullets, syncOrbitBullets } from './weapons.js';
+import { shootBulletWave, updateBullets, updateEnemyBullets, updateOrbitBullets } from './weapons.js';
 import { updatePickups } from './pickups.js';
 import { updateParticles } from './particles.js';
 import { updateDamageNums } from './damageNumbers.js';
 import { getFireInterval } from './xp.js';
-import { triggerGameOver, formatTime, triggerVictory } from './gameFlow.js';
-import { openUpgradeShop, closeUpgradeShopIfOpen } from './ui/upgrades.js';
+import { triggerGameOver, formatTime } from './gameFlow.js';
+import { playerGroup } from './player.js';
 
 const timerEl  = document.getElementById('timer-value');
 const fpsTogEl = document.getElementById('s-fps');
+const fpsOvEl  = document.getElementById('fpsOverlay');
 const fpsValEl = document.getElementById('fpsVal');
 
 export const clock = new THREE.Clock();
 let fpsEMA = 60;
 
-// Glass banner elements
-let _bannerTimer = 0;
-const _bannerWrap = document.getElementById('waveBanner');
-const _bannerText = document.getElementById('waveBannerText');
-
-function showWaveBanner(text) {
-  if (!_bannerWrap || !_bannerText) return;
-  _bannerText.textContent = text;
-  _bannerWrap.classList.add('show');
-  _bannerTimer = 1.35;
-}
-
-function startWave(waveNum) {
-  const cfg = WAVE_CONFIG[Math.max(0, Math.min(waveNum - 1, WAVE_CONFIG.length - 1))];
-  state.wave = cfg.wave;
-  state.wavePhase = 'standard';
-  state.waveSpawnRemaining = cfg.standardCount;
-  state.bossSpawnRemaining = 0;
-  state.maxEnemies = Math.max(state.maxEnemies, 350);
-  showWaveBanner('WAVE ' + cfg.wave);
-}
-
 export function tick() {
   requestAnimationFrame(tick);
 
-  // When the upgrade shop is open, keep rendering but don't advance simulation
-  if (state.paused || state.gameOver || state.upgradeOpen) {
+  if (state.paused || state.gameOver) {
     renderBloom();
     labelRenderer.render(scene, camera);
     return;
   }
 
-  // Start wave after countdown completes
-  if (state.wavePendingStart) {
-    state.wavePendingStart = false;
-    startWave(state.wave || 1);
-  }
-
   const delta = Math.min(clock.getDelta(), 0.05);
 
-  // Banner timing
-  if (_bannerWrap && _bannerTimer > 0) {
-    _bannerTimer -= delta;
-    if (_bannerTimer <= 0) _bannerWrap.classList.remove('show');
-  }
-
-  // FPS
+  // FPS display
   fpsEMA = fpsEMA * 0.9 + (1 / Math.max(delta, 1e-6)) * 0.1;
   if (fpsTogEl?.checked && fpsValEl) fpsValEl.textContent = fpsEMA.toFixed(0);
 
   state.elapsed += delta;
   if (timerEl) timerEl.textContent = formatTime(state.elapsed);
 
-  // Player
+  // Slow-motion worldDelta is updated inside updatePlayer
   updatePlayer(delta, state.worldScale);
   const worldDelta = delta * state.worldScale;
 
-  // World systems
+  // ── World ──────────────────────────────────────────────────────────────────
   updateChunks(playerGroup.position);
   updateSunPosition(playerGroup.position);
   updateOrbitLights(delta, playerGroup.position);
 
-  // Camera follow
+  // Camera follows player
   camera.position.set(
     playerGroup.position.x + 28,
     28,
@@ -93,65 +59,26 @@ export function tick() {
   );
   camera.lookAt(playerGroup.position);
 
-  // ── Wave spawns ────────────────────────────────────────────────────────────
+  // Periodic enemy trickle
+  if (!Number.isFinite(state.spawnTickTimer)) state.spawnTickTimer = 0;
+  if (!Number.isFinite(state.maxEnemies) || state.maxEnemies <= 0) state.maxEnemies = 50;
   state.spawnTickTimer -= delta;
   if (state.spawnTickTimer <= 0) {
-    const waveCfg = WAVE_CONFIG[Math.max(0, Math.min((state.wave || 1) - 1, WAVE_CONFIG.length - 1))];
     const space = Math.max(0, state.maxEnemies - state.enemies.length);
-
-    if (state.wavePhase === 'standard' && state.waveSpawnRemaining > 0 && space > 0) {
-      const batch = Math.min(10, state.waveSpawnRemaining, space);
-      for (let i = 0; i < batch; i++) spawnEnemyAtEdge(null);
-      state.waveSpawnRemaining -= batch;
-    } else if (state.wavePhase === 'boss' && state.bossSpawnRemaining > 0 && space > 0) {
-      const boss = waveCfg.boss;
-      const bossCfg = { isBoss: true, color: boss.color, sizeMult: boss.sizeMult, health: boss.health, expMult: boss.expMult, coinMult: 1, fireRate: 1.4 };
-      const batch = Math.min(2, state.bossSpawnRemaining, space);
-      for (let i = 0; i < batch; i++) spawnEnemyAtEdge(bossCfg);
-      state.bossSpawnRemaining -= batch;
-    }
-
-    state.spawnTickTimer = 0.35;
+    const toSpawn = Math.min(space, 10);
+    for (let s = 0; s < toSpawn; s++) spawnEnemyAtEdge();
+    state.spawnTickTimer = 0.5;
   }
 
-  // ── Wave transitions ────────────────────────────────────────────────────────
-  if (state.wavePhase === 'standard' && state.waveSpawnRemaining <= 0 && state.enemies.length === 0) {
-    const waveCfg = WAVE_CONFIG[Math.max(0, Math.min((state.wave || 1) - 1, WAVE_CONFIG.length - 1))];
-    state.wavePhase = 'boss';
-    state.bossSpawnRemaining = waveCfg.boss.count;
-    showWaveBanner('BOSS');
-  }
-
-  if (state.wavePhase === 'boss' && state.bossSpawnRemaining <= 0 && state.enemies.length === 0) {
-    // Open shop and pause progression until CONTINUE
-    state.wavePhase = 'upgrade';
-    state.upgradeOpen = true;
-    state.paused = true;
-    openUpgradeShop(state.wave || 1, () => {
-      closeUpgradeShopIfOpen();
-      state.upgradeOpen = false;
-      state.paused = false;
-
-      if ((state.wave || 1) >= 10) {
-        triggerVictory();
-        return;
-      }
-      state.wave = (state.wave || 1) + 1;
-      state.wavePendingStart = true;
-      // Re-sync orbit bullets in case tier changed
-      syncOrbitBullets();
-    });
-  }
-
-  // Auto-shoot (real-time delta)
+  // Auto-shoot (runs on real delta so fire rate is unaffected by slowmo)
   state.shootTimer -= delta;
-  if ((state.weaponTier || 1) >= 2) state.bulletWaveAngle += 1.2 * delta;
+  if (state.playerLevel >= 2) state.bulletWaveAngle += 1.2 * delta;
   if (state.shootTimer <= 0) {
     shootBulletWave();
     state.shootTimer = getFireInterval();
   }
 
-  // Update world entities
+  // ── Update world entities with worldDelta ─────────────────────────────────
   updateBullets(worldDelta);
   updateEnemyBullets(worldDelta);
   if (state.orbitRings.length > 0) updateOrbitBullets(worldDelta);
