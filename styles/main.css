@@ -806,144 +806,91 @@ body.mode-playing #menu-screen { display: none !important; }
 /* end of menu styles */
 
 
-/* ── Wave banner ───────────────────────────────────────────────────────────── */
-.wave-banner{
+/* ── Wave / Boss Banner (glass) ────────────────────────────────────────────── */
+#wave-banner{
   position: fixed;
-  top: 18px;
+  top: 86px;
   left: 50%;
-  transform: translateX(-50%);
-  z-index: 9999;
-  padding: 10px 18px;
-  border-radius: 14px;
-  background: rgba(0,0,0,0.55);
-  border: 1px solid rgba(255,255,255,0.18);
-  color: #fff;
-  font-weight: 800;
-  letter-spacing: 0.16em;
-  text-transform: uppercase;
-  opacity: 0;
+  transform: translateX(-50%) translateY(-18px) scale(0.985);
+  padding: 14px 28px;
+  border-radius: 18px;
+  z-index: 60;
   pointer-events: none;
-  transition: opacity 220ms ease, transform 220ms ease;
-}
-.wave-banner.show{
-  opacity: 1;
-  transform: translateX(-50%) translateY(0);
-}
 
-/* ── Upgrade shop overlay ──────────────────────────────────────────────────── */
-.upgrade-overlay{
-  position: fixed;
-  inset: 0;
-  z-index: 10000;
-  display: none;
-  align-items: center;
-  justify-content: center;
-  background: rgba(0,0,0,0.70);
-  backdrop-filter: blur(3px);
-}
-.upgrade-overlay.show{ display: flex; }
-
-.upgrade-card{
-  width: min(820px, calc(100vw - 36px));
-  max-height: min(78vh, 720px);
-  display: flex;
-  flex-direction: column;
-  border-radius: 20px;
-  background: rgba(18,18,18,0.92);
-  border: 1px solid rgba(255,255,255,0.14);
-  box-shadow: 0 20px 60px rgba(0,0,0,0.6);
-  overflow: hidden;
-}
-.upgrade-header{
-  display:flex;
-  align-items:flex-end;
-  justify-content:space-between;
-  gap: 12px;
-  padding: 18px 18px 12px;
-  border-bottom: 1px solid rgba(255,255,255,0.12);
-}
-.upgrade-title{
-  font-size: 18px;
-  font-weight: 900;
-  letter-spacing: 0.14em;
-  color:#fff;
-}
-.upgrade-coins{
+  font-family: var(--mono);
   font-size: 14px;
-  font-weight: 700;
-  color: rgba(255,255,255,0.92);
-}
-.upgrade-list{
-  padding: 14px 16px;
-  overflow: auto;
-}
-.upgrade-row{
-  display:flex;
-  align-items:center;
-  justify-content:space-between;
-  gap: 12px;
-  padding: 12px 12px;
-  border-radius: 14px;
-  border: 1px solid rgba(255,255,255,0.10);
-  background: rgba(255,255,255,0.04);
-  margin-bottom: 10px;
-}
-.upgrade-row.owned{ opacity: 0.6; }
-.upgrade-row.locked{ opacity: 0.45; }
-
-.upgrade-name{
-  font-weight: 800;
-  color: #fff;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  font-size: 13px;
-}
-.upgrade-meta{
-  margin-top: 4px;
-  font-size: 12px;
-  color: rgba(255,255,255,0.78);
-}
-.upgrade-right{
-  display:flex;
-  align-items:center;
-  gap: 12px;
-}
-.upgrade-cost{
-  font-size: 12px;
-  color: rgba(255,255,255,0.78);
-  white-space: nowrap;
-}
-.upgrade-buy-btn{
-  min-width: 92px;
-  height: 34px;
-  border-radius: 12px;
-  border: 1px solid rgba(255,255,255,0.16);
-  background: rgba(0,229,255,0.14);
-  color: #fff;
-  font-weight: 800;
-  letter-spacing: 0.10em;
-  cursor: pointer;
-}
-.upgrade-buy-btn:disabled{
-  opacity: 0.5;
-  cursor: not-allowed;
-  background: rgba(255,255,255,0.06);
-}
-.upgrade-footer{
-  padding: 12px 18px 18px;
-  border-top: 1px solid rgba(255,255,255,0.12);
-  display:flex;
-  justify-content:flex-end;
-}
-.upgrade-close-btn{
-  height: 40px;
-  padding: 0 18px;
-  border-radius: 14px;
-  border: 1px solid rgba(255,255,255,0.18);
-  background: rgba(255,255,255,0.08);
-  color:#fff;
   font-weight: 900;
-  letter-spacing: 0.12em;
-  cursor:pointer;
+  letter-spacing: 0.45em;
+  text-transform: uppercase;
+  color: rgba(255,255,255,0.92);
+
+  opacity: 0;
+  transition:
+    opacity 220ms ease,
+    transform 260ms cubic-bezier(0.34,1.56,0.64,1),
+    filter 260ms ease;
+
+  background: linear-gradient(180deg,
+    rgba(255,255,255,0.10) 0%,
+    rgba(8,10,14,0.62) 55%,
+    rgba(8,10,14,0.38) 100%
+  );
+  border: 1px solid rgba(0,229,255,0.22);
+  box-shadow:
+    0 18px 60px rgba(0,0,0,0.55),
+    0 0 0 1px rgba(0,0,0,0.35) inset,
+    0 0 26px rgba(0,229,255,0.22);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
 }
-.upgrade-close-btn:hover{ background: rgba(255,255,255,0.12); }
+
+#wave-banner::before{
+  content:"";
+  position:absolute;
+  inset: 1px;
+  border-radius: 17px;
+  background: radial-gradient(circle at 20% 10%,
+    rgba(255,255,255,0.22),
+    rgba(255,255,255,0) 55%
+  );
+  opacity: 0.9;
+  pointer-events:none;
+}
+
+#wave-banner::after{
+  content:"";
+  position:absolute;
+  inset:-1px;
+  border-radius: 18px;
+  background: linear-gradient(90deg,
+    rgba(0,229,255,0.00) 0%,
+    rgba(0,229,255,0.25) 50%,
+    rgba(0,229,255,0.00) 100%
+  );
+  opacity: 0.35;
+  filter: blur(10px);
+  pointer-events:none;
+}
+
+#wave-banner > span{
+  position: relative;
+  display: inline-block;
+  text-shadow:
+    0 0 18px rgba(0,229,255,0.35),
+    0 0 32px rgba(0,229,255,0.18);
+}
+
+#wave-banner.show{
+  opacity: 1;
+  transform: translateX(-50%) translateY(0) scale(1);
+  filter: saturate(1.05);
+}
+
+@media (max-width: 520px){
+  #wave-banner{
+    top: 78px;
+    padding: 12px 20px;
+    font-size: 12px;
+    letter-spacing: 0.38em;
+  }
+}
