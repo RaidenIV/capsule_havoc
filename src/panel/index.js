@@ -358,6 +358,13 @@ g('pause-resume-btn')?.addEventListener('click', () => {
   if (state.paused) togglePause();
 });
 
+// Restart
+g('pause-restart-btn')?.addEventListener('click', () => {
+  pauseEl?.classList.remove('show');
+  state.paused = false;
+  restartGame();
+});
+
 
 // Settings page
 g('pause-settings-btn')?.addEventListener('click', () => showPausePage('settings'));
