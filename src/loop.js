@@ -20,6 +20,19 @@ const timerEl  = document.getElementById('timer-value');
 const fpsTogEl = document.getElementById('s-fps');
 const fpsOvEl  = document.getElementById('fpsOverlay');
 const fpsValEl = document.getElementById('fpsVal');
+const waveBannerEl = document.getElementById('waveBanner');
+const waveBannerTextEl = document.getElementById('waveBannerText');
+let waveBannerTimer = null;
+function showWaveBanner(text, ms = 1400) {
+  if (!waveBannerEl || !waveBannerTextEl) return;
+  waveBannerTextEl.textContent = text;
+  waveBannerEl.classList.add('show');
+  if (waveBannerTimer) clearTimeout(waveBannerTimer);
+  waveBannerTimer = setTimeout(() => {
+    waveBannerEl.classList.remove('show');
+  }, ms);
+}
+
 
 export const clock = new THREE.Clock();
 let fpsEMA = 60;
@@ -33,12 +46,14 @@ function _initWaveState() {
   state.waveRemainingToSpawn = def.standardCount;
   state.bossRemainingToSpawn = 0;
   state.waveActiveCap = Math.min(80, 40 + state.waveIndex * 4);
+  showWaveBanner(`WAVE ${state.waveIndex}`);
 }
 
 function _beginBossPhase() {
   const def = _getWaveDef();
   state.wavePhase = 'boss';
   state.bossRemainingToSpawn = def.boss.count;
+  showWaveBanner(`BOSS`);
 }
 
 function _advanceWaveIfCleared(triggerVictory) {
