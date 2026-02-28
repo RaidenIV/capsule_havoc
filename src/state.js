@@ -13,23 +13,22 @@ export const state = {
   // ── UI mode ─────────────────────────────────────────────────────────────────
   uiMode: 'menu',   // 'menu' | 'playing'
   loopStarted: false,
-      // incremented on restart to cancel stale setTimeout callbacks
+  // incremented on restart to cancel stale setTimeout callbacks
+
+  // ── Shop / Wave system ───────────────────────────────────────────────
+  upgradeOpen: false,
+  weaponTier:  1,
+  waveIndex:   1,
+  wavePhase:   null,
+  waveRemainingToSpawn: null,
+  bossRemainingToSpawn: null,
+  waveActiveCap: null,
+
 
   // ── Stats ────────────────────────────────────────────────────────────────────
   kills:   0,
   elapsed: 0,
   coins:   0,
-
-  // ── Waves / Shop ───────────────────────────────────────────────────────────
-  waveIndex: 1,
-  wavePhase: null,              // 'standard' | 'boss'
-  waveRemainingToSpawn: null,
-  bossRemainingToSpawn: null,
-  waveActiveCap: null,
-  upgradeOpen: false,
-
-  // Weapon tier (purchased; decoupled from XP level)
-  weaponTier: 0,
 
   // ── Player ───────────────────────────────────────────────────────────────────
   playerHP:    100,

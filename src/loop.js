@@ -57,7 +57,7 @@ function _beginBossPhase() {
   showWaveBanner(`BOSS`);
 }
 
-function _advanceWaveIfCleared() {
+function _advanceWaveIfCleared(triggerVictory) {
   if (state.enemies.length !== 0) return;
 
   if (state.wavePhase === 'standard') {
@@ -68,20 +68,25 @@ function _advanceWaveIfCleared() {
   if (state.wavePhase === 'boss') {
     if (state.bossRemainingToSpawn > 0) return;
 
-    // Boss pack cleared → open Upgrade Shop, pause game until CONTINUE
+    // Boss pack cleared → open Upgrade Shop and pause progression.
+    state.wavePhase = 'upgrade';
     state.upgradeOpen = true;
+
     openUpgradeShop(state.waveIndex, () => {
       closeUpgradeShopIfOpen();
       state.upgradeOpen = false;
+
+      // Prevent a huge delta spike after being paused in the shop
+      clock.getDelta();
 
       if (state.waveIndex >= WAVE_CONFIG.length) {
         triggerVictory();
         return;
       }
+
       state.waveIndex++;
       _initWaveState();
     });
-    return;
   }
 }
 
@@ -103,7 +108,7 @@ function _spawnWaveBatch() {
     const n = Math.min(room, state.bossRemainingToSpawn);
     if (n <= 0) return;
 
-    const bossSizeMult = def.boss.size;
+    const bossSizeMult = def.boss.size / STANDARD_ENEMY_SIZE_MULT;
 
     for (let i = 0; i < n; i++) {
       spawnEnemyAtEdge({
@@ -171,7 +176,7 @@ export function tick() {
 
   // Auto-shoot (runs on real delta so fire rate is unaffected by slowmo)
   state.shootTimer -= delta;
-  if (state.weaponTier >= 2) state.bulletWaveAngle += 1.2 * delta;
+  if ((state.weaponTier || 1) >= 2) state.bulletWaveAngle += 1.2 * delta;
   if (state.shootTimer <= 0) {
     shootBulletWave();
     state.shootTimer = getFireInterval();
@@ -185,7 +190,7 @@ export function tick() {
   const enemyResult = updateEnemies(delta, worldDelta, state.elapsed);
   if (enemyResult === 'DEAD') { triggerGameOver(); return; }
 
-  _advanceWaveIfCleared();
+  _advanceWaveIfCleared(triggerVictory);
 
   updatePickups(worldDelta, state.playerLevel, state.elapsed);
   updateParticles(worldDelta);

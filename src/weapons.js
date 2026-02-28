@@ -54,7 +54,7 @@ export function destroyOrbitBullets() {
 
 export function syncOrbitBullets() {
   destroyOrbitBullets();
-  for (const def of getOrbitRingDefs(state.weaponTier)) {
+  for (const def of getOrbitRingDefs(state.weaponTier || state.playerLevel || 1)) {
     const meshes = [];
     for (let i = 0; i < def.count; i++) {
       const mesh = new THREE.Mesh(bulletGeo, makeOrbitMat(def.color));

@@ -806,111 +806,147 @@ body.mode-playing #menu-screen { display: none !important; }
 /* end of menu styles */
 
 
-/* ── Upgrade Shop Overlay (added) ───────────────────────────────────────── */
-#upgrade-overlay{
-  position:fixed; inset:0;
-  display:none;
-  align-items:center; justify-content:center;
+/* ─────────────────────────────────────────────────────────────
+   Wave transition banner
+   ───────────────────────────────────────────────────────────── */
+.wave-banner{
+  position: fixed;
+  left: 50%;
+  top: 18%;
+  transform: translateX(-50%) translateY(-10px) scale(0.98);
+  opacity: 0;
+  pointer-events: none;
+  z-index: 2000;
+  transition: opacity 220ms ease, transform 220ms ease;
+}
+.wave-banner.show{
+  opacity: 1;
+  transform: translateX(-50%) translateY(0) scale(1);
+}
+.wave-banner__text{
+  font-family: 'Inter', system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  font-weight: 900;
+  font-size: clamp(28px, 4vw, 64px);
+  color: rgba(255,255,255,0.92);
+  text-shadow: 0 8px 26px rgba(0,0,0,0.55);
+  padding: 10px 18px;
+  border-radius: 14px;
+  background: rgba(0,0,0,0.20);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid rgba(255,255,255,0.12);
+}
+@media (prefers-reduced-motion: reduce){
+  .wave-banner{ transition: none; }
+}
+
+
+/* ────────────────────────────────────────────────────────────────────────── */
+/* Upgrade Shop (between waves) */
+
+.shop-overlay {
+  position: fixed;
+  inset: 0;
+  display: none;
+  align-items: center;
+  justify-content: center;
   background: rgba(0,0,0,0.55);
   z-index: 9999;
 }
-#upgrade-overlay .upgrade-card{
-  width:min(680px, calc(100vw - 32px));
-  border-radius: 18px;
+.shop-overlay.show { display: flex; }
+
+.shop-card {
+  width: min(720px, calc(100vw - 28px));
+  max-height: min(78vh, 760px);
+  overflow: auto;
   padding: 18px 18px 14px;
-  background: rgba(20,22,25,0.72);
-  border: 1px solid rgba(255,255,255,0.10);
+  border-radius: 18px;
+  background: rgba(20, 22, 26, 0.45);
+  border: 1px solid rgba(255,255,255,0.16);
+  box-shadow: 0 16px 60px rgba(0,0,0,0.55);
   backdrop-filter: blur(14px);
-  -webkit-backdrop-filter: blur(14px);
-  box-shadow: 0 18px 50px rgba(0,0,0,0.55);
-  color: rgba(255,255,255,0.92);
-  font-family: inherit;
 }
-#upgrade-overlay .upgrade-title{
+
+.shop-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+}
+
+.shop-title {
   font-weight: 800;
   letter-spacing: 0.12em;
-  font-size: 18px;
+  text-transform: uppercase;
+  font-size: 16px;
 }
-#upgrade-overlay .upgrade-sub{
-  margin-top: 6px;
-  opacity: 0.85;
-  font-size: 14px;
+
+.shop-sub {
+  opacity: 0.8;
+  margin-top: 8px;
+  margin-bottom: 12px;
+  font-size: 13px;
 }
-#upgrade-overlay .upgrade-coins{
-  margin-top: 10px;
-  font-weight: 700;
-  opacity: 0.9;
-}
-#upgrade-overlay .upgrade-list{
-  margin-top: 12px;
+
+.shop-list { display: flex; flex-direction: column; gap: 10px; }
+
+.shop-row {
   display: flex;
-  flex-direction: column;
-  gap: 10px;
-  max-height: min(52vh, 440px);
-  overflow:auto;
-  padding-right: 6px;
-}
-#upgrade-overlay .upgrade-row{
-  display:flex;
+  align-items: center;
+  justify-content: space-between;
   gap: 12px;
-  align-items:center;
-  justify-content:space-between;
   padding: 12px;
   border-radius: 14px;
   background: rgba(255,255,255,0.06);
-  border: 1px solid rgba(255,255,255,0.08);
+  border: 1px solid rgba(255,255,255,0.10);
 }
-#upgrade-overlay .upgrade-row.owned{ opacity: 0.65; }
-#upgrade-overlay .upgrade-tier{ font-weight: 800; }
-#upgrade-overlay .upgrade-desc{ font-size: 12px; opacity: 0.8; margin-top: 3px; }
-#upgrade-overlay .upgrade-buy{
+
+.shop-label { display: flex; flex-direction: column; gap: 4px; }
+.shop-tier { font-weight: 800; letter-spacing: 0.08em; font-size: 12px; }
+.shop-meta { opacity: 0.78; font-size: 12px; }
+
+.shop-buy {
+  min-width: 160px;
   padding: 10px 12px;
   border-radius: 12px;
-  border: 1px solid rgba(255,255,255,0.12);
-  background: rgba(0,170,255,0.18);
-  color: rgba(255,255,255,0.95);
+  border: 1px solid rgba(255,255,255,0.16);
+  background: rgba(0,0,0,0.25);
+  color: #fff;
   font-weight: 800;
-  letter-spacing: 0.06em;
-  cursor:pointer;
+  letter-spacing: 0.08em;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  cursor: pointer;
 }
-#upgrade-overlay .upgrade-buy:disabled{
-  cursor: default;
-  background: rgba(255,255,255,0.08);
-  opacity: 0.8;
-}
-#upgrade-overlay .upgrade-footer{
-  margin-top: 12px;
-  display:flex;
-  justify-content:flex-end;
-}
-#upgrade-overlay .upgrade-continue{
+.shop-buy:disabled { opacity: 0.55; cursor: not-allowed; }
+.shop-buy.owned { opacity: 0.45; }
+.shop-buy.cant { opacity: 0.6; }
+
+.shop-actions { margin-top: 14px; display: flex; justify-content: flex-end; }
+.shop-continue {
   padding: 12px 16px;
-  border-radius: 14px;
-  border: 1px solid rgba(255,255,255,0.12);
-  background: rgba(255,255,255,0.10);
-  color: rgba(255,255,255,0.95);
+  border-radius: 12px;
+  border: 1px solid rgba(255,255,255,0.18);
+  background: rgba(0, 180, 255, 0.18);
+  color: #fff;
   font-weight: 900;
   letter-spacing: 0.10em;
-  cursor:pointer;
+  cursor: pointer;
 }
 
-
-/* Reusable coin UI (matches #coin-hud) */
-.coin-icon{
-  width:20px;height:20px;border-radius:50%;
-  background: radial-gradient(circle at 35% 35%, #ffe566, #f0a800);
-  box-shadow: 0 0 10px rgba(255,200,50,0.7), 0 0 2px #a06000 inset;
-  display:inline-block; flex-shrink:0;
+/* Reuse the in-game coin pill look */
+.coin-ui {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 8px;
+  border-radius: 999px;
+  background: rgba(0,0,0,0.25);
+  border: 1px solid rgba(255,255,255,0.14);
 }
-.coin-count{
-  font-family: var(--mono); font-size: 22px; font-weight: 900;
-  color: #ffe566; letter-spacing: 2px;
-  text-shadow: 0 0 14px rgba(255,224,102,0.8);
-}
-
-/* Upgrade shop coin + cost styling */
-.upgrade-coins-hud{display:flex;align-items:center;gap:10px;justify-content:flex-end;margin:10px 0 14px;}
-.upgrade-buy{display:flex;align-items:center;justify-content:space-between;gap:10px;}
-.upgrade-cost{display:flex;align-items:center;gap:8px;}
-.upgrade-buy.cant-afford{opacity:0.55;filter:saturate(0.7);}
-.upgrade-buy:disabled{cursor:not-allowed;}
+.coin-dot { color: #f5c542; font-size: 14px; line-height: 1; }
+.coin-num { color: #f5c542; font-weight: 900; letter-spacing: 0.04em; }

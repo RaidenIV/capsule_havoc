@@ -7,8 +7,8 @@ import { onRendererResize } from './renderer.js';
 import { onBloomResize }   from './bloom.js';
 import { updateXP }        from './xp.js';
 import { updateHealthBar } from './player.js';
-import { setLevelUpCallback } from './enemies.js';
-import { restartGame, startCountdown } from './gameFlow.js';
+import { spawnEnemyAtEdge, setLevelUpCallback, setVictoryCallback } from './enemies.js';
+import { triggerVictory, restartGame, startCountdown } from './gameFlow.js';
 import { initInput }       from './input.js';
 import { tick }            from './loop.js';
 import { togglePanel, togglePause, updatePauseBtn } from './panel/index.js';
@@ -17,9 +17,11 @@ import { stopMusic } from './audio.js';
 import { initMenuUI } from './ui/menu.js';
 
 // ── Wire cross-module callbacks (breaks enemies ↔ weapons circular deps) ──────
+setVictoryCallback(triggerVictory);
+
 setLevelUpCallback((newLevel) => {
-  // Player XP/levels can still exist for meta-progression, but weapon power is now shop-driven.
-  // Keep the level-up SFX only (no elite spawns / no weapon unlocks here).
+  // XP levels still exist for progression feedback, but weapon upgrades are
+  // purchased in the between-wave shop (weaponTier).
   playSound('levelup', 0.8);
 });
 

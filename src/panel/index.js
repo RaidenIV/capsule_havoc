@@ -162,18 +162,20 @@ function applyEmissive() {
 
 // ── Open / close ──────────────────────────────────────────────────────────────
 export function togglePanel() {
-  const cp = document.getElementById('cp');
-  if (!cp) return;
-  state.cpOpen = !state.cpOpen;
-  cp.style.display = state.cpOpen ? 'block' : 'none';
+  state.panelOpen = !state.panelOpen;
+  cpEl.classList.toggle('open', state.panelOpen);
+  uiEl.classList.toggle('po',   state.panelOpen);
+  hintEl.classList.toggle('po', state.panelOpen);
+  xpHudEl?.classList.toggle('po', state.panelOpen);
 
-  // NOTE: Opening the Control Panel should NOT pause/unpause gameplay anymore.
-  // Pause is controlled only by the Pause button / pause overlay.
-
-  if (state.cpOpen) {
+  // The dev panel is an overlay, but it should NOT pause the game.
+  // (Pause is controlled by the pause menu / Esc.)
+  if (state.panelOpen) {
     loadPanelFromState();
   }
 
+  // Prevent stuck movement if the user opens the panel mid-hold.
+  state.keys.w = state.keys.a = state.keys.s = state.keys.d = false;
 }
 g('cp-close').addEventListener('click', togglePanel);
 
@@ -357,14 +359,6 @@ document.querySelectorAll('.pause-action-btn, .pause-export-btn').forEach(btn =>
 g('pause-resume-btn')?.addEventListener('click', () => {
   if (state.paused) togglePause();
 });
-
-// Restart
-g('pause-restart-btn')?.addEventListener('click', () => {
-  // Ensure pause overlay closes, then restart.
-  if (state.paused) togglePause();
-  restartGame();
-});
-
 
 
 // Settings page

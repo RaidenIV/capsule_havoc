@@ -153,8 +153,7 @@
       <!-- ── Page: Main ── -->
       <div class="pause-page active" id="pause-page-main">
         <button class="pause-action-btn resume"   id="pause-resume-btn">RESUME</button>
-                <button class="pause-action-btn restart"  id="pause-restart-btn">RESTART</button>
-<button class="pause-action-btn settings" id="pause-settings-btn">SETTINGS</button>
+        <button class="pause-action-btn settings" id="pause-settings-btn">SETTINGS</button>
         <button class="pause-action-btn quit"     id="pause-quit-btn">QUIT TO MENU</button>
       </div>
 
@@ -516,6 +515,28 @@
 </script>
 
 <script type="module" src="./src/main.js"></script>
+
+
+
+  <!-- Upgrade Shop (between waves) -->
+  <div id="upgradeShop" class="shop-overlay" aria-hidden="true">
+    <div class="shop-card">
+      <div class="shop-header">
+        <div id="shopWave" class="shop-title">WAVE COMPLETE</div>
+        <div class="shop-coins" title="Coins">
+          <span class="coin-ui"><span class="coin-dot">●</span><span id="shopCoinsVal" class="coin-num">0</span></span>
+        </div>
+      </div>
+
+      <div class="shop-sub">Spend coins on weapon tiers. Higher tiers cost more.</div>
+
+      <div id="shopList" class="shop-list"></div>
+
+      <div class="shop-actions">
+        <button id="shopContinue" class="shop-continue">CONTINUE</button>
+      </div>
+    </div>
+  </div>
 
 </body>
 </html>
