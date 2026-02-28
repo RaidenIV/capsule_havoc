@@ -293,17 +293,17 @@ const _trailFrag = /* glsl */`
     float mask = 1.0 - smoothstep(uProgress - 0.03, uProgress + 0.01, vUv.x);
     if (mask < 0.001) discard;
 
-    // Full-length afterimage: trail is bright all the way from hilt to tip.
-    // Only the very tail (last 10%) fades, so it reads like a persistent blade echo.
-    float trailFade = smoothstep(0.0, 0.10, vUv.x);
+    // Uniform brightness - no trail fade, same intensity from hilt to tip
+    // Only the base clips in over the first 6% so it doesn't hard-cut at origin
+    float base = smoothstep(0.0, 0.06, vUv.x);
 
-    // Outer cutting edge: thin bright line along the full outer radius
+    // Outer cutting edge: bright line at the outer radius
     float edge = exp(-(1.0 - vUv.y) * (1.0 - vUv.y) * 80.0);
-    // Inner glow: fills the arc body
-    float body = pow(vUv.y, 1.2) * 0.5;
+    // Arc body fill
+    float body = pow(vUv.y, 1.0) * 0.45;
 
-    vec3 col = mix(uColor * 0.5, vec3(1.0, 1.0, 1.0), edge * 0.9);
-    float alpha = (body + edge * 1.0) * trailFade * mask * uFade;
+    vec3 col = mix(uColor * 0.55, vec3(1.0, 1.0, 1.0), edge * 0.9);
+    float alpha = (body + edge) * base * mask * uFade;
     alpha = clamp(alpha, 0.0, 1.0);
     gl_FragColor = vec4(col, alpha);
   }
@@ -320,13 +320,14 @@ const _bladeFrag = /* glsl */`
   varying vec2  vUv;
   void main(){
     float cy   = abs(vUv.y - 0.5) * 2.0;           // 0=centre, 1=edge
-    float core = exp(-cy * cy * 420.0);             // very tight white core (laser-thin)
-    float glow = exp(-cy * cy *  50.0);             // tight blue glow
+    // Falloffs tuned so total visible width ≈ bullet diameter (0.09 world units)
+    float core = exp(-cy * cy * 800.0);             // razor white core
+    float glow = exp(-cy * cy * 120.0);             // tight blue halo, no spread
     float taper = 1.0 - smoothstep(0.88, 1.0, vUv.x) * 0.75;
     float base  = smoothstep(0.0, 0.04, vUv.x);
 
-    vec3  col   = core * vec3(1.0) + glow * uColor * 2.0;
-    float alpha = (core * 3.0 + glow * 0.9) * taper * base * uFade;
+    vec3  col   = core * vec3(1.0) + glow * uColor * 2.2;
+    float alpha = (core * 4.0 + glow * 1.2) * taper * base * uFade;
     gl_FragColor = vec4(col, clamp(alpha, 0.0, 1.0));
   }
 `;
@@ -387,6 +388,7 @@ export function performSlash() {
   scene.add(bladeMesh);
 
   const dmg = Math.round(SLASH_DAMAGE * (getBulletDamage() / 10));
+  playSound('laser_sword', 0.7, 0.92 + Math.random() * 0.16);
 
   state.slashEffects.push({
     trailMesh, arcGeo, trailMat,

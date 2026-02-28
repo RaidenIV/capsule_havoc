@@ -79,6 +79,7 @@ export async function initAudio() {
     dash:         './assets/sfx/dash.wav',
     gameover:     './assets/sfx/gameover.wav',
     victory:      './assets/sfx/victory.wav',
+    laser_sword:  './assets/sfx/laser_sword.wav',
   };
 
   await Promise.allSettled(
