@@ -20,17 +20,21 @@ export const state = {
   elapsed: 0,
   coins:   0,
 
+  // ── Waves / Shop ───────────────────────────────────────────────────────────
+  waveIndex: 1,
+  wavePhase: null,              // 'standard' | 'boss'
+  waveRemainingToSpawn: null,
+  bossRemainingToSpawn: null,
+  waveActiveCap: null,
+  upgradeOpen: false,
+
+  // Weapon tier (purchased; decoupled from XP level)
+  weaponTier: 0,
+
   // ── Player ───────────────────────────────────────────────────────────────────
   playerHP:    100,
   playerXP:    0,
   playerLevel: 0,
-
-  // ── Waves ───────────────────────────────────────────────────────────────────
-  waveIndex: 1,              // 1..10
-  wavePhase: 'standard',     // 'standard' | 'boss'
-  waveRemainingToSpawn: 0,   // remaining standard enemies to spawn this wave
-  bossRemainingToSpawn: 0,   // remaining bosses to spawn this wave
-  waveActiveCap: 60,         // max simultaneous enemies (perf cap)
 
   // ── Shoot timing ────────────────────────────────────────────────────────────
   shootTimer:      0,

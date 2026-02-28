@@ -1,144 +1,134 @@
-// ─── ui/upgrades.js ─────────────────────────────────────────────────────────
-// Between-wave upgrade shop. The game pauses while this overlay is open.
-
+// ─── ui/upgrades.js ──────────────────────────────────────────────────────────
 import { state } from '../state.js';
-import { WEAPON_CONFIG, UPGRADE_COST_BY_TIER } from '../constants.js';
+import { WEAPON_CONFIG } from '../constants.js';
 import { syncOrbitBullets } from '../weapons.js';
-import { playSound } from '../audio.js';
+import { getFireInterval } from '../xp.js';
 
-let overlay, coinsEl, listEl, closeBtn, titleEl;
-let _onClose = null;
+let _overlay, _coinsEl, _tierListEl, _continueBtn, _titleEl;
+let _onContinue = null;
 
-function fmtPct(v) {
-  return Math.round(v * 100) + '%';
+function $(id) { return document.getElementById(id); }
+
+function ensureDom() {
+  _overlay = $('upgrade-overlay');
+  _coinsEl = $('upgrade-coins');
+  _tierListEl = $('upgrade-tier-list');
+  _continueBtn = $('upgrade-continue-btn');
+  _titleEl = $('upgrade-title');
+
+  if (!_overlay || !_coinsEl || !_tierListEl || !_continueBtn) return false;
+
+  _continueBtn.onclick = () => {
+    closeUpgradeShopIfOpen();
+    if (typeof _onContinue === 'function') _onContinue();
+  };
+  return true;
 }
 
-function tierSummary(tier) {
-  const c = WEAPON_CONFIG[tier];
-  const fire = c[0];
-  const bullets = c[1];
-  const dmgMult = c[2];
-  const orbitCount = c[3];
-  const orbitRadius = c[4];
-  const orbitSpeed = c[5];
+function tierCost(tierIdx) {
+  if (tierIdx <= 0) return 0;
+  // costs: 2, 4, 8, ... 1024
+  return Math.pow(2, tierIdx);
+}
+
+function tierLabel(tierIdx) {
+  return `Tier ${tierIdx}`;
+}
+
+function describeTier(tierIdx) {
+  const cfg = WEAPON_CONFIG[Math.min(tierIdx, WEAPON_CONFIG.length - 1)];
+  const fire = cfg[0];
+  const wave = cfg[1];
+  const dmgM = cfg[2];
+  const orbitCount = cfg[3];
   return {
-    fire,
-    bullets,
-    dmgMult,
-    orbitCount,
-    orbitRadius,
-    orbitSpeed,
+    fire, wave, dmgM, orbitCount
   };
 }
 
 function render() {
-  if (!overlay) return;
-  if (coinsEl) coinsEl.textContent = state.coins.toString();
+  if (!_overlay) return;
 
-  if (!listEl) return;
-  listEl.innerHTML = '';
+  if (_coinsEl) _coinsEl.textContent = String(state.coins);
 
-  for (let tier = 1; tier <= 10; tier++) {
+  _tierListEl.innerHTML = '';
+
+  const cur = state.weaponTier ?? 0;
+  const maxTier = WEAPON_CONFIG.length - 1;
+
+  for (let t = 1; t <= maxTier; t++) {
     const row = document.createElement('div');
-    row.className = 'upgrade-row';
+    row.className = 'upgrade-tier';
 
     const left = document.createElement('div');
-    left.className = 'upgrade-left';
+    left.className = 'upgrade-tier-left';
 
     const name = document.createElement('div');
-    name.className = 'upgrade-name';
-    name.textContent = 'Weapon Tier ' + tier;
+    name.className = 'upgrade-tier-name';
+    name.textContent = tierLabel(t);
 
     const meta = document.createElement('div');
-    meta.className = 'upgrade-meta';
-
-    const s = tierSummary(tier);
-    meta.textContent =
-      `Fire ${s.fire.toFixed(3)}s • Bullets ${s.bullets} • Damage x${s.dmgMult}` +
-      (s.orbitCount > 0 ? ` • Orbit ${s.orbitCount}` : '');
+    meta.className = 'upgrade-tier-meta';
+    const d = describeTier(t);
+    meta.textContent = `Fire ${d.fire.toFixed(3)}s · Bullets ${d.wave} · DMG x${d.dmgM} · Orbit ${d.orbitCount}`;
 
     left.appendChild(name);
     left.appendChild(meta);
 
     const right = document.createElement('div');
-    right.className = 'upgrade-right';
+    right.className = 'upgrade-tier-right';
 
-    const cost = UPGRADE_COST_BY_TIER[tier] ?? (tier * 10);
-    const costEl = document.createElement('div');
-    costEl.className = 'upgrade-cost';
-    costEl.textContent = cost + ' coins';
-
+    const cost = tierCost(t);
     const btn = document.createElement('button');
     btn.className = 'upgrade-buy-btn';
+    btn.textContent = (t <= cur) ? 'OWNED' : `BUY (${cost})`;
 
-    const owned = tier <= state.weaponTier;
-    const isNext = tier === state.weaponTier + 1;
-
-    if (owned) {
-      btn.textContent = 'OWNED';
+    if (t <= cur) {
       btn.disabled = true;
       row.classList.add('owned');
-    } else if (!isNext) {
-      btn.textContent = 'LOCKED';
+    } else if (state.coins < cost) {
       btn.disabled = true;
       row.classList.add('locked');
     } else {
-      btn.textContent = 'BUY';
-      btn.disabled = state.coins < cost;
-      btn.addEventListener('click', () => {
+      btn.disabled = false;
+      btn.onclick = () => {
         if (state.coins < cost) return;
         state.coins -= cost;
-        state.weaponTier = tier;
-        playSound('click', 0.35, 1.0);
+        state.weaponTier = t;
+
+        // Apply immediately
         syncOrbitBullets();
+        state.shootTimer = Math.min(state.shootTimer, getFireInterval());
+
+        const coinCountEl = $('coin-count');
+        if (coinCountEl) coinCountEl.textContent = String(state.coins);
+
         render();
-        // Also update HUD coin text if present
-        const hudCoin = document.getElementById('coin-count');
-        if (hudCoin) hudCoin.textContent = state.coins.toString();
-      });
+      };
     }
 
-    right.appendChild(costEl);
     right.appendChild(btn);
-
     row.appendChild(left);
     row.appendChild(right);
-    listEl.appendChild(row);
+    _tierListEl.appendChild(row);
   }
 }
 
-export function initUpgradeUI() {
-  overlay = document.getElementById('upgradeOverlay');
-  coinsEl = document.getElementById('upgradeCoins');
-  listEl = document.getElementById('upgradeList');
-  closeBtn = document.getElementById('upgradeCloseBtn');
-  titleEl = document.getElementById('upgradeTitle');
+export function openUpgradeShop(waveIndex, onContinue) {
+  if (!ensureDom()) return;
 
-  if (!overlay) return;
+  _onContinue = onContinue;
 
-  if (closeBtn) {
-    closeBtn.addEventListener('click', () => {
-      closeUpgradeShopIfOpen();
-      if (_onClose) { const cb = _onClose; _onClose = null; cb(); }
-    });
-  }
-}
-
-export function openUpgradeShop(waveNum, onClose) {
-  if (!overlay) initUpgradeUI();
-  if (!overlay) return;
-
-  _onClose = onClose || null;
-  if (titleEl) titleEl.textContent = `UPGRADES — AFTER WAVE ${waveNum}`;
-
-  overlay.classList.add('show');
-  state.upgradeOpen = true;
+  if (_titleEl) _titleEl.textContent = `UPGRADES — AFTER WAVE ${waveIndex}`;
   render();
+
+  _overlay.classList.add('show');
+  _overlay.setAttribute('aria-hidden', 'false');
 }
 
 export function closeUpgradeShopIfOpen() {
-  if (!overlay) return;
-  overlay.classList.remove('show');
-  state.upgradeOpen = false;
-  _onClose = null;
+  if (!ensureDom()) return;
+  _overlay.classList.remove('show');
+  _overlay.setAttribute('aria-hidden', 'true');
+  _onContinue = null;
 }

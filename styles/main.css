@@ -841,3 +841,137 @@ body.mode-playing #menu-screen { display: none !important; }
 @media (prefers-reduced-motion: reduce){
   .wave-banner{ transition: none; }
 }
+
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   Upgrade Shop (Wave between-waves overlay)
+   ───────────────────────────────────────────────────────────────────────────── */
+.upgrade-overlay{
+  position:fixed; inset:0;
+  display:none;
+  align-items:center;
+  justify-content:center;
+  padding:24px;
+  background:rgba(0,0,0,.55);
+  z-index: 1200;
+}
+.upgrade-overlay.show{ display:flex; }
+
+.upgrade-modal{
+  width:min(920px, calc(100vw - 32px));
+  max-height:min(78vh, 720px);
+  display:flex;
+  flex-direction:column;
+  gap:12px;
+  padding:18px 18px 14px;
+  border-radius:18px;
+  background: rgba(20, 20, 22, 0.55);
+  border: 1px solid rgba(255,255,255,0.10);
+  box-shadow: 0 18px 60px rgba(0,0,0,0.55);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+}
+
+.upgrade-hdr{
+  display:flex;
+  align-items:flex-end;
+  justify-content:space-between;
+  gap:12px;
+}
+.upgrade-title{
+  font-family: var(--font-ui, 'Rajdhani', system-ui);
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  color: rgba(255,255,255,0.92);
+  font-size: 18px;
+}
+.upgrade-coins{
+  font-family: var(--font-ui, 'Rajdhani', system-ui);
+  font-weight:700;
+  letter-spacing: 0.10em;
+  color: rgba(255,255,255,0.78);
+  font-size: 13px;
+}
+.upgrade-body{
+  overflow:auto;
+  padding-right: 4px;
+}
+.upgrade-note{
+  font-family: var(--font-ui, 'Rajdhani', system-ui);
+  color: rgba(255,255,255,0.72);
+  font-size: 12px;
+  margin: 2px 0 10px;
+}
+
+.upgrade-tier-list{
+  display:flex;
+  flex-direction:column;
+  gap:10px;
+}
+.upgrade-tier{
+  display:flex;
+  justify-content:space-between;
+  gap:12px;
+  padding:12px 12px;
+  border-radius:14px;
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.10);
+}
+.upgrade-tier.owned{
+  opacity:0.70;
+}
+.upgrade-tier.locked{
+  opacity:0.55;
+}
+
+.upgrade-tier-left{ display:flex; flex-direction:column; gap:4px; }
+.upgrade-tier-name{
+  font-family: var(--font-ui, 'Rajdhani', system-ui);
+  color: rgba(255,255,255,0.92);
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  font-size: 13px;
+}
+.upgrade-tier-meta{
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  color: rgba(255,255,255,0.70);
+  font-size: 11px;
+}
+
+.upgrade-buy-btn{
+  min-width: 140px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px solid rgba(255,255,255,0.14);
+  background: rgba(0, 170, 255, 0.16);
+  color: rgba(255,255,255,0.92);
+  font-family: var(--font-ui, 'Rajdhani', system-ui);
+  font-weight: 800;
+  letter-spacing: 0.10em;
+  cursor:pointer;
+}
+.upgrade-buy-btn:disabled{
+  background: rgba(255,255,255,0.06);
+  color: rgba(255,255,255,0.55);
+  cursor:not-allowed;
+}
+
+.upgrade-footer{
+  display:flex;
+  justify-content:flex-end;
+  padding-top: 2px;
+}
+.upgrade-continue-btn{
+  padding: 12px 16px;
+  border-radius: 14px;
+  border: 1px solid rgba(255,255,255,0.18);
+  background: rgba(255,255,255,0.10);
+  color: rgba(255,255,255,0.90);
+  font-family: var(--font-ui, 'Rajdhani', system-ui);
+  font-weight: 900;
+  letter-spacing: 0.14em;
+  cursor:pointer;
+}
+.upgrade-continue-btn:hover{
+  background: rgba(255,255,255,0.14);
+}

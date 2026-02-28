@@ -6,6 +6,7 @@ import { state } from './state.js';
 import {
   ENEMY_SPEED, ENEMY_CONTACT_DPS, ENEMY_BULLET_SPEED, ENEMY_BULLET_LIFETIME,
   STAGGER_DURATION, SPAWN_FLASH_DURATION, ELITE_FIRE_RATE, ELITE_TYPES, PLAYER_MAX_HP,
+  STANDARD_ENEMY_SIZE_MULT, ENEMY_HP,
 } from './constants.js';
 import {
   enemyGeo, enemyMat, enemyGeoParams, bulletGeoParams,
@@ -16,7 +17,7 @@ import { steerAroundProps, pushOutOfProps, hasLineOfSight } from './terrain.js';
 import { spawnEnemyDamageNum, spawnPlayerDamageNum } from './damageNumbers.js';
 import { spawnExplosion } from './particles.js';
 import { dropLoot } from './pickups.js';
-import { updateXP, getXPPerKill, getCoinValue, getEnemyHP } from './xp.js';
+import { updateXP, getXPPerKill, getCoinValue } from './xp.js';
 import { playSound } from './audio.js';
 
 // Reused quaternion helpers for enemy laser orientation
@@ -29,11 +30,12 @@ export function spawnEnemy(x, z, eliteType = null) {
   const grp = new THREE.Group();
   grp.position.set(x, 0, z);
 
-  const color     = eliteType ? eliteType.color : 0x888888;
-  const scaleMult = eliteType ? eliteType.sizeMult : 1;
-  const hpMult    = eliteType ? eliteType.hpMult   : 1;
-  const expMult   = eliteType ? eliteType.expMult  : 1;
-  const coinMult  = eliteType ? eliteType.coinMult : 1;
+  const cfg = eliteType;
+  const color     = cfg?.color ?? 0x888888;
+  const scaleMult = cfg?.sizeMult ?? STANDARD_ENEMY_SIZE_MULT;
+  const hpMult    = cfg?.hpMult   ?? 1;
+  const expMult   = cfg?.expMult  ?? 1;
+  const coinMult  = cfg?.coinMult ?? 1;
 
   const mat = enemyMat.clone();
   mat.color.set(color);
@@ -47,13 +49,11 @@ export function spawnEnemy(x, z, eliteType = null) {
   grp.add(mesh);
   scene.add(grp);
 
-  const baseHP   = getEnemyHP();
-  const fixedHp  = eliteType?.fixedHp;
-  const hp       = fixedHp != null ? Math.round(fixedHp) : Math.round(baseHP * hpMult);
-  const fireRate = eliteType ? (eliteType.fireRate ?? (ELITE_FIRE_RATE[eliteType.minLevel] ?? 2.0)) : null;
+  const hp       = cfg?.fixedHp != null ? cfg.fixedHp : Math.round(ENEMY_HP * hpMult);
+  const fireRate = eliteType ? (ELITE_FIRE_RATE[eliteType.minLevel] ?? 2.0) : null;
 
   let eliteBarFill = null;
-  if (eliteType) {
+  if (cfg) {
     const bWrap = document.createElement('div');
     bWrap.className = 'elite-bar-wrap';
     bWrap.style.width = Math.round(40 + scaleMult * 30) + 'px';
@@ -70,8 +70,7 @@ export function spawnEnemy(x, z, eliteType = null) {
 
   state.enemies.push({
     grp, mesh, mat, hp, maxHp: hp, dead: false,
-    scaleMult, expMult, coinMult, eliteType, eliteBarFill,
-    isBoss: !!eliteType?.isBoss,
+    scaleMult, expMult, coinMult, eliteType: cfg, eliteBarFill,
     fireRate, shootTimer: fireRate ? Math.random() * fireRate : 0,
     staggerTimer: 0, baseColor: new THREE.Color(color),
     spawnFlashTimer: SPAWN_FLASH_DURATION, matDirty: true,
@@ -139,6 +138,7 @@ export function killEnemy(j) {
   const xpGained  = Math.round(getXPPerKill() * (e.expMult || 1));
   const prevLevel = state.playerLevel;
   updateXP(xpGained);
+
   if (state.playerLevel > prevLevel) {
     if (_onLevelUp) _onLevelUp(state.playerLevel);
   }

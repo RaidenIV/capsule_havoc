@@ -14,6 +14,7 @@ import { updateParticles } from './particles.js';
 import { updateDamageNums } from './damageNumbers.js';
 import { getFireInterval } from './xp.js';
 import { triggerGameOver, triggerVictory, formatTime } from './gameFlow.js';
+import { openUpgradeShop, closeUpgradeShopIfOpen } from './ui/upgrades.js';
 import { playerGroup } from './player.js';
 
 const timerEl  = document.getElementById('timer-value');
@@ -56,7 +57,7 @@ function _beginBossPhase() {
   showWaveBanner(`BOSS`);
 }
 
-function _advanceWaveIfCleared(triggerVictory) {
+function _advanceWaveIfCleared() {
   if (state.enemies.length !== 0) return;
 
   if (state.wavePhase === 'standard') {
@@ -67,12 +68,20 @@ function _advanceWaveIfCleared(triggerVictory) {
   if (state.wavePhase === 'boss') {
     if (state.bossRemainingToSpawn > 0) return;
 
-    if (state.waveIndex >= WAVE_CONFIG.length) {
-      triggerVictory();
-      return;
-    }
-    state.waveIndex++;
-    _initWaveState();
+    // Boss pack cleared → open Upgrade Shop, pause game until CONTINUE
+    state.upgradeOpen = true;
+    openUpgradeShop(state.waveIndex, () => {
+      closeUpgradeShopIfOpen();
+      state.upgradeOpen = false;
+
+      if (state.waveIndex >= WAVE_CONFIG.length) {
+        triggerVictory();
+        return;
+      }
+      state.waveIndex++;
+      _initWaveState();
+    });
+    return;
   }
 }
 
@@ -94,7 +103,7 @@ function _spawnWaveBatch() {
     const n = Math.min(room, state.bossRemainingToSpawn);
     if (n <= 0) return;
 
-    const bossSizeMult = def.boss.size / STANDARD_ENEMY_SIZE_MULT;
+    const bossSizeMult = def.boss.size;
 
     for (let i = 0; i < n; i++) {
       spawnEnemyAtEdge({
@@ -115,7 +124,7 @@ function _spawnWaveBatch() {
 export function tick() {
   requestAnimationFrame(tick);
 
-  if (state.paused || state.gameOver) {
+  if (state.paused || state.gameOver || state.upgradeOpen) {
     renderBloom();
     labelRenderer.render(scene, camera);
     return;
@@ -162,7 +171,7 @@ export function tick() {
 
   // Auto-shoot (runs on real delta so fire rate is unaffected by slowmo)
   state.shootTimer -= delta;
-  if (state.playerLevel >= 2) state.bulletWaveAngle += 1.2 * delta;
+  if (state.weaponTier >= 2) state.bulletWaveAngle += 1.2 * delta;
   if (state.shootTimer <= 0) {
     shootBulletWave();
     state.shootTimer = getFireInterval();
@@ -176,7 +185,7 @@ export function tick() {
   const enemyResult = updateEnemies(delta, worldDelta, state.elapsed);
   if (enemyResult === 'DEAD') { triggerGameOver(); return; }
 
-  _advanceWaveIfCleared(triggerVictory);
+  _advanceWaveIfCleared();
 
   updatePickups(worldDelta, state.playerLevel, state.elapsed);
   updateParticles(worldDelta);

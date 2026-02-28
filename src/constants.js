@@ -47,26 +47,6 @@ export const LEVEL_ENEMY_CONFIG = [
 ];
 
 // Elite types unlocked at each player level
-// ── Wave system ──────────────────────────────────────────────────────────────
-// Standard enemies are sized relative to the player. Boss sizes are expressed
-// as a multiplier of PLAYER size (not enemy base size).
-export const STANDARD_ENEMY_SIZE_MULT = 0.75;
-
-// 10-wave arena: each wave spawns N standard enemies, then spawns a boss pack.
-export const WAVE_CONFIG = [
-  { wave: 1,  standardCount:  50, boss: { color: 0xff7700, size: 1.00, health:  100, expMult:    2, count:  1 } },
-  { wave: 2,  standardCount:  75, boss: { color: 0x00bb44, size: 1.25, health:  200, expMult:    4, count:  2 } },
-  { wave: 3,  standardCount: 100, boss: { color: 0x9b30ff, size: 1.50, health:  300, expMult:    8, count:  3 } },
-  { wave: 4,  standardCount: 125, boss: { color: 0x888888, size: 1.75, health:  400, expMult:   16, count:  4 } },
-  { wave: 5,  standardCount: 150, boss: { color: 0x00cccc, size: 2.00, health:  500, expMult:   32, count:  5 } },
-  { wave: 6,  standardCount: 175, boss: { color: 0x111111, size: 2.25, health:  600, expMult:   64, count:  6 } },
-  { wave: 7,  standardCount: 200, boss: { color: 0x00eeff, size: 2.50, health:  700, expMult:  128, count:  7 } },
-  { wave: 8,  standardCount: 225, boss: { color: 0x00ff66, size: 2.75, health:  800, expMult:  256, count:  8 } },
-  { wave: 9,  standardCount: 250, boss: { color: 0xaa00ff, size: 3.00, health:  900, expMult:  512, count: 10 } },
-  { wave: 10, standardCount: 300, boss: { color: 0x0088ff, size: 1.00, health: 1000, expMult: 1024, count:  4 } },
-];
-
-
 export const ELITE_TYPES = [
   { minLevel:  1, color: 0xff7700, sizeMult: 2.00, hpMult:   5, expMult:  2, coinMult:  2, count:  5 },
   { minLevel:  3, color: 0x00bb44, sizeMult: 2.00, hpMult:  15, expMult:  4, coinMult:  4, count: 10 },
@@ -90,3 +70,25 @@ export const WEAPON_CONFIG = [
   [0.106, 10,16.0, 14,  9.0,  9.0, 0xffffff],
   [0.106, 10,16.0, 16, 10.0, 10.0, 0xffffff],
 ];
+
+
+// ── Enemy sizing ──────────────────────────────────────────────────────────────
+// Standard enemies are 25% smaller than the player (player size multiplier = 1.0)
+export const STANDARD_ENEMY_SIZE_MULT = 0.75;
+
+// ── Wave System ───────────────────────────────────────────────────────────────
+// 10 escalating waves; each wave ends with a boss pack.
+// Boss `size` is a multiplier of PLAYER size (not standard enemy size).
+export const WAVE_CONFIG = [
+  { wave: 1,  standardCount:  50, boss: { color: 0xff7700, size: 1.00, health:  100, expMult:    2, count:  1 } },
+  { wave: 2,  standardCount:  75, boss: { color: 0x00bb44, size: 1.25, health:  200, expMult:    4, count:  2 } },
+  { wave: 3,  standardCount: 100, boss: { color: 0x9b30ff, size: 1.50, health:  300, expMult:    8, count:  3 } },
+  { wave: 4,  standardCount: 125, boss: { color: 0x888888, size: 1.75, health:  400, expMult:   16, count:  4 } },
+  { wave: 5,  standardCount: 150, boss: { color: 0x00cccc, size: 2.00, health:  500, expMult:   32, count:  5 } },
+  { wave: 6,  standardCount: 175, boss: { color: 0x111111, size: 2.25, health:  600, expMult:   64, count:  6 } },
+  { wave: 7,  standardCount: 200, boss: { color: 0x00eeff, size: 2.50, health:  700, expMult:  128, count:  7 } },
+  { wave: 8,  standardCount: 225, boss: { color: 0x00ff66, size: 2.75, health:  800, expMult:  256, count:  8 } },
+  { wave: 9,  standardCount: 250, boss: { color: 0xaa00ff, size: 3.00, health:  900, expMult:  512, count: 10 } },
+  { wave: 10, standardCount: 300, boss: { color: 0x0088ff, size: 1.00, health: 1000, expMult: 1024, count:  4 } },
+];
+

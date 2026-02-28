@@ -102,7 +102,7 @@ export function triggerVictory() {
   h1.textContent  = 'VICTORY';
   h1.style.color  = '#ffe066';
   h1.style.textShadow = '0 0 60px rgba(255,224,102,0.9)';
-  finalStatsEl.textContent = `All 10 waves cleared! ${formatTime(state.elapsed)} — ${state.coins} coins`;
+  finalStatsEl.textContent = `All 100 enemies defeated! ${formatTime(state.elapsed)} — ${state.coins} coins`;
   recordRun({ kills: state.kills, elapsed: state.elapsed, coins: state.coins, victory: true });
   gameOverEl.classList.add('show');
 }
@@ -153,10 +153,18 @@ export function restartGame(opts = {}) {
   state.playerXP    = 0;
   state.playerLevel = 0;
   state.coins       = 0;
+  state.weaponTier  = 0;
+  state.upgradeOpen = false;
+  state.waveIndex   = 1;
+  state.wavePhase   = null;
+  state.waveRemainingToSpawn = null;
+  state.bossRemainingToSpawn = null;
+  state.waveActiveCap = null;
   state.gameOver    = false;
 
   updateHealthBar(); updateDashBar();
   updateXP(0);
+  syncOrbitBullets();
 
   if (killsEl)     killsEl.textContent    = '0';
   if (timerEl)     timerEl.textContent    = '00:00';
@@ -167,11 +175,7 @@ export function restartGame(opts = {}) {
   if (h1) { h1.textContent = 'DESTROYED'; h1.style.color = ''; h1.style.textShadow = ''; }
   document.querySelectorAll('.lvl-cb').forEach(lb => lb.classList.remove('active'));
 
-  // Wave system spawns enemies via the main loop.
-  state.waveIndex = 1;
-  state.wavePhase = 'standard';
-  state.waveRemainingToSpawn = 0;
-  state.bossRemainingToSpawn = 0;
+  // Wave system handles spawns (no initial enemies here)
 
   if (startCountdownNow) startCountdown();
 }
