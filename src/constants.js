@@ -7,7 +7,7 @@ export const SLASH_RADIUS   = 3.5;
 export const SLASH_ARC      = Math.PI * 1.5;   // 270° sweep
 export const SLASH_INTERVAL = 0.65;             // seconds between slashes
 export const SLASH_DAMAGE   = 20;               // base damage (scales with weapon tier)
-export const SLASH_DURATION = 0.28;             // visual fade time
+export const SLASH_DURATION = 0.38;             // visual fade time
 
 // ── Movement ─────────────────────────────────────────────────────────────────
 export const PLAYER_SPEED          = 7;
