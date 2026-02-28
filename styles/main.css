@@ -893,3 +893,24 @@ body.mode-playing #menu-screen { display: none !important; }
   letter-spacing: 0.10em;
   cursor:pointer;
 }
+
+
+/* Reusable coin UI (matches #coin-hud) */
+.coin-icon{
+  width:20px;height:20px;border-radius:50%;
+  background: radial-gradient(circle at 35% 35%, #ffe566, #f0a800);
+  box-shadow: 0 0 10px rgba(255,200,50,0.7), 0 0 2px #a06000 inset;
+  display:inline-block; flex-shrink:0;
+}
+.coin-count{
+  font-family: var(--mono); font-size: 22px; font-weight: 900;
+  color: #ffe566; letter-spacing: 2px;
+  text-shadow: 0 0 14px rgba(255,224,102,0.8);
+}
+
+/* Upgrade shop coin + cost styling */
+.upgrade-coins-hud{display:flex;align-items:center;gap:10px;justify-content:flex-end;margin:10px 0 14px;}
+.upgrade-buy{display:flex;align-items:center;justify-content:space-between;gap:10px;}
+.upgrade-cost{display:flex;align-items:center;gap:8px;}
+.upgrade-buy.cant-afford{opacity:0.55;filter:saturate(0.7);}
+.upgrade-buy:disabled{cursor:not-allowed;}

@@ -22,7 +22,7 @@ function ensureRoot() {
       <div class="upgrade-card">
         <div class="upgrade-title">UPGRADE SHOP</div>
         <div class="upgrade-sub" id="upgrade-sub">Spend coins to buy weapon tiers.</div>
-        <div class="upgrade-coins">Coins: <span id="upgrade-coins-val">0</span></div>
+        <div class="upgrade-coins-hud"><span class="coin-icon" aria-hidden="true"></span><span class="coin-count" id="upgrade-coins-val">0</span></div>
         <div class="upgrade-list" id="upgrade-list"></div>
         <div class="upgrade-footer">
           <button class="upgrade-continue" id="upgrade-continue">CONTINUE</button>
@@ -74,6 +74,8 @@ function renderList() {
 
   for (let tier = 1; tier <= 10; tier++) {
     const cost = tierCost(tier);
+    const coins = state.coins ?? 0;
+    const canAfford = coins >= cost;
     const isOwned = owned(tier);
 
     const row = document.createElement('div');
@@ -83,8 +85,12 @@ function renderList() {
         <div class="upgrade-tier">Tier ${tier}</div>
         <div class="upgrade-desc">Improves fire rate, waves, damage, and orbit rings.</div>
       </div>
-      <button class="upgrade-buy" ${isOwned ? 'disabled' : ''} data-tier="${tier}">
-        ${isOwned ? 'OWNED' : ('BUY · ' + cost)}
+      <button class="upgrade-buy ${isOwned ? 'owned' : (canAfford ? '' : 'cant-afford')}" ${isOwned ? 'disabled' : (canAfford ? '' : 'disabled')} data-tier="${tier}">
+        ${isOwned ? 'OWNED' : (canAfford ? 'BUY' : 'NEED')}
+        <span class="upgrade-cost">
+          <span class="coin-icon" aria-hidden="true"></span>
+          <span class="coin-count">${cost}</span>
+        </span>
       </button>
     `;
     list.appendChild(row);
@@ -97,6 +103,8 @@ function renderList() {
       if (owned(tier)) return;
 
       const cost = tierCost(tier);
+    const coins = state.coins ?? 0;
+    const canAfford = coins >= cost;
       const coins = state.coins ?? 0;
       if (coins < cost) return;
 
