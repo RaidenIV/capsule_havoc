@@ -6,7 +6,6 @@ import { state } from './state.js';
 import {
   ENEMY_SPEED, ENEMY_CONTACT_DPS, ENEMY_BULLET_SPEED, ENEMY_BULLET_LIFETIME,
   STAGGER_DURATION, SPAWN_FLASH_DURATION, ELITE_FIRE_RATE, ELITE_TYPES, PLAYER_MAX_HP,
-  STANDARD_ENEMY_SIZE_MULT, ENEMY_HP,
 } from './constants.js';
 import {
   enemyGeo, enemyMat, enemyGeoParams, bulletGeoParams,
@@ -17,7 +16,7 @@ import { steerAroundProps, pushOutOfProps, hasLineOfSight } from './terrain.js';
 import { spawnEnemyDamageNum, spawnPlayerDamageNum } from './damageNumbers.js';
 import { spawnExplosion } from './particles.js';
 import { dropLoot } from './pickups.js';
-import { updateXP, getXPPerKill, getCoinValue } from './xp.js';
+import { updateXP, getXPPerKill, getCoinValue, getEnemyHP } from './xp.js';
 import { playSound } from './audio.js';
 
 // Reused quaternion helpers for enemy laser orientation
@@ -26,16 +25,24 @@ const _eBulletDir = new THREE.Vector3();
 const _eBulletQ   = new THREE.Quaternion();
 
 // ── Spawn ─────────────────────────────────────────────────────────────────────
-export function spawnEnemy(x, z, eliteType = null) {
+export function spawnEnemy(x, z, eliteTypeOrCfg = null) {
   const grp = new THREE.Group();
   grp.position.set(x, 0, z);
+  const isCfg = eliteTypeOrCfg && (eliteTypeOrCfg.isBoss || eliteTypeOrCfg.color || eliteTypeOrCfg.sizeMult || eliteTypeOrCfg.health || eliteTypeOrCfg.expMult || eliteTypeOrCfg.coinMult);
+  const eliteType = isCfg ? null : eliteTypeOrCfg;
+  const cfg = isCfg ? eliteTypeOrCfg : null;
 
-  const cfg = eliteType;
-  const color     = cfg?.color ?? 0x888888;
-  const scaleMult = cfg?.sizeMult ?? STANDARD_ENEMY_SIZE_MULT;
-  const hpMult    = cfg?.hpMult   ?? 1;
-  const expMult   = cfg?.expMult  ?? 1;
-  const coinMult  = cfg?.coinMult ?? 1;
+  const color     = cfg ? (cfg.color ?? 0x888888) : (eliteType ? eliteType.color : 0x888888);
+  const scaleMult = cfg ? (cfg.sizeMult ?? 1)    : (eliteType ? eliteType.sizeMult : 1);
+  const hpMult    = cfg ? 1                      : (eliteType ? eliteType.hpMult   : 1);
+  const expMult   = cfg ? (cfg.expMult ?? 1)     : (eliteType ? eliteType.expMult  : 1);
+  const coinMult  = cfg ? (cfg.coinMult ?? 1)    : (eliteType ? eliteType.coinMult : 1);
+
+  const cfg = (eliteTypeOrCfg && !eliteTypeOrCfg.color && !eliteTypeOrCfg.isBoss) ? eliteTypeOrCfg : eliteTypeOrCfg;
+  const scaleMult = eliteType ? eliteType.sizeMult : 1;
+  const hpMult    = eliteType ? eliteType.hpMult   : 1;
+  const expMult   = eliteType ? eliteType.expMult  : 1;
+  const coinMult  = eliteType ? eliteType.coinMult : 1;
 
   const mat = enemyMat.clone();
   mat.color.set(color);
@@ -49,11 +56,11 @@ export function spawnEnemy(x, z, eliteType = null) {
   grp.add(mesh);
   scene.add(grp);
 
-  const hp       = cfg?.fixedHp != null ? cfg.fixedHp : Math.round(ENEMY_HP * hpMult);
-  const fireRate = eliteType ? (ELITE_FIRE_RATE[eliteType.minLevel] ?? 2.0) : null;
+  const hp = cfg && Number.isFinite(cfg.health) ? Math.round(cfg.health) : Math.round(getEnemyHP() * hpMult);
+  const fireRate = cfg && Number.isFinite(cfg.fireRate) ? cfg.fireRate : (eliteType ? (ELITE_FIRE_RATE[eliteType.minLevel] ?? 2.0) : null);
 
   let eliteBarFill = null;
-  if (cfg) {
+  if (eliteType) {
     const bWrap = document.createElement('div');
     bWrap.className = 'elite-bar-wrap';
     bWrap.style.width = Math.round(40 + scaleMult * 30) + 'px';
@@ -70,7 +77,7 @@ export function spawnEnemy(x, z, eliteType = null) {
 
   state.enemies.push({
     grp, mesh, mat, hp, maxHp: hp, dead: false,
-    scaleMult, expMult, coinMult, eliteType: cfg, eliteBarFill,
+    scaleMult, expMult, coinMult, eliteType, eliteBarFill,
     fireRate, shootTimer: fireRate ? Math.random() * fireRate : 0,
     staggerTimer: 0, baseColor: new THREE.Color(color),
     spawnFlashTimer: SPAWN_FLASH_DURATION, matDirty: true,
@@ -80,14 +87,14 @@ export function spawnEnemy(x, z, eliteType = null) {
   mat.transparent = true; mat.opacity = 0; mesh.castShadow = false;
 }
 
-export function spawnEnemyAtEdge(eliteType = null) {
+export function spawnEnemyAtEdge(eliteTypeOrCfg = null) {
   if (state.enemies.length >= state.maxEnemies) return;
   const angle = Math.random() * Math.PI * 2;
   const r     = 28 + Math.random() * 5;
   spawnEnemy(
     playerGroup.position.x + Math.cos(angle) * r,
     playerGroup.position.z + Math.sin(angle) * r,
-    eliteType
+    eliteTypeOrCfg
   );
 }
 

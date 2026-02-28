@@ -128,11 +128,6 @@
   </div>
 </div>
 
-<!-- Wave transition banner -->
-<div id="waveBanner" class="wave-banner" aria-hidden="true">
-  <div id="waveBannerText" class="wave-banner__text">WAVE 1</div>
-</div>
-
 <!-- FPS overlay -->
 <div id="fpsOverlay">FPS: <span id="fpsVal">0</span></div>
 
@@ -153,7 +148,7 @@
       <!-- ── Page: Main ── -->
       <div class="pause-page active" id="pause-page-main">
         <button class="pause-action-btn resume"   id="pause-resume-btn">RESUME</button>
-        <button class="pause-action-btn" id="pause-restart-btn">RESTART</button>
+                <button class="pause-action-btn restart" id="pause-restart-btn">RESTART</button>
 <button class="pause-action-btn settings" id="pause-settings-btn">SETTINGS</button>
         <button class="pause-action-btn quit"     id="pause-quit-btn">QUIT TO MENU</button>
       </div>
@@ -518,24 +513,34 @@
 <script type="module" src="./src/main.js"></script>
 
 
-  <!-- Upgrade Shop Overlay -->
-  <div id="upgrade-overlay" class="upgrade-overlay">
-    <div class="upgrade-card">
-      <div class="upgrade-head">
-        <div id="upg-wave" class="upgrade-title">WAVE COMPLETE</div>
-        <div class="upgrade-coins">
-          <span class="coin-pill">
-            <span class="coin-icon spin"></span>
-            <span id="upg-coins" class="coin-count">0</span>
-          </span>
-        </div>
-      </div>
-      <div id="upg-list" class="upg-list"></div>
-      <div class="upgrade-foot">
-        <button id="upg-continue" class="upg-continue">CONTINUE</button>
+    <!-- Wave / Boss Banner -->
+    <div id="waveBanner" aria-hidden="true">
+      <div id="waveBannerInner">
+        <div id="waveBannerText">WAVE 1</div>
       </div>
     </div>
-  </div>
+    
 
+    <!-- Upgrade Shop Overlay -->
+    <div id="upgrade-overlay" class="upgrade-overlay" aria-hidden="true">
+      <div class="upgrade-modal">
+        <div class="upgrade-header">
+          <div class="upgrade-title">UPGRADES</div>
+          <div class="upgrade-coins coin-pill">
+            <span class="coin-icon"></span>
+            <span class="coin-value" id="shop-coins">0</span>
+          </div>
+        </div>
+
+        <div class="upgrade-subtitle" id="shop-subtitle">Spend coins between waves.</div>
+
+        <div class="upgrade-list" id="upgrade-list"></div>
+
+        <div class="upgrade-footer">
+          <button class="upgrade-continue" id="upgrade-continue-btn">CONTINUE</button>
+        </div>
+      </div>
+    </div>
+    
 </body>
 </html>

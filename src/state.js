@@ -13,17 +13,7 @@ export const state = {
   // ── UI mode ─────────────────────────────────────────────────────────────────
   uiMode: 'menu',   // 'menu' | 'playing'
   loopStarted: false,
-  // incremented on restart to cancel stale setTimeout callbacks
-
-  // ── Shop / Wave system ───────────────────────────────────────────────
-  upgradeOpen: false,
-  weaponTier:  1,
-  waveIndex:   1,
-  wavePhase:   null,
-  waveRemainingToSpawn: null,
-  bossRemainingToSpawn: null,
-  waveActiveCap: null,
-
+      // incremented on restart to cancel stale setTimeout callbacks
 
   // ── Stats ────────────────────────────────────────────────────────────────────
   kills:   0,
@@ -69,6 +59,17 @@ export const state = {
   dashStreaks:  [],
   orbitRings:   [],
   orbitHitActive: new Set(),
+  // ── Waves / shop (wave-based progression) ───────────────────────────────────
+  wave: 1,
+  wavePhase: 'standard', // 'standard' | 'boss' | 'upgrade'
+  waveSpawnRemaining: 0,
+  bossSpawnRemaining: 0,
+  wavePendingStart: false,
+
+  // ── Upgrades ───────────────────────────────────────────────────────────────
+  weaponTier: 1,
+  upgradeOpen: false,
+
 
   // ── Panel ────────────────────────────────────────────────────────────────────
   panelOpen: false,

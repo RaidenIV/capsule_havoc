@@ -7,7 +7,8 @@ import { onRendererResize } from './renderer.js';
 import { onBloomResize }   from './bloom.js';
 import { updateXP }        from './xp.js';
 import { updateHealthBar } from './player.js';
-import { spawnEnemyAtEdge, setLevelUpCallback, setVictoryCallback } from './enemies.js';
+import { setLevelUpCallback, setVictoryCallback } from './enemies.js';
+import { syncOrbitBullets } from './weapons.js';
 import { triggerVictory, restartGame, startCountdown } from './gameFlow.js';
 import { initInput }       from './input.js';
 import { tick }            from './loop.js';
@@ -19,10 +20,13 @@ import { initMenuUI } from './ui/menu.js';
 // ── Wire cross-module callbacks (breaks enemies ↔ weapons circular deps) ──────
 setVictoryCallback(triggerVictory);
 
-setLevelUpCallback((newLevel) => {
-  // XP levels still exist for progression feedback, but weapon upgrades are
-  // purchased in the between-wave shop (weaponTier).
+setLevelUpCallback(() => {
+  // Levels still exist for XP display/difficulty, but upgrades are purchased in the shop
   playSound('levelup', 0.8);
+});
+  syncOrbitBullets();
+  ELITE_TYPES.filter(et => et.minLevel <= newLevel)
+             .forEach(et => spawnLevelElites(et));
 });
 
 // ── Wire input callbacks ──────────────────────────────────────────────────────

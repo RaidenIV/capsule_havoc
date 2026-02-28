@@ -11,10 +11,7 @@ const xpBarFillEl = document.getElementById('xp-bar-fill');
 export function getXPPerKill()  { return XP_PER_KILL_BY_LEVEL[Math.min(state.playerLevel, XP_PER_KILL_BY_LEVEL.length - 1)]; }
 export function getCoinValue()  { return LEVEL_ENEMY_CONFIG[Math.min(state.playerLevel, LEVEL_ENEMY_CONFIG.length - 1)][1]; }
 export function getEnemyHP()    { const cfg = LEVEL_ENEMY_CONFIG[Math.min(state.playerLevel, LEVEL_ENEMY_CONFIG.length - 1)]; return Math.round(30 * (1 + cfg[0])); }
-export function getWeaponConfig() {
-  const tier = Math.max(1, state.weaponTier || 1);
-  return WEAPON_CONFIG[Math.min(tier - 1, WEAPON_CONFIG.length - 1)];
-}
+export function getWeaponConfig() { return WEAPON_CONFIG[Math.min(Math.max((state.weaponTier||1)-1,0), WEAPON_CONFIG.length - 1)]; }
 export function getBulletDamage() { return Math.round(10 * getWeaponConfig()[2]); }
 export function getFireInterval() { return getWeaponConfig()[0]; }
 export function getWaveBullets()  { return getWeaponConfig()[1]; }

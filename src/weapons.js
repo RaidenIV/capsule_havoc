@@ -24,23 +24,29 @@ function makeOrbitMat(color) {
   });
 }
 
-function getOrbitRingDefs(level) {
-  const C  = WEAPON_CONFIG;
-  const ring = (lv, flip = false) => ({
-    count: C[lv][3], radius: C[lv][4], speed: C[lv][5] * (flip ? -1 : 1), color: C[lv][6],
+function getOrbitRingDefsByTier(tier) {
+  const C = WEAPON_CONFIG;
+  const idx = Math.min(Math.max((tier || 1) - 1, 0), C.length - 1);
+  const ring = (ci, flip = false) => ({
+    count: C[ci][3],
+    radius: C[ci][4],
+    speed: C[ci][5] * (flip ? -1 : 1),
+    color: C[ci][6],
   });
-  switch (level) {
-    case 0: case 1: return [];
-    case 2: return [ring(2)];
-    case 3: return [ring(3)];
-    case 4: return [ring(4)];
-    case 5: return [ring(5)];
-    case 6:  return [ring(6),  ring(3, true)];
-    case 7:  return [ring(7),  ring(4, true)];
-    case 8:  return [ring(8),  ring(5, true)];
-    case 9:  return [ring(9),  ring(6, true)];
-    case 10: return [ring(10), ring(6, true)];
-    default: return [ring(Math.min(level, 10))];
+
+  // No orbit bullets until config index >= 2 (tier 3+)
+  if (idx < 2) return [];
+
+  switch (idx) {
+    case 2:  return [ring(2)];
+    case 3:  return [ring(3)];
+    case 4:  return [ring(4)];
+    case 5:  return [ring(5)];
+    case 6:  return [ring(6), ring(2, true)];
+    case 7:  return [ring(7), ring(3, true)];
+    case 8:  return [ring(8), ring(4, true)];
+    case 9:  return [ring(9), ring(5, true)];
+    default: return [ring(10), ring(6, true)];
   }
 }
 
@@ -54,7 +60,7 @@ export function destroyOrbitBullets() {
 
 export function syncOrbitBullets() {
   destroyOrbitBullets();
-  for (const def of getOrbitRingDefs(state.weaponTier || state.playerLevel || 1)) {
+  for (const def of getOrbitRingDefsByTier(state.weaponTier || 1)) {
     const meshes = [];
     for (let i = 0; i < def.count; i++) {
       const mesh = new THREE.Mesh(bulletGeo, makeOrbitMat(def.color));
