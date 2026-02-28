@@ -1,131 +1,120 @@
 // ─── ui/upgrades.js ──────────────────────────────────────────────────────────
 import { state } from '../state.js';
-import { WEAPON_TIER_COSTS, WEAPON_CONFIG } from '../constants.js';
+import { WEAPON_TIER_COSTS } from '../constants.js';
+import { playSound } from '../audio.js';
 import { syncOrbitBullets } from '../weapons.js';
 
-let _overlay, _list, _coinsEl, _continueBtn, _onClose = null;
+let _onClose = null;
 
-function g(id){ return document.getElementById(id); }
+function $(id){ return document.getElementById(id); }
 
-function ensureRefs() {
-  _overlay = g('upgrade-overlay');
-  _list = g('upgrade-list');
-  _coinsEl = g('shop-coins');
-  _continueBtn = g('upgrade-continue-btn');
-}
+function renderList(){
+  const list = $('upgradeList');
+  if (!list) return;
 
-function fmt(n){ return String(n|0); }
+  list.innerHTML = '';
 
-function tierName(tier){
-  return 'WEAPON TIER ' + tier;
-}
+  const currentTier = Math.max(1, state.weaponTier || 1);
+  const maxTier = WEAPON_TIER_COSTS.length + 1; // tier 1 is base (free), costs start at tier 2
 
-function tierDesc(tier){
-  const cfg = WEAPON_CONFIG[Math.min(Math.max(tier-1,0), WEAPON_CONFIG.length-1)];
-  const fire = cfg[0], wave = cfg[1], dmg = cfg[2];
-  return `Fire ${(1/fire).toFixed(2)} rps · ${wave} bullets · dmg ×${dmg}`;
-}
-
-function setCoinsUI() {
-  if (_coinsEl) _coinsEl.textContent = fmt(state.coins);
-}
-
-function renderList() {
-  if (!_list) return;
-  _list.innerHTML = '';
-
-  const curTier = state.weaponTier || 1;
-  for (let tier = 2; tier <= WEAPON_TIER_COSTS.length; tier++) {
-    const cost = WEAPON_TIER_COSTS[tier-1];
-    const canBuy = state.coins >= cost && tier > curTier;
+  for (let tier = 2; tier <= maxTier; tier++){
+    const cost = WEAPON_TIER_COSTS[tier - 2] ?? WEAPON_TIER_COSTS[WEAPON_TIER_COSTS.length - 1];
+    const affordable = (state.coins || 0) >= cost;
+    const owned = tier <= currentTier;
 
     const row = document.createElement('div');
-    row.className = 'upgrade-item';
+    row.className = 'upgrade-row';
 
     const left = document.createElement('div');
-    left.className = 'left';
-
     const name = document.createElement('div');
-    name.className = 'name';
-    name.textContent = tierName(tier);
-
-    const desc = document.createElement('div');
-    desc.className = 'desc';
-    desc.textContent = tierDesc(tier);
+    name.className = 'upg-name';
+    name.textContent = 'WEAPON TIER ' + tier;
+    const meta = document.createElement('div');
+    meta.className = 'upg-meta';
+    meta.textContent = owned ? 'OWNED' : 'Unlock stronger fire rate / waves / orbit';
 
     left.appendChild(name);
-    left.appendChild(desc);
+    left.appendChild(meta);
 
     const btn = document.createElement('button');
     btn.className = 'upg-buy';
-    btn.disabled = !canBuy;
+    btn.disabled = owned || !affordable;
 
-    // Label + (coin + cost)
     const label = document.createElement('span');
-    label.textContent = canBuy ? 'BUY' : (tier <= curTier ? 'OWNED' : 'NEED');
+    label.textContent = owned ? 'OWNED' : (affordable ? 'BUY' : 'NEED');
 
     const pill = document.createElement('span');
-    pill.className = 'coin-pill';
+    pill.className = 'upgrade-coins';
     pill.style.padding = '6px 10px';
+    const coin = document.createElement('span');
+    coin.className = 'coin-icon';
+    const count = document.createElement('span');
+    count.className = 'coin-count';
+    count.textContent = String(cost);
+    pill.appendChild(coin);
+    pill.appendChild(count);
 
-    const icon = document.createElement('span');
-    icon.className = 'coin-icon'; // static in buy buttons (CSS disables animation)
-
-    const val = document.createElement('span');
-    val.className = 'coin-value';
-    val.textContent = fmt(cost);
-
-    pill.appendChild(icon);
-    pill.appendChild(val);
+    // Buy buttons do NOT animate coins (per preference)
+    coin.style.animation = 'none';
 
     btn.appendChild(label);
     btn.appendChild(pill);
 
     btn.addEventListener('click', () => {
-      // Buy ONLY the selected tier (no auto-buy of lower tiers)
-      const c = WEAPON_TIER_COSTS[tier-1];
-      if (tier <= (state.weaponTier || 1)) return;
-      if (state.coins < c) return;
+      if (btn.disabled) return;
+      const coins = state.coins || 0;
+      if (coins < cost) return;
 
-      state.coins -= c;
+      state.coins = coins - cost;
       state.weaponTier = tier;
-
-      // apply immediately
-      syncOrbitBullets();
-
-      setCoinsUI();
+      try { syncOrbitBullets(); } catch {}
+      playSound?.('purchase', 0.8);
+      updateCoinsUI();
       renderList();
     });
 
     row.appendChild(left);
     row.appendChild(btn);
-    _list.appendChild(row);
+    list.appendChild(row);
   }
 }
 
-export function openUpgradeShop(waveNum, onClose) {
-  ensureRefs();
-  _onClose = onClose || null;
-  if (!_overlay) return;
+function updateCoinsUI(){
+  const el = $('upgradeCoins');
+  if (el) el.textContent = String(state.coins || 0);
+}
 
-  setCoinsUI();
+export function openUpgradeShop(waveNum, onClose){
+  _onClose = typeof onClose === 'function' ? onClose : null;
+
+  const overlay = $('upgradeOverlay');
+  if (!overlay) return;
+
+  state.upgradeOpen = true;
+  state.paused = true;
+
+  updateCoinsUI();
   renderList();
 
-  _overlay.classList.add('show');
-  _overlay.setAttribute('aria-hidden', 'false');
+  overlay.classList.add('show');
+  overlay.setAttribute('aria-hidden', 'false');
 
-  // Continue closes shop
-  if (_continueBtn) {
-    _continueBtn.onclick = () => {
+  const btn = $('upgradeContinueBtn');
+  if (btn) {
+    btn.onclick = () => {
       closeUpgradeShopIfOpen();
       if (_onClose) _onClose();
     };
   }
 }
 
-export function closeUpgradeShopIfOpen() {
-  ensureRefs();
-  if (!_overlay) return;
-  _overlay.classList.remove('show');
-  _overlay.setAttribute('aria-hidden', 'true');
+export function closeUpgradeShopIfOpen(){
+  const overlay = $('upgradeOverlay');
+  if (!overlay) return;
+
+  overlay.classList.remove('show');
+  overlay.setAttribute('aria-hidden', 'true');
+
+  state.upgradeOpen = false;
+  state.paused = false;
 }

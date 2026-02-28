@@ -34,8 +34,8 @@ window.addEventListener('keydown', e => {
 
   if (e.key === 'Escape' && !state.gameOver) {
     e.preventDefault();
-    // If dev panel is open, close it first; otherwise toggle pause menu
-    if (state.panelOpen && _togglePanel) { _togglePanel(); return; }
+    // If the dev panel is open, close it first, then open pause.
+    if (state.panelOpen && _togglePanel) _togglePanel();
     if (_togglePause) _togglePause();
     return;
   }

@@ -148,8 +148,7 @@
       <!-- ── Page: Main ── -->
       <div class="pause-page active" id="pause-page-main">
         <button class="pause-action-btn resume"   id="pause-resume-btn">RESUME</button>
-                <button class="pause-action-btn restart" id="pause-restart-btn">RESTART</button>
-<button class="pause-action-btn settings" id="pause-settings-btn">SETTINGS</button>
+        <button class="pause-action-btn settings" id="pause-settings-btn">SETTINGS</button>
         <button class="pause-action-btn quit"     id="pause-quit-btn">QUIT TO MENU</button>
       </div>
 
@@ -513,34 +512,32 @@
 <script type="module" src="./src/main.js"></script>
 
 
-    <!-- Wave / Boss Banner -->
-    <div id="waveBanner" aria-hidden="true">
-      <div id="waveBannerInner">
-        <div id="waveBannerText">WAVE 1</div>
-      </div>
+  <!-- Wave/Boss banner (glassmorphic) -->
+  <div id="waveBanner" aria-hidden="true">
+    <div id="waveBannerInner">
+      <span id="waveBannerText">WAVE 1</span>
     </div>
-    
+  </div>
 
-    <!-- Upgrade Shop Overlay -->
-    <div id="upgrade-overlay" class="upgrade-overlay" aria-hidden="true">
-      <div class="upgrade-modal">
-        <div class="upgrade-header">
-          <div class="upgrade-title">UPGRADES</div>
-          <div class="upgrade-coins coin-pill">
-            <span class="coin-icon"></span>
-            <span class="coin-value" id="shop-coins">0</span>
-          </div>
-        </div>
 
-        <div class="upgrade-subtitle" id="shop-subtitle">Spend coins between waves.</div>
-
-        <div class="upgrade-list" id="upgrade-list"></div>
-
-        <div class="upgrade-footer">
-          <button class="upgrade-continue" id="upgrade-continue-btn">CONTINUE</button>
+  <!-- Upgrade Shop Overlay -->
+  <div id="upgradeOverlay" class="upgrade-overlay" aria-hidden="true">
+    <div class="upgrade-modal" role="dialog" aria-modal="true" aria-label="Upgrade Shop">
+      <div class="upgrade-hdr">
+        <div class="upgrade-title">UPGRADES</div>
+        <div class="upgrade-coins" title="Coins">
+          <span class="coin-icon"></span>
+          <span class="coin-count" id="upgradeCoins">0</span>
         </div>
       </div>
+
+      <div class="upgrade-body" id="upgradeList"></div>
+
+      <div class="upgrade-footer">
+        <button class="upgrade-continue" id="upgradeContinueBtn">CONTINUE</button>
+      </div>
     </div>
-    
+  </div>
+
 </body>
 </html>

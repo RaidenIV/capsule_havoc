@@ -806,169 +806,160 @@ body.mode-playing #menu-screen { display: none !important; }
 /* end of menu styles */
 
 
-/* === Wave banner + Upgrade Shop === */
-
-/* Glassmorphic wave banner */
+/* ── Wave/Boss Banner (glassmorphic) ─────────────────────────────────────── */
 #waveBanner{
   position: fixed;
-  top: 22px;
+  top: 18px;
   left: 50%;
   transform: translateX(-50%);
-  z-index: 9999;
+  z-index: 40;
   pointer-events: none;
   opacity: 0;
-  transition: opacity 200ms ease, transform 200ms ease;
-  transform-origin: center;
+  transition: opacity 220ms ease, transform 220ms ease;
 }
 #waveBanner.show{
   opacity: 1;
   transform: translateX(-50%) translateY(0);
 }
 #waveBannerInner{
-  min-width: 220px;
-  padding: 14px 18px;
+  padding: 10px 18px;
   border-radius: 16px;
-  background: linear-gradient(135deg, rgba(255,255,255,0.14), rgba(255,255,255,0.06));
-  border: 1px solid rgba(255,255,255,0.18);
-  box-shadow:
-    0 14px 40px rgba(0,0,0,0.55),
-    inset 0 1px 0 rgba(255,255,255,0.22);
+  background: linear-gradient(180deg, rgba(255,255,255,0.16), rgba(255,255,255,0.06));
+  border: 1px solid rgba(255,255,255,0.14);
   backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
+  box-shadow: 0 10px 30px rgba(0,0,0,0.35), inset 0 1px 0 rgba(255,255,255,0.12);
 }
 #waveBannerText{
-  font-family: 'Rajdhani', system-ui, sans-serif;
+  font-family: Rajdhani, system-ui, sans-serif;
   font-weight: 800;
-  letter-spacing: 0.16em;
-  font-size: 20px;
-  color: rgba(255,255,255,0.92);
-  text-align: center;
-  text-shadow: 0 0 20px rgba(0,229,255,0.24);
+  letter-spacing: 0.14em;
+  font-size: 18px;
+  color: rgba(255,255,255,0.95);
+  text-shadow: 0 0 14px rgba(255,255,255,0.14);
 }
 
-/* Upgrade shop overlay */
+
+/* ── Upgrade Shop Overlay ───────────────────────────────────────────────── */
 .upgrade-overlay{
   position: fixed;
   inset: 0;
   display: none;
   align-items: center;
   justify-content: center;
-  z-index: 9998;
   background: rgba(0,0,0,0.55);
-  backdrop-filter: blur(6px);
-  -webkit-backdrop-filter: blur(6px);
+  z-index: 60;
 }
-.upgrade-overlay.show{ display:flex; }
+.upgrade-overlay.show{ display: flex; }
+
 .upgrade-modal{
-  width: min(720px, calc(100vw - 28px));
+  width: min(680px, calc(100vw - 24px));
   border-radius: 18px;
-  padding: 16px;
-  background: linear-gradient(135deg, rgba(255,255,255,0.12), rgba(255,255,255,0.06));
-  border: 1px solid rgba(255,255,255,0.16);
-  box-shadow: 0 18px 60px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.18);
-}
-.upgrade-header{
-  display:flex;
-  align-items:center;
-  justify-content: space-between;
-  gap: 12px;
-  margin-bottom: 10px;
-}
-.upgrade-title{
-  font-family: 'Rajdhani', system-ui, sans-serif;
-  font-weight: 900;
-  letter-spacing: 0.14em;
+  background: linear-gradient(180deg, rgba(255,255,255,0.12), rgba(255,255,255,0.06));
+  border: 1px solid rgba(255,255,255,0.14);
+  backdrop-filter: blur(14px);
+  box-shadow: 0 18px 50px rgba(0,0,0,0.45), inset 0 1px 0 rgba(255,255,255,0.12);
+  padding: 14px;
   color: rgba(255,255,255,0.92);
 }
-.upgrade-subtitle{
-  font-family: 'Rajdhani', system-ui, sans-serif;
-  color: rgba(255,255,255,0.70);
-  margin-bottom: 12px;
+
+.upgrade-hdr{
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 4px 6px 10px;
+  border-bottom: 1px solid rgba(255,255,255,0.10);
 }
-.upgrade-list{
+.upgrade-title{
+  font-family: Rajdhani, system-ui, sans-serif;
+  font-weight: 900;
+  letter-spacing: 0.14em;
+}
+.upgrade-body{
+  padding: 12px 6px;
   display: grid;
   grid-template-columns: 1fr;
   gap: 10px;
-  margin: 10px 0 14px;
-  max-height: min(52vh, 460px);
+  max-height: min(52vh, 520px);
   overflow: auto;
-  padding-right: 6px;
 }
-.upgrade-item{
-  display:flex;
-  align-items:center;
+.upgrade-row{
+  display: flex;
+  align-items: center;
   justify-content: space-between;
-  gap: 10px;
-  padding: 12px;
+  gap: 12px;
+  padding: 10px 10px;
   border-radius: 14px;
-  border: 1px solid rgba(255,255,255,0.12);
   background: rgba(0,0,0,0.18);
+  border: 1px solid rgba(255,255,255,0.10);
 }
-.upgrade-item .name{
-  font-family: 'Rajdhani', system-ui, sans-serif;
-  font-weight: 800;
-  color: rgba(255,255,255,0.92);
+.upg-name{
+  font-family: Rajdhani, system-ui, sans-serif;
+  font-weight: 700;
+  letter-spacing: 0.06em;
 }
-.upgrade-item .desc{
-  font-family: 'Rajdhani', system-ui, sans-serif;
-  color: rgba(255,255,255,0.68);
-  font-size: 14px;
-}
-.upgrade-item .left{display:flex;flex-direction:column;gap:2px}
-.upg-buy{
-  display:flex;
-  align-items:center;
-  gap: 10px;
-  padding: 10px 14px;
-  border-radius: 12px;
-  border: 1px solid rgba(255,255,255,0.18);
-  background: rgba(0,0,0,0.26);
-  color: rgba(255,255,255,0.92);
-  font-family: 'Rajdhani', system-ui, sans-serif;
-  font-weight: 900;
-  letter-spacing: 0.08em;
-  cursor:pointer;
-}
-.upg-buy[disabled]{
-  opacity: 0.55;
-  cursor:not-allowed;
-}
-.upgrade-footer{
-  display:flex;
-  justify-content:flex-end;
-}
-.upgrade-continue{
-  padding: 10px 16px;
-  border-radius: 12px;
-  border: 1px solid rgba(255,255,255,0.18);
-  background: rgba(0,0,0,0.26);
-  color: rgba(255,255,255,0.92);
-  font-family: 'Rajdhani', system-ui, sans-serif;
-  font-weight: 900;
-  letter-spacing: 0.10em;
-  cursor:pointer;
+.upg-meta{
+  opacity: 0.82;
+  font-size: 12px;
 }
 
-/* Coin pill (HUD-like) */
-.coin-pill{
-  display:flex;
-  align-items:center;
+.upg-buy{
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  border-radius: 14px;
+  border: 1px solid rgba(255,255,255,0.14);
+  background: rgba(255,255,255,0.10);
+  color: rgba(255,255,255,0.94);
+  font-family: Rajdhani, system-ui, sans-serif;
+  font-weight: 800;
+  letter-spacing: 0.10em;
+  cursor: pointer;
+}
+.upg-buy[disabled]{
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.upgrade-footer{
+  display: flex;
+  justify-content: flex-end;
+  padding: 10px 6px 4px;
+  border-top: 1px solid rgba(255,255,255,0.10);
+}
+.upgrade-continue{
+  padding: 12px 18px;
+  border-radius: 14px;
+  border: 1px solid rgba(255,255,255,0.16);
+  background: rgba(255,255,255,0.14);
+  color: rgba(255,255,255,0.95);
+  font-family: Rajdhani, system-ui, sans-serif;
+  font-weight: 900;
+  letter-spacing: 0.14em;
+  cursor: pointer;
+}
+
+
+/* ── Coin pill (shared) ─────────────────────────────────────────────────── */
+.upgrade-coins{
+  display: inline-flex;
+  align-items: center;
   gap: 10px;
   padding: 8px 12px;
   border-radius: 999px;
-  background: rgba(0,0,0,0.25);
   border: 1px solid rgba(255,255,255,0.14);
+  background: rgba(0,0,0,0.16);
 }
 .coin-icon{
-  width: 18px; height: 18px;
+  width: 16px;
+  height: 16px;
   border-radius: 50%;
-  background: radial-gradient(circle at 30% 30%, #fff3b0 0%, #ffd34a 22%, #ffb100 55%, #a76a00 100%);
-  box-shadow: 0 0 12px rgba(255,193,7,0.35);
-  display:inline-block;
+  background: radial-gradient(circle at 30% 30%, #fff7b0 0%, #ffd24a 32%, #d79a12 70%, #7d5208 100%);
+  box-shadow: 0 0 0 1px rgba(255,255,255,0.18), 0 0 14px rgba(255,210,74,0.14);
 }
-.coin-value{
-  font-family: 'Rajdhani', system-ui, sans-serif;
+.coin-count{
+  font-family: Rajdhani, system-ui, sans-serif;
   font-weight: 900;
-  color: rgba(255,255,255,0.92);
+  letter-spacing: 0.06em;
 }
-.upg-buy .coin-icon{ animation: none !important; } /* no animation in buy buttons */

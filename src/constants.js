@@ -72,23 +72,18 @@ export const WEAPON_CONFIG = [
 ];
 
 
+// ── Waves / Shop ───────────────────────────────────────────────────────────
 export const STANDARD_ENEMY_SIZE_MULT = 0.75;
-
-// 10-wave system with boss packs at end of each wave.
-// Boss sizeMult is a multiplier of player size.
+export const WEAPON_TIER_COSTS = [2,4,8,16,32,64,128,256,512,1024];
 export const WAVE_CONFIG = [
-  { wave: 1,  standardCount:  50, boss: { color: 0xff7700, sizeMult: 1.00, health:  100, expMult:   2, count:  1 } },
-  { wave: 2,  standardCount:  75, boss: { color: 0x00bb44, sizeMult: 1.25, health:  200, expMult:   4, count:  2 } },
-  { wave: 3,  standardCount: 100, boss: { color: 0x9b30ff, sizeMult: 1.50, health:  300, expMult:   8, count:  3 } },
-  { wave: 4,  standardCount: 125, boss: { color: 0x888888, sizeMult: 1.75, health:  400, expMult:  16, count:  4 } },
-  { wave: 5,  standardCount: 150, boss: { color: 0x00cccc, sizeMult: 2.00, health:  500, expMult:  32, count:  5 } },
-  { wave: 6,  standardCount: 175, boss: { color: 0x111111, sizeMult: 2.25, health:  600, expMult:  64, count:  6 } },
-  { wave: 7,  standardCount: 200, boss: { color: 0x00eeff, sizeMult: 2.50, health:  700, expMult: 128, count:  7 } },
-  { wave: 8,  standardCount: 225, boss: { color: 0x00ff66, sizeMult: 2.75, health:  800, expMult: 256, count:  8 } },
-  { wave: 9,  standardCount: 250, boss: { color: 0xaa00ff, sizeMult: 3.00, health:  900, expMult: 512, count: 10 } },
-  { wave: 10, standardCount: 300, boss: { color: 0x0088ff, sizeMult: 1.00, health: 1000, expMult:1024, count:  4 } },
+  { wave: 1, standardCount: 50, boss: { color: 0xff7700, sizeMult: 1, health: 100, expMult: 2, count: 1 } },
+  { wave: 2, standardCount: 75, boss: { color: 0x00bb44, sizeMult: 1.25, health: 200, expMult: 4, count: 2 } },
+  { wave: 3, standardCount: 100, boss: { color: 0x9b30ff, sizeMult: 1.5, health: 300, expMult: 8, count: 3 } },
+  { wave: 4, standardCount: 125, boss: { color: 0x888888, sizeMult: 1.75, health: 400, expMult: 16, count: 4 } },
+  { wave: 5, standardCount: 150, boss: { color: 0x00cccc, sizeMult: 2, health: 500, expMult: 32, count: 5 } },
+  { wave: 6, standardCount: 175, boss: { color: 0x111111, sizeMult: 2.25, health: 600, expMult: 64, count: 6 } },
+  { wave: 7, standardCount: 200, boss: { color: 0x00eeff, sizeMult: 2.5, health: 700, expMult: 128, count: 7 } },
+  { wave: 8, standardCount: 225, boss: { color: 0x00ff66, sizeMult: 2.75, health: 800, expMult: 256, count: 8 } },
+  { wave: 9, standardCount: 250, boss: { color: 0xaa00ff, sizeMult: 3.0, health: 900, expMult: 512, count: 10 } },
+  { wave: 10, standardCount: 300, boss: { color: 0x0088ff, sizeMult: 1.0, health: 1000, expMult: 1024, count: 4 } },
 ];
-
-// Weapon tier costs: tier 1 is starting tier (free). Purchasing sets tier directly.
-export const WEAPON_TIER_COSTS = [0, 2, 4, 8, 16, 32, 64, 128, 256, 512, 1024];
-

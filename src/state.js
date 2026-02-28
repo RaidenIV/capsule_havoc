@@ -31,6 +31,17 @@ export const state = {
   spawnTickTimer:  0,
   maxEnemies:      50,
 
+
+
+  // ── Waves / Shop ───────────────────────────────────────────────────────────
+  wave: 1,
+  wavePhase: 'standard', // 'standard' | 'boss' | 'upgrade'
+  waveSpawnRemaining: 0,
+  bossSpawnRemaining: 0,
+  wavePendingStart: false,
+
+  upgradeOpen: false,
+  weaponTier: 1,
   // ── Dash / Slow-motion ───────────────────────────────────────────────────────
   dashTimer:     0,
   dashCooldown:  0,
@@ -59,17 +70,6 @@ export const state = {
   dashStreaks:  [],
   orbitRings:   [],
   orbitHitActive: new Set(),
-  // ── Waves / shop (wave-based progression) ───────────────────────────────────
-  wave: 1,
-  wavePhase: 'standard', // 'standard' | 'boss' | 'upgrade'
-  waveSpawnRemaining: 0,
-  bossSpawnRemaining: 0,
-  wavePendingStart: false,
-
-  // ── Upgrades ───────────────────────────────────────────────────────────────
-  weaponTier: 1,
-  upgradeOpen: false,
-
 
   // ── Panel ────────────────────────────────────────────────────────────────────
   panelOpen: false,
