@@ -178,6 +178,10 @@ canvas { display: block; }
   background: rgba(0,229,255,0.1); border-color: rgba(0,229,255,0.3); color: #00e5ff;
 }
 .pause-action-btn.resume:hover { background: rgba(0,229,255,0.18); box-shadow: 0 0 20px rgba(0,229,255,0.15); }
+.pause-action-btn.restart {
+  background: rgba(255,180,0,0.08); border-color: rgba(255,180,0,0.25); color: rgba(255,200,80,0.85);
+}
+.pause-action-btn.restart:hover { background: rgba(255,180,0,0.18); border-color: rgba(255,200,0,0.45); color: #ffd84d; }
 .pause-action-btn.settings {
   background: rgba(255,255,255,0.04); border-color: rgba(255,255,255,0.1); color: rgba(255,255,255,0.6);
 }
@@ -283,11 +287,11 @@ canvas { display: block; }
   pointer-events: none; z-index: 10;
   transition: opacity 0.3s;
 }
-#coin-icon {
-  width: 20px; height: 20px; border-radius: 50%;
-  background: radial-gradient(circle at 35% 35%, #ffe566, #f0a800);
-  box-shadow: 0 0 10px rgba(255,200,50,0.7), 0 0 2px #a06000 inset;
+#coin-canvas {
+  width: 28px; height: 28px;
   flex-shrink: 0;
+  display: block;
+  filter: drop-shadow(0 0 6px rgba(255,200,50,0.8));
 }
 #coin-count {
   font-family: var(--mono); font-size: 22px; font-weight: 900;
@@ -965,3 +969,9 @@ body.mode-playing #menu-screen { display: none !important; }
   font-weight: 900;
   letter-spacing: 0.06em;
 }
+
+/* ─────────────────────────────────────────────────────────────
+   Slash attack visual (Three.js mesh handles rendering,
+   this just suppresses any accidental layout artifacts)
+   ───────────────────────────────────────────────────────────── */
+#slash-canvas { display: none; }
