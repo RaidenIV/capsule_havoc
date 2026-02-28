@@ -103,10 +103,9 @@ function renderList() {
       if (owned(tier)) return;
 
       const cost = tierCost(tier);
-    const coins = state.coins ?? 0;
-    const canAfford = coins >= cost;
       const coins = state.coins ?? 0;
       if (coins < cost) return;
+
 
       // IMPORTANT: Buy ONLY the selected tier (no cumulative auto-buy of lower tiers).
       state.coins = coins - cost;
