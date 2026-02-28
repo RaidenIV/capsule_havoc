@@ -220,6 +220,8 @@ export function updateOrbitBullets(worldDelta) {
         }
       }
     }
+  }
+}
 
 // ─────────────────────────────────────────────────────────────────────────────
 //  SWORD SWING  –  Arc trail + rotating blade line
