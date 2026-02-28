@@ -4,8 +4,8 @@ import { scene } from './renderer.js';
 import { state } from './state.js';
 import {
   BULLET_SPEED, BULLET_LIFETIME, ENEMY_BULLET_DMG, WEAPON_CONFIG,
-  SLASH_RADIUS, SLASH_ARC, SLASH_DAMAGE, SLASH_DURATION,
-  SLASH_EXTEND_TIME, SLASH_FADE_TIME, SLASH_WIDTH,
+  SLASH_RADIUS, SLASH_INNER_R, SLASH_VISUAL_ARC, SLASH_HIT_ARC,
+  SLASH_DAMAGE, SLASH_DURATION, SLASH_SWING_TIME, SLASH_FADE_TIME,
 } from './constants.js';
 import { bulletGeo, bulletMat, bulletGeoParams, floorY } from './materials.js';
 import { playerGroup, updateHealthBar } from './player.js';
@@ -220,161 +220,207 @@ export function updateOrbitBullets(worldDelta) {
         }
       }
     }
+
+// ─────────────────────────────────────────────────────────────────────────────
+//  SWORD SWING  –  Arc trail + rotating blade line
+//
+//  Visual design:
+//    • Ring-sector (wedge) geometry = the glowing arc TRAIL left by the swing
+//    • Thin flat rectangle = the BLADE LINE itself, rotates across the arc
+//    • Outer edge (cutting edge) is the brightest part of the trail
+//    • Blade snaps from start-angle to end-angle over SLASH_SWING_TIME
+//    • Tip sparkle bursts at blade tip when swing peaks
+//
+//  NOTE: game uses atan2(moveX, moveZ) convention (bearing), so
+//    facing +Z → angle 0 → geometry must use sin(a) for X, cos(a) for Z
+// ─────────────────────────────────────────────────────────────────────────────
+
+// Ring-sector trail geometry
+// UV.x = 0 (swing-start / tail) → 1 (swing-end / leading edge)
+// UV.y = 0 (inner radius / hilt) → 1 (outer radius / cutting edge)
+function _buildArcGeo(innerR, outerR, startAngle, totalArc, segs = 64) {
+  const pos = [], uvs = [], idx = [];
+  for (let i = 0; i <= segs; i++) {
+    const t = i / segs;
+    const a = startAngle + t * totalArc;
+    const sx = Math.sin(a), cz = Math.cos(a);
+    pos.push(sx * innerR, 0, cz * innerR);  uvs.push(t, 0);
+    pos.push(sx * outerR, 0, cz * outerR);  uvs.push(t, 1);
   }
+  for (let i = 0; i < segs; i++) {
+    const b = i * 2;
+    idx.push(b, b+1, b+2,  b+1, b+3, b+2);
+  }
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+  g.setAttribute('uv',       new THREE.Float32BufferAttribute(uvs, 2));
+  g.setIndex(idx);
+  return g;
 }
-// ── Slash attack ──────────────────────────────────────────────────────────────
-// ── Slash ShaderMaterial factory ──────────────────────────────────────────────
-// One shared shader definition; each slash gets its own uniform instances.
-const _slashVert = /* glsl */`
+
+// Blade-line geometry: extends along +X from innerR to outerR, thin in Z
+// Mesh is rotated via rotation.y each frame to follow the leading edge
+function _buildBladeGeo(innerR, outerR) {
+  const hw = 0.08; // half-thickness
+  const pos = new Float32Array([
+    innerR, 0, -hw,   outerR, 0, -hw,
+    outerR, 0,  hw,   innerR, 0,  hw,
+  ]);
+  const uvs = new Float32Array([0,0, 1,0, 1,1, 0,1]);
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+  g.setAttribute('uv',       new THREE.Float32BufferAttribute(uvs, 2));
+  g.setIndex([0,1,2, 0,2,3]);
+  return g;
+}
+
+// Trail shader
+// UV.x: arc position (0=tail, 1=leading edge shown by uProgress mask)
+// UV.y: radial (0=inner/hilt, 1=outer/cutting edge)
+const _trailVert = /* glsl */`
   varying vec2 vUv;
-  void main(){
-    vUv = uv;
-    gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.0);
-  }
+  void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.); }
 `;
-const _slashFrag = /* glsl */`
-  uniform float uTime;
-  uniform float uProgress;   // 0 → 1  (blade grows from base to tip)
-  uniform float uFade;       // 1 → 0  (overall fade after peak)
-  uniform vec3  uColor;      // electric blue
+const _trailFrag = /* glsl */`
+  uniform float uProgress;  // 0→1: reveal arc from tail to leading edge
+  uniform float uFade;      // 1→0: overall brightness after peak
+  uniform vec3  uColor;
   varying vec2  vUv;
-
-  // Cheap plasma shimmer: layered sin bands scrolling along the blade
-  float plasma(float x, float t){
-    float n  = sin(x * 14.0 + t * 9.0)  * 0.50;
-        n += sin(x *  9.0 - t * 6.0)  * 0.30;
-        n += sin(x * 22.0 + t * 14.0) * 0.20;
-    return n * 0.5 + 0.5;                       // remap 0..1
-  }
-
   void main(){
-    // ── 1. Cross-section glow (distance from centre line in UV.y) ────────────
-    float cy    = vUv.y - 0.5;                  // -0.5 … +0.5
-    float core  = exp(-cy * cy * 260.0);        // white-hot core (very tight)
-    float glow  = exp(-cy * cy *  22.0);        // electric blue glow (wide)
-    float halo  = exp(-cy * cy *   6.0);        // outer soft halo
+    // Hide geometry past the current leading edge
+    float mask = 1.0 - smoothstep(uProgress - 0.04, uProgress + 0.01, vUv.x);
+    if (mask < 0.001) discard;
 
-    // ── 2. Length mask — blade grows from base (uv.x=0) → tip (uv.x=1) ──────
-    //    Soft leading edge so tip looks like it's cutting through air
-    float lenMask = 1.0 - smoothstep(uProgress - 0.10, uProgress + 0.01, vUv.x);
+    // Cutting-edge glow: outer radius (UV.y → 1) is brightest
+    float edgeFalloff = pow(vUv.y, 1.4);   // dim near hilt, bright at tip
 
-    // ── 3. Tip taper — blade narrows at the very tip ──────────────────────────
-    float taper = 1.0 - smoothstep(0.80, 1.00, vUv.x) * 0.65;
+    // Trail fades toward the tail (UV.x=0)
+    float trailFade = pow(vUv.x / max(uProgress, 0.02), 2.5);
 
-    // ── 4. Base fade — slight taper back at origin so it doesn't hard-clip ───
-    float baseFade = smoothstep(0.0, 0.04, vUv.x);
+    // Thin bright line right at the outer edge
+    float edge = exp(-(1.0 - vUv.y) * (1.0 - vUv.y) * 90.0);
 
-    // ── 5. Plasma shimmer along the blade ────────────────────────────────────
-    float shimmer = plasma(vUv.x, uTime) * 0.22 + 0.78;
-
-    // ── 6. Assemble colour layers ─────────────────────────────────────────────
-    vec3 coreCol  = vec3(1.00, 1.00, 1.00);            // white
-    vec3 glowCol  = uColor;                             // electric blue
-    vec3 haloCol  = uColor * vec3(0.5, 0.75, 1.4);     // cooler blue-purple halo
-
-    vec3 col =  coreCol * core * 2.2
-              + glowCol * glow * shimmer * 1.4
-              + haloCol * halo * 0.5;
-
-    // ── 7. Alpha — additive so alpha == brightness contribution ───────────────
-    float alpha = (core * 2.0 + glow * 1.0 + halo * 0.35)
-                  * lenMask * taper * baseFade * uFade;
-
-    // Clamp — additive blending so brightness > 1 is fine, but alpha needs cap
+    vec3 col = mix(uColor * 0.4, vec3(1.0, 1.0, 1.0), edge * 0.85);
+    float alpha = (edgeFalloff * 0.6 + edge * 0.9) * trailFade * mask * uFade;
     alpha = clamp(alpha, 0.0, 1.0);
-
     gl_FragColor = vec4(col, alpha);
   }
 `;
 
-function _makeSlashMat() {
+// Blade shader  UV.x: 0=hilt, 1=tip   UV.y: 0/1=edges, 0.5=center
+const _bladeVert = /* glsl */`
+  varying vec2 vUv;
+  void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.); }
+`;
+const _bladeFrag = /* glsl */`
+  uniform float uFade;
+  uniform vec3  uColor;
+  varying vec2  vUv;
+  void main(){
+    float cy   = abs(vUv.y - 0.5) * 2.0;          // 0 = centre, 1 = edge
+    float core = exp(-cy * cy * 180.0);            // white-hot core
+    float glow = exp(-cy * cy *  18.0);            // blue glow
+    float taper = 1.0 - smoothstep(0.85, 1.0, vUv.x) * 0.7;  // tip taper
+    float base  = smoothstep(0.0, 0.06, vUv.x);               // base fade-in
+
+    vec3  col   = core * vec3(1.0) + glow * uColor * 1.8;
+    float alpha = (core * 2.5 + glow * 0.8) * taper * base * uFade;
+    gl_FragColor = vec4(col, clamp(alpha, 0.0, 1.0));
+  }
+`;
+
+function _makeTrailMat() {
   return new THREE.ShaderMaterial({
-    vertexShader:   _slashVert,
-    fragmentShader: _slashFrag,
+    vertexShader: _trailVert, fragmentShader: _trailFrag,
     uniforms: {
-      uTime:     { value: 0.0 },
       uProgress: { value: 0.0 },
       uFade:     { value: 1.0 },
-      uColor:    { value: new THREE.Vector3(0.25, 0.65, 1.0) },
+      uColor:    { value: new THREE.Vector3(0.15, 0.55, 1.0) },
     },
-    transparent:  true,
-    depthWrite:   false,
-    blending:     THREE.AdditiveBlending,
-    side:         THREE.DoubleSide,
+    transparent: true, depthWrite: false,
+    blending: THREE.AdditiveBlending, side: THREE.DoubleSide,
   });
 }
 
-// ── Tip sparkle — tiny radial burst at blade tip on peak ──────────────────────
-function _makeTipSparkle(tipPos) {
-  const group = new THREE.Group();
-  group.position.copy(tipPos);
-  const SPOKES = 8;
-  for (let i = 0; i < SPOKES; i++) {
-    const angle = (i / SPOKES) * Math.PI * 2;
-    const len   = 0.18 + Math.random() * 0.22;
-    const geo   = new THREE.PlaneGeometry(len, 0.06);
-    // Offset geometry so it extends outward from center
+function _makeBladeMat() {
+  return new THREE.ShaderMaterial({
+    vertexShader: _bladeVert, fragmentShader: _bladeFrag,
+    uniforms: {
+      uFade:  { value: 1.0 },
+      uColor: { value: new THREE.Vector3(0.25, 0.65, 1.0) },
+    },
+    transparent: true, depthWrite: false,
+    blending: THREE.AdditiveBlending, side: THREE.DoubleSide,
+  });
+}
+
+function _makeTipSparkle(pos) {
+  const g = new THREE.Group();
+  g.position.copy(pos);
+  for (let i = 0; i < 8; i++) {
+    const angle = (i / 8) * Math.PI * 2;
+    const len   = 0.12 + Math.random() * 0.18;
+    const geo   = new THREE.PlaneGeometry(len, 0.05);
     geo.translate(len * 0.5, 0, 0);
     const mat = new THREE.MeshBasicMaterial({
-      color: i % 2 === 0 ? 0xffffff : 0x66ddff,
-      transparent: true, opacity: 0.95,
-      depthWrite: false, blending: THREE.AdditiveBlending,
-      side: THREE.DoubleSide,
+      color: i % 2 === 0 ? 0xffffff : 0x44bbff,
+      transparent: true, opacity: 0.9,
+      depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide,
     });
     const m = new THREE.Mesh(geo, mat);
     m.rotation.z = angle;
     m.layers.enable(2);
-    group.add(m);
+    g.add(m);
   }
-  group.layers.enable(2);
-  return group;
+  g.layers.enable(2);
+  return g;
 }
+
+// Convert our bearing angle (atan2(moveX,moveZ)) to mesh rotation.y
+// so that the blade extends toward the bearing direction
+function _bearingToRotY(a) { return a - Math.PI / 2; }
 
 // ── performSlash ──────────────────────────────────────────────────────────────
 export function performSlash() {
-  const facingAngle = Math.atan2(state.lastMoveX, state.lastMoveZ);
-  const halfArc     = SLASH_ARC / 2;
-  const dmg         = Math.round(SLASH_DAMAGE * (getBulletDamage() / 10));
+  const facing = Math.atan2(state.lastMoveX, state.lastMoveZ);
+  const half   = SLASH_VISUAL_ARC * 0.5;
+  const startA = facing - half;
+  const endA   = facing + half;
 
-  // Blade plane: PlaneGeometry(length, width), lying flat on XZ, facing up
-  const geo = new THREE.PlaneGeometry(SLASH_RADIUS, SLASH_WIDTH, 1, 1);
-  const mat = _makeSlashMat();
-  const mesh = new THREE.Mesh(geo, mat);
+  // Arc trail mesh (full arc, revealed progressively via shader)
+  const arcGeo  = _buildArcGeo(SLASH_INNER_R, SLASH_RADIUS, startA, SLASH_VISUAL_ARC);
+  const trailMat = _makeTrailMat();
+  const trailMesh = new THREE.Mesh(arcGeo, trailMat);
+  trailMesh.position.copy(playerGroup.position);
+  trailMesh.position.y = 0.08;
+  trailMesh.layers.enable(2);
+  scene.add(trailMesh);
 
-  // Lay flat
-  mesh.rotation.x = -Math.PI / 2;
-  // Orient along attack direction
-  mesh.rotation.z = -facingAngle;
-  // Offset so blade extends *forward* from player (not centered on player)
-  const fwdX = Math.sin(facingAngle);
-  const fwdZ = Math.cos(facingAngle);
-  mesh.position.set(
-    playerGroup.position.x + fwdX * (SLASH_RADIUS * 0.5),
-    0.12,
-    playerGroup.position.z + fwdZ * (SLASH_RADIUS * 0.5),
-  );
-  mesh.layers.enable(2); // bloom
-  scene.add(mesh);
+  // Blade line (rotates from startA → endA)
+  const bladeGeo  = _buildBladeGeo(SLASH_INNER_R, SLASH_RADIUS);
+  const bladeMat  = _makeBladeMat();
+  const bladeMesh = new THREE.Mesh(bladeGeo, bladeMat);
+  bladeMesh.position.copy(playerGroup.position);
+  bladeMesh.position.y = 0.14;
+  bladeMesh.rotation.y = _bearingToRotY(startA);
+  bladeMesh.layers.enable(2);
+  scene.add(bladeMesh);
 
-  // Tip world position (for sparkle)
-  const tipPos = new THREE.Vector3(
-    playerGroup.position.x + fwdX * SLASH_RADIUS,
-    0.18,
-    playerGroup.position.z + fwdZ * SLASH_RADIUS,
-  );
+  // Tip sparkle position (at blade tip on the leading edge)
+  const dmg = Math.round(SLASH_DAMAGE * (getBulletDamage() / 10));
 
   state.slashEffects.push({
-    mesh, mat, geo,
-    tipPos,
-    tipSparkle:  null,        // created at peak
-    sparkleLife: 0,
-    life:        SLASH_DURATION,
-    maxLife:     SLASH_DURATION,
-    hitDone:     false,
+    trailMesh, arcGeo, trailMat,
+    bladeMesh, bladeGeo, bladeMat,
+    startA, endA,
+    tipSparkle: null, sparkleLife: 0,
+    life:    SLASH_DURATION,
+    maxLife: SLASH_DURATION,
+    elapsed: 0,
+    hitDone: false,
     dmg,
-    facingAngle,
-    halfArc,
-    elapsed:     0,
+    facing,
+    halfHit: SLASH_HIT_ARC * 0.5,
   });
 }
 
@@ -386,9 +432,8 @@ export function updateSlashEffects(worldDelta) {
     s.elapsed += worldDelta;
 
     if (s.life <= 0) {
-      scene.remove(s.mesh);
-      s.geo.dispose();
-      s.mat.dispose();
+      scene.remove(s.trailMesh); s.arcGeo.dispose();   s.trailMat.dispose();
+      scene.remove(s.bladeMesh); s.bladeGeo.dispose(); s.bladeMat.dispose();
       if (s.tipSparkle) {
         scene.remove(s.tipSparkle);
         s.tipSparkle.children.forEach(c => { c.geometry.dispose(); c.material.dispose(); });
@@ -397,37 +442,39 @@ export function updateSlashEffects(worldDelta) {
       continue;
     }
 
-    const totalLife = s.maxLife;
+    // Swing progress: 0→1 over SLASH_SWING_TIME, ease-out
+    const rawSwing  = Math.min(1, s.elapsed / SLASH_SWING_TIME);
+    const swing     = 1 - Math.pow(1 - rawSwing, 2.0); // ease-out
 
-    // uProgress: 0 → 1 over SLASH_EXTEND_TIME
-    const progress = Math.min(1.0, s.elapsed / SLASH_EXTEND_TIME);
-
-    // uFade: 1 while extending, then 1→0 over SLASH_FADE_TIME
-    const fadeStart = totalLife - SLASH_FADE_TIME;
-    const fade      = s.life <= SLASH_FADE_TIME
-      ? s.life / SLASH_FADE_TIME
+    // Overall fade: holds at 1 while swinging, then 1→0 over SLASH_FADE_TIME
+    const fade = s.life <= SLASH_FADE_TIME
+      ? Math.pow(s.life / SLASH_FADE_TIME, 0.65)
       : 1.0;
 
-    s.mat.uniforms.uTime.value     = s.elapsed;
-    s.mat.uniforms.uProgress.value = progress;
-    s.mat.uniforms.uFade.value     = fade;
+    // Update trail shader
+    s.trailMat.uniforms.uProgress.value = swing;
+    s.trailMat.uniforms.uFade.value     = fade;
 
-    // Spawn tip sparkle the moment blade fully extends
-    if (!s.tipSparkle && progress >= 1.0) {
-      s.tipSparkle  = _makeTipSparkle(s.tipPos);
-      s.sparkleLife = 0.10;
+    // Rotate blade to current leading edge
+    const currentAngle = s.startA + swing * SLASH_VISUAL_ARC;
+    s.bladeMesh.rotation.y = _bearingToRotY(currentAngle);
+    s.bladeMat.uniforms.uFade.value = swing < 1.0 ? fade : fade * 0.6; // blade dims after peak
+
+    // Tip sparkle at peak
+    if (!s.tipSparkle && swing >= 0.98) {
+      const tx = playerGroup.position.x + Math.sin(s.endA) * SLASH_RADIUS;
+      const tz = playerGroup.position.z + Math.cos(s.endA) * SLASH_RADIUS;
+      s.tipSparkle  = _makeTipSparkle(new THREE.Vector3(tx, 0.18, tz));
+      s.sparkleLife = 0.12;
       scene.add(s.tipSparkle);
     }
 
-    // Fade sparkle
     if (s.tipSparkle) {
       s.sparkleLife -= worldDelta;
-      const sf = Math.max(0, s.sparkleLife / 0.10);
+      const sf = Math.max(0, s.sparkleLife / 0.12);
       s.tipSparkle.children.forEach(c => {
-        c.material.opacity = sf * 0.95;
-        // Scale spokes outward as they fade
-        const sc = 1 + (1 - sf) * 1.4;
-        c.scale.setScalar(sc);
+        c.material.opacity = sf * 0.9;
+        c.scale.setScalar(1 + (1 - sf) * 1.8);
       });
       if (s.sparkleLife <= 0) {
         scene.remove(s.tipSparkle);
@@ -436,21 +483,20 @@ export function updateSlashEffects(worldDelta) {
       }
     }
 
-    // Damage fires when blade is 50% extended
-    if (!s.hitDone && progress >= 0.5) {
+    // Damage at 50% through swing
+    if (!s.hitDone && swing >= 0.5) {
       s.hitDone = true;
       for (let j = state.enemies.length - 1; j >= 0; j--) {
         const e = state.enemies[j];
         if (e.dead) continue;
-        const dx   = e.grp.position.x - playerGroup.position.x;
-        const dz   = e.grp.position.z - playerGroup.position.z;
-        const dist = Math.sqrt(dx * dx + dz * dz);
-        if (dist > SLASH_RADIUS) continue;
+        const dx = e.grp.position.x - playerGroup.position.x;
+        const dz = e.grp.position.z - playerGroup.position.z;
+        if (dx*dx + dz*dz > SLASH_RADIUS * SLASH_RADIUS) continue;
 
-        let angleDiff = Math.atan2(dx, dz) - s.facingAngle;
-        while (angleDiff >  Math.PI) angleDiff -= Math.PI * 2;
-        while (angleDiff < -Math.PI) angleDiff += Math.PI * 2;
-        if (Math.abs(angleDiff) > s.halfArc) continue;
+        let diff = Math.atan2(dx, dz) - s.facing;
+        while (diff >  Math.PI) diff -= Math.PI * 2;
+        while (diff < -Math.PI) diff += Math.PI * 2;
+        if (Math.abs(diff) > s.halfHit) continue;
 
         e.hp -= s.dmg;
         spawnEnemyDamageNum(s.dmg, e);

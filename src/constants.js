@@ -3,14 +3,15 @@
 // Import with: import { PLAYER_SPEED, ELITE_TYPES, ... } from './constants.js';
 
 // ── Slash attack ──────────────────────────────────────────────────────────────
-export const SLASH_RADIUS      = 3.8;           // reach in world units
-export const SLASH_WIDTH       = 1.5;           // blade width (hitbox + visual)
-export const SLASH_ARC         = Math.PI * 1.5; // hitbox arc (270°)
-export const SLASH_INTERVAL    = 0.65;          // seconds between slashes
-export const SLASH_DAMAGE      = 20;            // base damage
-export const SLASH_DURATION    = 0.22;          // total visual lifetime (s)
-export const SLASH_EXTEND_TIME = 0.12;          // time to reach full length
-export const SLASH_FADE_TIME   = 0.10;          // time to fade out after peak
+export const SLASH_RADIUS      = 4.0;             // blade reach
+export const SLASH_INNER_R     = 0.4;             // inner radius (near hilt)
+export const SLASH_VISUAL_ARC  = Math.PI * 0.70;  // ~126° visual sweep arc
+export const SLASH_HIT_ARC     = Math.PI * 0.85;  // hitbox slightly wider
+export const SLASH_INTERVAL    = 0.65;
+export const SLASH_DAMAGE      = 20;
+export const SLASH_DURATION    = 0.30;            // total life (s)
+export const SLASH_SWING_TIME  = 0.10;            // blade sweeps in this time
+export const SLASH_FADE_TIME   = 0.20;            // fades after peak
 
 // ── Movement ─────────────────────────────────────────────────────────────────
 export const PLAYER_SPEED          = 7;
