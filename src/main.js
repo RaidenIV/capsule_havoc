@@ -18,11 +18,9 @@ import { initMenuUI } from './ui/menu.js';
 
 // ── Wire cross-module callbacks (breaks enemies ↔ weapons circular deps) ──────
 setLevelUpCallback((newLevel) => {
+  // Player XP/levels can still exist for meta-progression, but weapon power is now shop-driven.
+  // Keep the level-up SFX only (no elite spawns / no weapon unlocks here).
   playSound('levelup', 0.8);
-});
-  syncOrbitBullets();
-  ELITE_TYPES.filter(et => et.minLevel <= newLevel)
-             .forEach(et => spawnLevelElites(et));
 });
 
 // ── Wire input callbacks ──────────────────────────────────────────────────────
