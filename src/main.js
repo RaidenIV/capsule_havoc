@@ -7,8 +7,7 @@ import { onRendererResize } from './renderer.js';
 import { onBloomResize }   from './bloom.js';
 import { updateXP }        from './xp.js';
 import { updateHealthBar } from './player.js';
-import { spawnEnemyAtEdge, setLevelUpCallback, setVictoryCallback } from './enemies.js';
-import { syncOrbitBullets } from './weapons.js';
+import { setLevelUpCallback, setVictoryCallback } from './enemies.js';
 import { triggerVictory, restartGame, startCountdown } from './gameFlow.js';
 import { initInput }       from './input.js';
 import { tick }            from './loop.js';
@@ -16,13 +15,14 @@ import { togglePanel, togglePause, updatePauseBtn } from './panel/index.js';
 import { initAudio, resumeAudioContext, playSound, playSplashSound } from './audio.js';
 import { stopMusic } from './audio.js';
 import { initMenuUI } from './ui/menu.js';
+import { initUpgradeUI } from './ui/upgrades.js';
 
 // ── Wire cross-module callbacks (breaks enemies ↔ weapons circular deps) ──────
 setVictoryCallback(triggerVictory);
 
-setLevelUpCallback((newLevel) => {
+setLevelUpCallback(() => {
+  // XP levels remain for the XP bar / stats, but weapon upgrades are purchased between waves.
   playSound('levelup', 0.8);
-  syncOrbitBullets();
 });
 
 // ── Wire input callbacks ──────────────────────────────────────────────────────
@@ -48,6 +48,7 @@ window.addEventListener('resize', () => {
 // ── Menu-driven start ─────────────────────────────────────────────────
 updateHealthBar();
 updateXP(0);
+initUpgradeUI();
 
 // Show menu first; defer tick()/spawns/countdown until Start is pressed.
 state.uiMode = 'menu';
