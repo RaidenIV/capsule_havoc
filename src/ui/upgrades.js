@@ -65,10 +65,10 @@ function renderShop() {
     } else if (!canAfford) {
       btn.disabled = true;
       btn.classList.add('cant');
-      btn.innerHTML = `<span>NEED</span><span class="coin-ui"><span class="coin-dot">●</span><span class="coin-num">${fmtCoins(cost)}</span></span>`;
+      btn.innerHTML = `<span>NEED</span><span class="coin-ui"><span class="coin-spin" aria-hidden="true"></span><span class="coin-num">${fmtCoins(cost)}</span></span>`;
     } else {
       btn.disabled = false;
-      btn.innerHTML = `<span>BUY</span><span class="coin-ui"><span class="coin-dot">●</span><span class="coin-num">${fmtCoins(cost)}</span></span>`;
+      btn.innerHTML = `<span>BUY</span><span class="coin-ui"><span class="coin-spin" aria-hidden="true"></span><span class="coin-num">${fmtCoins(cost)}</span></span>`;
       btn.addEventListener('click', () => {
         // Buy ONLY the selected tier, not the chain.
         const latestTier = Math.max(1, state.weaponTier || 1);
@@ -107,6 +107,9 @@ export function openUpgradeShop(waveIndex, onContinue) {
   const btn = $('shopContinue');
   if (btn) {
     btn.onclick = () => {
+      // Ensure game resumes after closing the shop
+      state.upgradeOpen = false;
+      state.paused = false;
       closeUpgradeShopIfOpen();
       if (_onContinue) _onContinue();
     };
@@ -117,6 +120,9 @@ export function closeUpgradeShopIfOpen() {
   const overlay = $('upgradeShop');
   if (!overlay) return;
   overlay.classList.remove('show');
+  // Defensive: if anything set paused, release it on close
+  state.paused = false;
+  state.upgradeOpen = false;
   _open = false;
   _onContinue = null;
 }
