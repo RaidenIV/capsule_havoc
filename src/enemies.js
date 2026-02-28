@@ -105,7 +105,8 @@ export function spawnEnemy(x, z, eliteTypeOrCfg = null) {
 
 
 export function spawnEnemyAtEdge(eliteTypeOrCfg = null) {
-  if (state.enemies.length >= state.maxEnemies) return;
+  // Only enforce cap if maxEnemies is a positive finite number.
+  if (Number.isFinite(state.maxEnemies) && state.maxEnemies > 0 && state.enemies.length >= state.maxEnemies) return;
   const angle = Math.random() * Math.PI * 2;
   const r     = 28 + Math.random() * 5;
   spawnEnemy(
