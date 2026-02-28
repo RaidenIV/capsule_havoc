@@ -167,14 +167,12 @@ export function togglePanel() {
   uiEl.classList.toggle('po',   state.panelOpen);
   hintEl.classList.toggle('po', state.panelOpen);
   xpHudEl?.classList.toggle('po', state.panelOpen);
-
-  // The dev panel is an overlay, but it should NOT pause the game.
-  // (Pause is controlled by the pause menu / Esc.)
   if (state.panelOpen) {
-    loadPanelFromState();
-  }
-
-  // Prevent stuck movement if the user opens the panel mid-hold.
+  // Opening the control panel should NOT pause the game and should NOT show the pause overlay.
+  clock.getDelta();
+  loadPanel();
+}
+updatePauseBtn();
   state.keys.w = state.keys.a = state.keys.s = state.keys.d = false;
 }
 g('cp-close').addEventListener('click', togglePanel);
@@ -184,7 +182,6 @@ export function updatePauseBtn() {
   const btn = g('pause-btn'); if (!btn) return;
   if (state.paused) { btn.textContent = '▶ Resume'; btn.classList.add('paused'); }
   else              { btn.textContent = '⏸ Pause';  btn.classList.remove('paused'); }
-  pauseEl.classList.toggle('show', state.paused);
 }
 export function togglePause() {
   state.paused = !state.paused;

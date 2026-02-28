@@ -843,141 +843,31 @@ body.mode-playing #menu-screen { display: none !important; }
 }
 
 
-/* ────────────────────────────────────────────────────────────────────────── */
-/* Upgrade Shop (between waves) */
+/* ── Coin icon (HUD + shop header) ───────────────────────────────────────── */
+.coin-pill{display:inline-flex;align-items:center;gap:8px}
+.coin-icon{width:18px;height:18px;border-radius:50%;background:radial-gradient(circle at 30% 30%, #fff2a8 0%, #ffd24a 25%, #d9a300 70%, #8a5f00 100%);border:1px solid rgba(255,215,0,0.55);box-shadow:0 0 10px rgba(255,200,0,0.18) inset, 0 0 14px rgba(255,200,0,0.16);}
+.coin-icon.spin{animation:coinSpin 0.9s linear infinite}
+@keyframes coinSpin{0%{transform:rotateY(0deg)}100%{transform:rotateY(360deg)}}
+.coin-count{font-family:var(--rj);font-weight:800;color:#ffd24a;letter-spacing:0.2px}
 
-.shop-overlay {
-  position: fixed;
-  inset: 0;
-  display: none;
-  align-items: center;
-  justify-content: center;
-  background: rgba(0,0,0,0.55);
-  z-index: 9999;
-}
-.shop-overlay.show { display: flex; }
+/* Buttons should NOT spin their coin icon */
+.upg-buy .coin-icon{animation:none !important}
 
-.shop-card {
-  width: min(720px, calc(100vw - 28px));
-  max-height: min(78vh, 760px);
-  overflow: auto;
-  padding: 18px 18px 14px;
-  border-radius: 18px;
-  background: rgba(20, 22, 26, 0.45);
-  border: 1px solid rgba(255,255,255,0.16);
-  box-shadow: 0 16px 60px rgba(0,0,0,0.55);
-  backdrop-filter: blur(14px);
-}
-
-.shop-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 14px;
-}
-
-.shop-title {
-  font-weight: 800;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  font-size: 16px;
-}
-
-.shop-sub {
-  opacity: 0.8;
-  margin-top: 8px;
-  margin-bottom: 12px;
-  font-size: 13px;
-}
-
-.shop-list { display: flex; flex-direction: column; gap: 10px; }
-
-.shop-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  padding: 12px;
-  border-radius: 14px;
-  background: rgba(255,255,255,0.06);
-  border: 1px solid rgba(255,255,255,0.10);
-}
-
-.shop-label { display: flex; flex-direction: column; gap: 4px; }
-.shop-tier { font-weight: 800; letter-spacing: 0.08em; font-size: 12px; }
-.shop-meta { opacity: 0.78; font-size: 12px; }
-
-.shop-buy {
-  min-width: 160px;
-  padding: 10px 12px;
-  border-radius: 12px;
-  border: 1px solid rgba(255,255,255,0.16);
-  background: rgba(0,0,0,0.25);
-  color: #fff;
-  font-weight: 800;
-  letter-spacing: 0.08em;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 10px;
-  cursor: pointer;
-}
-.shop-buy:disabled { opacity: 0.55; cursor: not-allowed; }
-.shop-buy.owned { opacity: 0.45; }
-.shop-buy.cant { opacity: 0.6; }
-
-.shop-actions { margin-top: 14px; display: flex; justify-content: flex-end; }
-.shop-continue {
-  padding: 12px 16px;
-  border-radius: 12px;
-  border: 1px solid rgba(255,255,255,0.18);
-  background: rgba(0, 180, 255, 0.18);
-  color: #fff;
-  font-weight: 900;
-  letter-spacing: 0.10em;
-  cursor: pointer;
-}
-
-/* Reuse the in-game coin pill look */
-.coin-ui {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 4px 8px;
-  border-radius: 999px;
-  background: rgba(0,0,0,0.25);
-  border: 1px solid rgba(255,255,255,0.14);
-}
-.coin-dot { color: #f5c542; font-size: 14px; line-height: 1; }
-.coin-num { color: #f5c542; font-weight: 900; letter-spacing: 0.04em; }
-
-
-/* ── Coin (spinning) ───────────────────────────────────────────────────────── */
-@keyframes coinSpin {
-  0%   { transform: rotateY(0deg); }
-  100% { transform: rotateY(360deg); }
-}
-#coin-icon,
-.coin-spin {
-  position: relative;
-  width: 20px; height: 20px; border-radius: 50%;
-  background: radial-gradient(circle at 35% 35%, #ffe566, #f0a800);
-  box-shadow: 0 0 10px rgba(255,200,50,0.7), 0 0 2px #a06000 inset;
-  flex-shrink: 0;
-  transform-style: preserve-3d;
-  animation: coinSpin 0.9s linear infinite;
-}
-#coin-icon::before,
-.coin-spin::before {
-  content: "";
-  position: absolute; inset: 0;
-  border-radius: 50%;
-  background: conic-gradient(from 210deg, rgba(255,255,255,0.0), rgba(255,255,255,0.55), rgba(255,255,255,0.0));
-  opacity: 0.65;
-  filter: blur(0.2px);
-}
-.coin-spin {
-  width: 16px; height: 16px;
-  box-shadow: 0 0 8px rgba(255,200,50,0.65), 0 0 2px #a06000 inset;
-  animation-duration: 0.9s;
-}
+/* ── Upgrade Shop Overlay ─────────────────────────────────────────────────── */
+.upgrade-overlay{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;opacity:0;pointer-events:none;transition:opacity .2s;background:rgba(0,0,0,.55);z-index:120;backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px)}
+.upgrade-overlay.show{opacity:1;pointer-events:auto}
+.upgrade-card{width:min(720px,calc(100vw - 32px));max-height:calc(100vh - 48px);overflow:auto;border-radius:18px;border:1px solid rgba(255,255,255,.10);background:rgba(12,14,18,.92);box-shadow:0 30px 80px rgba(0,0,0,.55)}
+.upgrade-head{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:14px 16px;border-bottom:1px solid rgba(255,255,255,.08)}
+.upgrade-title{font-family:var(--rj);font-weight:900;letter-spacing:.6px;color:#e9f2ff}
+.upg-list{padding:12px 12px 6px;display:flex;flex-direction:column;gap:10px}
+.upg-row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px;border-radius:14px;border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.03)}
+.upg-title{font-family:var(--rj);font-weight:900;color:#f2f6ff}
+.upg-sub{font-family:var(--rj);font-size:12px;color:rgba(233,242,255,.72);margin-top:2px}
+.upg-buy{min-width:160px;border-radius:12px;border:1px solid rgba(255,255,255,.10);background:rgba(255,255,255,.06);color:#e9f2ff;font-family:var(--rj);font-weight:900;letter-spacing:.4px;padding:10px 12px;cursor:pointer}
+.upg-buy:hover{background:rgba(255,255,255,.10)}
+.upg-buy:disabled{opacity:.55;cursor:not-allowed}
+.upg-buy.owned{background:rgba(66,245,120,.10);border-color:rgba(66,245,120,.25)}
+.upg-buy.locked{background:rgba(255,119,0,.08);border-color:rgba(255,119,0,.22)}
+.upgrade-foot{padding:12px 16px;border-top:1px solid rgba(255,255,255,.08);display:flex;justify-content:flex-end}
+.upg-continue{border-radius:12px;border:1px solid rgba(0,229,255,.18);background:rgba(0,229,255,.10);color:#e9f2ff;font-family:var(--rj);font-weight:900;letter-spacing:.5px;padding:10px 14px;cursor:pointer}
+.upg-continue:hover{background:rgba(0,229,255,.16)}

@@ -1,132 +1,122 @@
 // ─── ui/upgrades.js ─────────────────────────────────────────────────────────
-// Upgrade Shop overlay shown between waves.
+// Wave upgrade shop overlay (coin spending). Opens after boss pack per wave.
+// - Pauses simulation while open (state.upgradeOpen).
+// - Next wave starts only after CONTINUE.
+// - Weapon upgrades are purchasable tiers; higher tiers cost more (2..1024).
 
 import { state } from '../state.js';
-import { WEAPON_CONFIG } from '../constants.js';
 import { syncOrbitBullets } from '../weapons.js';
 
-let _open = false;
+let _overlay = null;
 let _onContinue = null;
 
 function $(id) { return document.getElementById(id); }
 
-function costForTier(tier) {
-  // Tier 1 is the base weapon and is free.
-  // Tier N costs 2^(N-1): 2, 4, 8, ...
+function tierCost(tier) {
+  // tier 1 is baseline (free / already owned). Tier 2 cost = 2, tier 3 cost = 4 ... tier 11 cost = 1024
   if (tier <= 1) return 0;
-  return 2 ** (tier - 1);
+  const pow = Math.min(10, Math.max(1, tier - 1)); // 1..10
+  return 2 ** pow;
 }
 
-function fmtCoins(n) {
-  const v = Math.max(0, Math.floor(n || 0));
-  return v.toString();
+function ensureOverlay() {
+  _overlay = $('upgrade-overlay');
+  if (!_overlay) return null;
+  return _overlay;
 }
 
-function renderShop() {
-  const overlay = $('upgradeShop');
-  if (!overlay) return;
+function render() {
+  const ov = ensureOverlay();
+  if (!ov) return;
 
-  const coinsEl = $('shopCoinsVal');
-  if (coinsEl) coinsEl.textContent = fmtCoins(state.coins);
+  const coinsEl = $('upg-coins');
+  if (coinsEl) coinsEl.textContent = String(state.coins ?? 0);
 
-  const list = $('shopList');
+  const list = $('upg-list');
   if (!list) return;
 
-  const current = Math.max(1, state.weaponTier || 1);
-  const maxTier = Math.max(1, WEAPON_CONFIG.length);
-
   list.innerHTML = '';
+  const maxTier = 11;
 
   for (let tier = 2; tier <= maxTier; tier++) {
-    const cost = costForTier(tier);
-    const owned = tier <= current;
-    const canAfford = state.coins >= cost;
+    const cost = tierCost(tier);
+    const owned = (state.weaponTier ?? 1) >= tier;
+    const canAfford = (state.coins ?? 0) >= cost;
 
     const row = document.createElement('div');
-    row.className = 'shop-row';
+    row.className = 'upg-row';
 
-    const label = document.createElement('div');
-    label.className = 'shop-label';
-    label.innerHTML = `<div class="shop-tier">TIER ${tier}</div>`;
-
-    const meta = document.createElement('div');
-    meta.className = 'shop-meta';
-    const [fireInterval, waveBullets, dmgMult] = WEAPON_CONFIG[Math.min(tier - 1, WEAPON_CONFIG.length - 1)];
-    meta.textContent = `Fire ${fireInterval.toFixed(2)}s • Bullets ${waveBullets} • DMG x${dmgMult.toFixed(2)}`;
-    label.appendChild(meta);
+    const left = document.createElement('div');
+    left.className = 'upg-left';
+    left.innerHTML = `<div class="upg-title">Weapon Tier ${tier}</div>
+                      <div class="upg-sub">Improves fire interval, wave count, damage, and orbit rings</div>`;
 
     const btn = document.createElement('button');
-    btn.className = 'shop-buy';
+    btn.className = 'upg-buy';
+    btn.disabled = owned || !canAfford;
 
     if (owned) {
-      btn.disabled = true;
       btn.textContent = 'OWNED';
       btn.classList.add('owned');
     } else if (!canAfford) {
-      btn.disabled = true;
-      btn.classList.add('cant');
-      btn.innerHTML = `<span>NEED</span><span class="coin-ui"><span class="coin-spin" aria-hidden="true"></span><span class="coin-num">${fmtCoins(cost)}</span></span>`;
+      btn.innerHTML = `NEED <span class="coin-pill"><span class="coin-icon"></span><span class="coin-count">${cost}</span></span>`;
+      btn.classList.add('locked');
     } else {
-      btn.disabled = false;
-      btn.innerHTML = `<span>BUY</span><span class="coin-ui"><span class="coin-spin" aria-hidden="true"></span><span class="coin-num">${fmtCoins(cost)}</span></span>`;
-      btn.addEventListener('click', () => {
-        // Buy ONLY the selected tier, not the chain.
-        const latestTier = Math.max(1, state.weaponTier || 1);
-        if (tier <= latestTier) return;
-        const latestCost = costForTier(tier);
-        if (state.coins < latestCost) return;
-
-        state.coins -= latestCost;
-        state.weaponTier = tier;
-
-        // Apply immediately
-        syncOrbitBullets();
-
-        renderShop();
-      });
+      btn.innerHTML = `BUY <span class="coin-pill"><span class="coin-icon"></span><span class="coin-count">${cost}</span></span>`;
     }
 
-    row.appendChild(label);
+    btn.addEventListener('click', () => {
+      const coins = state.coins ?? 0;
+      if (owned) return;
+      if (coins < cost) return;
+
+      // Purchase ONLY the selected tier
+      state.coins = coins - cost;
+      state.weaponTier = tier;
+
+      // Apply immediately (orbit rings)
+      try { syncOrbitBullets(); } catch {}
+
+      render();
+    });
+
+    row.appendChild(left);
     row.appendChild(btn);
     list.appendChild(row);
   }
 }
 
-export function openUpgradeShop(waveIndex, onContinue) {
-  const overlay = $('upgradeShop');
-  if (!overlay) return;
-
-  _open = true;
+export function openUpgradeShop(waveNum, onContinue) {
+  const ov = ensureOverlay();
   _onContinue = typeof onContinue === 'function' ? onContinue : null;
+  if (!ov) return;
 
-  $('shopWave') && ($('shopWave').textContent = `WAVE ${waveIndex} COMPLETE`);
+  // Pause sim while open
+  state.upgradeOpen = true;
+  state.paused = false; // keep pause overlay logic separate; sim is frozen by upgradeOpen in tick()
 
-  overlay.classList.add('show');
-  renderShop();
+  const waveEl = $('upg-wave');
+  if (waveEl) waveEl.textContent = `WAVE ${waveNum} COMPLETE`;
 
-  const btn = $('shopContinue');
-  if (btn) {
-    btn.onclick = () => {
-      // Ensure game resumes after closing the shop
+  ov.classList.add('show');
+
+  const cont = $('upg-continue');
+  if (cont && !cont._bound) {
+    cont._bound = true;
+    cont.addEventListener('click', () => {
+      closeUpgradeShopIfOpen();
+      // Ensure the sim resumes
       state.upgradeOpen = false;
       state.paused = false;
-      closeUpgradeShopIfOpen();
       if (_onContinue) _onContinue();
-    };
+    });
   }
+
+  render();
 }
 
 export function closeUpgradeShopIfOpen() {
-  const overlay = $('upgradeShop');
-  if (!overlay) return;
-  overlay.classList.remove('show');
-  // Defensive: if anything set paused, release it on close
-  state.paused = false;
-  state.upgradeOpen = false;
-  _open = false;
-  _onContinue = null;
-}
-
-export function isUpgradeShopOpen() {
-  return _open;
+  const ov = ensureOverlay();
+  if (!ov) return;
+  ov.classList.remove('show');
 }
