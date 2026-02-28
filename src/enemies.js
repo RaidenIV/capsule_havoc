@@ -5,7 +5,7 @@ import { scene } from './renderer.js';
 import { state } from './state.js';
 import {
   ENEMY_SPEED, ENEMY_CONTACT_DPS, ENEMY_BULLET_SPEED, ENEMY_BULLET_LIFETIME,
-  STAGGER_DURATION, SPAWN_FLASH_DURATION, ELITE_FIRE_RATE, PLAYER_MAX_HP, STANDARD_ENEMY_SIZE_MULT,
+  STAGGER_DURATION, SPAWN_FLASH_DURATION, ELITE_FIRE_RATE, ELITE_TYPES, PLAYER_MAX_HP,
 } from './constants.js';
 import {
   enemyGeo, enemyMat, enemyGeoParams, bulletGeoParams,
@@ -25,15 +25,15 @@ const _eBulletDir = new THREE.Vector3();
 const _eBulletQ   = new THREE.Quaternion();
 
 // ── Spawn ─────────────────────────────────────────────────────────────────────
-export function spawnEnemy(x, z, cfg = null) {
+export function spawnEnemy(x, z, eliteType = null) {
   const grp = new THREE.Group();
   grp.position.set(x, 0, z);
 
-  const isBoss    = !!(cfg && cfg.isBoss);
-  const color     = cfg?.color ?? 0x888888;
-  const scaleMult = cfg?.sizeMult ?? STANDARD_ENEMY_SIZE_MULT;
-  const expMult   = cfg?.expMult  ?? 1;
-  const coinMult  = cfg?.coinMult ?? 1;
+  const color     = eliteType ? eliteType.color : 0x888888;
+  const scaleMult = eliteType ? eliteType.sizeMult : 1;
+  const hpMult    = eliteType ? eliteType.hpMult   : 1;
+  const expMult   = eliteType ? eliteType.expMult  : 1;
+  const coinMult  = eliteType ? eliteType.coinMult : 1;
 
   const mat = enemyMat.clone();
   mat.color.set(color);
@@ -47,13 +47,13 @@ export function spawnEnemy(x, z, cfg = null) {
   grp.add(mesh);
   scene.add(grp);
 
-  const hp = (cfg && typeof cfg.health === 'number')
-    ? Math.round(cfg.health)
-    : Math.round(getEnemyHP());
-  const fireRate = isBoss ? (cfg.fireRate ?? 1.6) : null;
+  const baseHP   = getEnemyHP();
+  const fixedHp  = eliteType?.fixedHp;
+  const hp       = fixedHp != null ? Math.round(fixedHp) : Math.round(baseHP * hpMult);
+  const fireRate = eliteType ? (eliteType.fireRate ?? (ELITE_FIRE_RATE[eliteType.minLevel] ?? 2.0)) : null;
 
   let eliteBarFill = null;
-  if (isBoss) {
+  if (eliteType) {
     const bWrap = document.createElement('div');
     bWrap.className = 'elite-bar-wrap';
     bWrap.style.width = Math.round(40 + scaleMult * 30) + 'px';
@@ -70,7 +70,8 @@ export function spawnEnemy(x, z, cfg = null) {
 
   state.enemies.push({
     grp, mesh, mat, hp, maxHp: hp, dead: false,
-    scaleMult, expMult, coinMult, isBoss, eliteBarFill,
+    scaleMult, expMult, coinMult, eliteType, eliteBarFill,
+    isBoss: !!eliteType?.isBoss,
     fireRate, shootTimer: fireRate ? Math.random() * fireRate : 0,
     staggerTimer: 0, baseColor: new THREE.Color(color),
     spawnFlashTimer: SPAWN_FLASH_DURATION, matDirty: true,
@@ -80,24 +81,23 @@ export function spawnEnemy(x, z, cfg = null) {
   mat.transparent = true; mat.opacity = 0; mesh.castShadow = false;
 }
 
-export function spawnEnemyAtEdge(cfg = null) {
+export function spawnEnemyAtEdge(eliteType = null) {
   if (state.enemies.length >= state.maxEnemies) return;
   const angle = Math.random() * Math.PI * 2;
   const r     = 28 + Math.random() * 5;
   spawnEnemy(
     playerGroup.position.x + Math.cos(angle) * r,
     playerGroup.position.z + Math.sin(angle) * r,
-    cfg
+    eliteType
   );
 }
 
-export function spawnBossPack(bossCfg) {
+export function spawnLevelElites(eliteType) {
   const session = state.gameSession;
-  const WINDOW  = 2500;
-  const count = bossCfg?.count ?? 1;
-  for (let i = 0; i < count; i++) {
+  const WINDOW  = 8000;
+  for (let i = 0; i < eliteType.count; i++) {
     setTimeout(() => {
-      if (!state.gameOver && state.gameSession === session) spawnEnemyAtEdge(bossCfg);
+      if (!state.gameOver && state.gameSession === session) spawnEnemyAtEdge(eliteType);
     }, Math.random() * WINDOW);
   }
 }
@@ -126,7 +126,7 @@ const killsEl = document.getElementById('kills-value');
 
 export function killEnemy(j) {
   const e = state.enemies[j];
-  spawnExplosion(e.grp.position, e.isBoss ? { color: e.baseColor.getHex(), sizeMult: e.scaleMult } : null);
+  spawnExplosion(e.grp.position, e.eliteType);
   removeCSS2DFromGroup(e.grp);
   scene.remove(e.grp);
   e.dead = true;
@@ -138,7 +138,8 @@ export function killEnemy(j) {
 
   const xpGained  = Math.round(getXPPerKill() * (e.expMult || 1));
   const prevLevel = state.playerLevel;
-  updateXP(xpGained);  if (state.playerLevel > prevLevel) {
+  updateXP(xpGained);
+  if (state.playerLevel > prevLevel) {
     if (_onLevelUp) _onLevelUp(state.playerLevel);
   }
 }

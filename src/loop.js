@@ -3,7 +3,7 @@ import * as THREE from 'three';
 import { renderer, scene, camera, labelRenderer } from './renderer.js';
 import { renderBloom, consumeExplBloomDirty } from './bloom.js';
 import { state } from './state.js';
-import { PLAYER_MAX_HP, WAVE_CONFIG } from './constants.js';
+import { PLAYER_MAX_HP, WAVE_CONFIG, STANDARD_ENEMY_SIZE_MULT } from './constants.js';
 import { updateSunPosition, updateOrbitLights } from './lighting.js';
 import { updateChunks } from './terrain.js';
 import { updatePlayer, updateDashStreaks } from './player.js';
@@ -13,60 +13,115 @@ import { updatePickups } from './pickups.js';
 import { updateParticles } from './particles.js';
 import { updateDamageNums } from './damageNumbers.js';
 import { getFireInterval } from './xp.js';
-import { triggerGameOver, formatTime, triggerVictory } from './gameFlow.js';
-import { openUpgradeShop, closeUpgradeShopIfOpen } from './ui/upgrades.js';
+import { triggerGameOver, triggerVictory, formatTime } from './gameFlow.js';
 import { playerGroup } from './player.js';
 
 const timerEl  = document.getElementById('timer-value');
 const fpsTogEl = document.getElementById('s-fps');
 const fpsOvEl  = document.getElementById('fpsOverlay');
 const fpsValEl = document.getElementById('fpsVal');
+const waveBannerEl = document.getElementById('waveBanner');
+const waveBannerTextEl = document.getElementById('waveBannerText');
+let waveBannerTimer = null;
+function showWaveBanner(text, ms = 1400) {
+  if (!waveBannerEl || !waveBannerTextEl) return;
+  waveBannerTextEl.textContent = text;
+  waveBannerEl.classList.add('show');
+  if (waveBannerTimer) clearTimeout(waveBannerTimer);
+  waveBannerTimer = setTimeout(() => {
+    waveBannerEl.classList.remove('show');
+  }, ms);
+}
+
 
 export const clock = new THREE.Clock();
 let fpsEMA = 60;
-
-let _bannerTimer = 0;
-const _bannerEl = document.getElementById('wave-banner');
-
-function showWaveBanner(text) {
-  if (!_bannerEl) return;
-  _bannerEl.textContent = text;
-  _bannerEl.classList.add('show');
-  _bannerTimer = 1.35;
+function _getWaveDef() {
+  return WAVE_CONFIG[Math.min(Math.max(state.waveIndex, 1), WAVE_CONFIG.length) - 1];
 }
 
-function startWave(waveNum) {
-  const cfg = WAVE_CONFIG[Math.max(0, Math.min(waveNum - 1, WAVE_CONFIG.length - 1))];
-  state.wave = cfg.wave;
+function _initWaveState() {
+  const def = _getWaveDef();
   state.wavePhase = 'standard';
-  state.waveSpawnRemaining = cfg.standardCount;
-  state.bossSpawnRemaining = 0;
-  state.maxEnemies = Math.max(state.maxEnemies, 350); // allow large waves
-  showWaveBanner('WAVE ' + cfg.wave);
+  state.waveRemainingToSpawn = def.standardCount;
+  state.bossRemainingToSpawn = 0;
+  state.waveActiveCap = Math.min(80, 40 + state.waveIndex * 4);
+  showWaveBanner(`WAVE ${state.waveIndex}`);
 }
+
+function _beginBossPhase() {
+  const def = _getWaveDef();
+  state.wavePhase = 'boss';
+  state.bossRemainingToSpawn = def.boss.count;
+  showWaveBanner(`BOSS`);
+}
+
+function _advanceWaveIfCleared(triggerVictory) {
+  if (state.enemies.length !== 0) return;
+
+  if (state.wavePhase === 'standard') {
+    if (state.waveRemainingToSpawn <= 0) _beginBossPhase();
+    return;
+  }
+
+  if (state.wavePhase === 'boss') {
+    if (state.bossRemainingToSpawn > 0) return;
+
+    if (state.waveIndex >= WAVE_CONFIG.length) {
+      triggerVictory();
+      return;
+    }
+    state.waveIndex++;
+    _initWaveState();
+  }
+}
+
+function _spawnWaveBatch() {
+  const def = _getWaveDef();
+
+  const activeCap = state.waveActiveCap ?? 60;
+  const room = Math.max(0, activeCap - state.enemies.length);
+  if (room <= 0) return;
+
+  if (state.wavePhase === 'standard') {
+    const n = Math.min(room, 12, state.waveRemainingToSpawn);
+    for (let i = 0; i < n; i++) spawnEnemyAtEdge(null);
+    state.waveRemainingToSpawn -= n;
+    return;
+  }
+
+  if (state.wavePhase === 'boss') {
+    const n = Math.min(room, state.bossRemainingToSpawn);
+    if (n <= 0) return;
+
+    const bossSizeMult = def.boss.size / STANDARD_ENEMY_SIZE_MULT;
+
+    for (let i = 0; i < n; i++) {
+      spawnEnemyAtEdge({
+        isBoss: true,
+        color: def.boss.color,
+        sizeMult: bossSizeMult,
+        fixedHp: def.boss.health,
+        expMult: def.boss.expMult,
+        coinMult: def.boss.expMult,
+        fireRate: null,
+      });
+    }
+    state.bossRemainingToSpawn -= n;
+  }
+}
+
 
 export function tick() {
   requestAnimationFrame(tick);
 
-  if (state.paused || state.gameOver || state.upgradeOpen) {
+  if (state.paused || state.gameOver) {
     renderBloom();
     labelRenderer.render(scene, camera);
     return;
   }
 
-  // Start wave after countdown completes
-  if (state.wavePendingStart) {
-    state.wavePendingStart = false;
-    startWave(state.wave);
-  }
-
   const delta = Math.min(clock.getDelta(), 0.05);
-
-  // Wave banner timing
-  if (_bannerEl && _bannerTimer > 0) {
-    _bannerTimer -= delta;
-    if (_bannerTimer <= 0) _bannerEl.classList.remove('show');
-  }
 
   // FPS display
   fpsEMA = fpsEMA * 0.9 + (1 / Math.max(delta, 1e-6)) * 0.1;
@@ -92,54 +147,22 @@ export function tick() {
   );
   camera.lookAt(playerGroup.position);
 
-  // ── Wave spawns ────────────────────────────────────────────────────────────
+  // Wave-driven spawns
+  if (!state.waveIndex) state.waveIndex = 1;
+  if (state.waveRemainingToSpawn == null || state.wavePhase == null) _initWaveState();
+  if (state.waveRemainingToSpawn === 0 && state.bossRemainingToSpawn === 0 && state.enemies.length === 0 && state.elapsed < 0.2) {
+    _initWaveState();
+  }
+
   state.spawnTickTimer -= delta;
   if (state.spawnTickTimer <= 0) {
-    const waveCfg = WAVE_CONFIG[Math.max(0, Math.min(state.wave - 1, WAVE_CONFIG.length - 1))];
-    const space = Math.max(0, state.maxEnemies - state.enemies.length);
-
-    if (state.wavePhase === 'standard' && state.waveSpawnRemaining > 0 && space > 0) {
-      const batch = Math.min(10, state.waveSpawnRemaining, space);
-      for (let i = 0; i < batch; i++) spawnEnemyAtEdge(null);
-      state.waveSpawnRemaining -= batch;
-    } else if (state.wavePhase === 'boss' && state.bossSpawnRemaining > 0 && space > 0) {
-      const boss = waveCfg.boss;
-      const bossCfg = { isBoss: true, color: boss.color, sizeMult: boss.sizeMult, health: boss.health, expMult: boss.expMult, coinMult: 1, fireRate: 1.4 };
-      const batch = Math.min(2, state.bossSpawnRemaining, space);
-      for (let i = 0; i < batch; i++) spawnEnemyAtEdge(bossCfg);
-      state.bossSpawnRemaining -= batch;
-    }
-
+    _spawnWaveBatch();
     state.spawnTickTimer = 0.35;
-  }
-
-  // ── Wave transitions ────────────────────────────────────────────────────────
-  if (state.wavePhase === 'standard' && state.waveSpawnRemaining <= 0 && state.enemies.length === 0) {
-    const waveCfg = WAVE_CONFIG[Math.max(0, Math.min(state.wave - 1, WAVE_CONFIG.length - 1))];
-    state.wavePhase = 'boss';
-    state.bossSpawnRemaining = waveCfg.boss.count;
-    showWaveBanner('BOSS');
-  }
-
-  if (state.wavePhase === 'boss' && state.bossSpawnRemaining <= 0 && state.enemies.length === 0) {
-    state.wavePhase = 'upgrade';
-    state.upgradeOpen = true;
-    openUpgradeShop(state.wave, () => {
-      // Called when player closes the upgrade window
-      closeUpgradeShopIfOpen();
-      state.upgradeOpen = false;
-      if (state.wave >= 10) {
-        triggerVictory();
-        return;
-      }
-      state.wave += 1;
-      startWave(state.wave);
-    });
   }
 
   // Auto-shoot (runs on real delta so fire rate is unaffected by slowmo)
   state.shootTimer -= delta;
-  if (state.weaponTier >= 2) state.bulletWaveAngle += 1.2 * delta;
+  if (state.playerLevel >= 2) state.bulletWaveAngle += 1.2 * delta;
   if (state.shootTimer <= 0) {
     shootBulletWave();
     state.shootTimer = getFireInterval();
@@ -152,6 +175,8 @@ export function tick() {
 
   const enemyResult = updateEnemies(delta, worldDelta, state.elapsed);
   if (enemyResult === 'DEAD') { triggerGameOver(); return; }
+
+  _advanceWaveIfCleared(triggerVictory);
 
   updatePickups(worldDelta, state.playerLevel, state.elapsed);
   updateParticles(worldDelta);

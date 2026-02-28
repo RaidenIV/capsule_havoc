@@ -4,7 +4,7 @@ import { PLAYER_MAX_HP } from './constants.js';
 import { scene } from './renderer.js';
 import { playerGroup, playerMesh, hbObj, dashBarObj, updateHealthBar, updateDashBar } from './player.js';
 import { updateXP } from './xp.js';
-import { removeCSS2DFromGroup } from './enemies.js';
+import { spawnEnemyAtEdge, removeCSS2DFromGroup } from './enemies.js';
 import { destroyOrbitBullets, syncOrbitBullets } from './weapons.js';
 import { _particleMeshPool } from './particles.js';
 import { startMusic, stopMusic, pauseMusic, resumeMusic, playSound } from './audio.js';
@@ -152,13 +152,6 @@ export function restartGame(opts = {}) {
   state.spawnTickTimer  = 0;
   state.playerXP    = 0;
   state.playerLevel = 0;
-  state.weaponTier = 0;
-  state.wave = 1;
-  state.wavePhase = 'standard';
-  state.waveSpawnRemaining = 0;
-  state.bossSpawnRemaining = 0;
-  state.upgradeOpen = false;
-  state.wavePendingStart = true;
   state.coins       = 0;
   state.gameOver    = false;
 
@@ -173,5 +166,12 @@ export function restartGame(opts = {}) {
   const h1 = document.querySelector('#game-over h1');
   if (h1) { h1.textContent = 'DESTROYED'; h1.style.color = ''; h1.style.textShadow = ''; }
   document.querySelectorAll('.lvl-cb').forEach(lb => lb.classList.remove('active'));
-  if (startCountdownNow) startCountdown(() => { state.wavePendingStart = true; syncOrbitBullets(); });
+
+  // Wave system spawns enemies via the main loop.
+  state.waveIndex = 1;
+  state.wavePhase = 'standard';
+  state.waveRemainingToSpawn = 0;
+  state.bossRemainingToSpawn = 0;
+
+  if (startCountdownNow) startCountdown();
 }
