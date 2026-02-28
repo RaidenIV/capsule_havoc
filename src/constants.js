@@ -4,8 +4,8 @@
 
 // ── Slash attack ──────────────────────────────────────────────────────────────
 export const SLASH_RADIUS      = 4.0;             // blade reach
-export const SLASH_INNER_R     = 0.75;            // starts past player body (player radius=0.4)
-export const SLASH_VISUAL_ARC  = Math.PI * 0.70;  // ~126° visual sweep arc
+export const SLASH_INNER_R     = 0.55;            // starts past player body
+export const SLASH_VISUAL_ARC  = Math.PI * 0.80;  // ~144° — wider wedge like reference image
 export const SLASH_HIT_ARC     = Math.PI * 0.85;  // hitbox slightly wider
 export const SLASH_INTERVAL    = 0.65;
 export const SLASH_DAMAGE      = 20;
