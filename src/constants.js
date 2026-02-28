@@ -2,6 +2,13 @@
 // All compile-time game constants. Nothing here should change at runtime.
 // Import with: import { PLAYER_SPEED, ELITE_TYPES, ... } from './constants.js';
 
+// ── Slash attack ──────────────────────────────────────────────────────────────
+export const SLASH_RADIUS   = 3.5;
+export const SLASH_ARC      = Math.PI * 1.5;   // 270° sweep
+export const SLASH_INTERVAL = 0.65;             // seconds between slashes
+export const SLASH_DAMAGE   = 20;               // base damage (scales with weapon tier)
+export const SLASH_DURATION = 0.28;             // visual fade time
+
 // ── Movement ─────────────────────────────────────────────────────────────────
 export const PLAYER_SPEED          = 7;
 export const ENEMY_SPEED           = 2.8;

@@ -4,6 +4,7 @@ import { scene } from './renderer.js';
 import { state } from './state.js';
 import {
   BULLET_SPEED, BULLET_LIFETIME, ENEMY_BULLET_DMG, WEAPON_CONFIG,
+  SLASH_RADIUS, SLASH_ARC, SLASH_DAMAGE, SLASH_DURATION,
 } from './constants.js';
 import { bulletGeo, bulletMat, bulletGeoParams, floorY } from './materials.js';
 import { playerGroup, updateHealthBar } from './player.js';
@@ -218,5 +219,88 @@ export function updateOrbitBullets(worldDelta) {
         }
       }
     }
+  }
+}
+// ── Slash attack ──────────────────────────────────────────────────────────────
+export function performSlash() {
+  const facingAngle = Math.atan2(state.lastMoveX, state.lastMoveZ);
+  const halfArc     = SLASH_ARC / 2;
+  const dmg         = Math.round(SLASH_DAMAGE * (getBulletDamage() / 10));
+
+  // Visual: ring arc flat on the ground, sweeps outward then fades
+  const geo = new THREE.RingGeometry(0.4, SLASH_RADIUS, 32, 1, facingAngle - halfArc, SLASH_ARC);
+  const mat = new THREE.MeshBasicMaterial({
+    color: 0x88eeff, transparent: true, opacity: 0.75,
+    side: THREE.DoubleSide, depthWrite: false,
+  });
+  const mesh = new THREE.Mesh(geo, mat);
+  mesh.rotation.x = -Math.PI / 2;
+  mesh.position.copy(playerGroup.position);
+  mesh.position.y = 0.15;
+  mesh.layers.enable(2); // explosion bloom layer for glow
+  scene.add(mesh);
+
+  // Trailing arc highlight (slightly smaller, brighter inner edge)
+  const geoInner = new THREE.RingGeometry(0.35, 0.65, 32, 1, facingAngle - halfArc, SLASH_ARC);
+  const matInner = new THREE.MeshBasicMaterial({
+    color: 0xffffff, transparent: true, opacity: 0.9,
+    side: THREE.DoubleSide, depthWrite: false,
+  });
+  const meshInner = new THREE.Mesh(geoInner, matInner);
+  meshInner.rotation.x = -Math.PI / 2;
+  meshInner.position.copy(playerGroup.position);
+  meshInner.position.y = 0.18;
+  meshInner.layers.enable(2);
+  scene.add(meshInner);
+
+  state.slashEffects.push(
+    { mesh, mat, life: SLASH_DURATION, maxLife: SLASH_DURATION, inner: false },
+    { mesh: meshInner, mat: matInner, life: SLASH_DURATION * 0.6, maxLife: SLASH_DURATION * 0.6, inner: true },
+  );
+
+  // Damage enemies in arc
+  for (let j = state.enemies.length - 1; j >= 0; j--) {
+    const e = state.enemies[j];
+    if (e.dead) continue;
+    const dx   = e.grp.position.x - playerGroup.position.x;
+    const dz   = e.grp.position.z - playerGroup.position.z;
+    const dist = Math.sqrt(dx * dx + dz * dz);
+    if (dist > SLASH_RADIUS) continue;
+
+    // Check within arc
+    let angleDiff = Math.atan2(dx, dz) - facingAngle;
+    while (angleDiff >  Math.PI) angleDiff -= Math.PI * 2;
+    while (angleDiff < -Math.PI) angleDiff += Math.PI * 2;
+    if (Math.abs(angleDiff) > halfArc) continue;
+
+    e.hp -= dmg;
+    spawnEnemyDamageNum(dmg, e);
+    e.staggerTimer = 0.12;
+    updateEliteBar(e);
+    if (e.hp <= 0) {
+      playSound(e.eliteType ? 'explodeElite' : 'explode', 0.7, 0.9 + Math.random() * 0.2);
+      killEnemy(j);
+    } else {
+      playSound(e.eliteType ? 'elite_hit' : 'standard_hit', 0.35, 0.95 + Math.random() * 0.1);
+    }
+  }
+}
+
+export function updateSlashEffects(worldDelta) {
+  for (let i = state.slashEffects.length - 1; i >= 0; i--) {
+    const s = state.slashEffects[i];
+    s.life -= worldDelta;
+    if (s.life <= 0) {
+      scene.remove(s.mesh);
+      s.mesh.geometry.dispose();
+      s.mat.dispose();
+      state.slashEffects.splice(i, 1);
+      continue;
+    }
+    const t = s.life / s.maxLife;
+    s.mat.opacity   = t * (s.inner ? 0.9 : 0.75);
+    // expand outward slightly as it fades
+    const scale = 1 + (1 - t) * 0.15;
+    s.mesh.scale.set(scale, scale, 1);
   }
 }

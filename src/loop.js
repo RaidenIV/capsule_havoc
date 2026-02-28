@@ -8,7 +8,7 @@ import { updateSunPosition, updateOrbitLights } from './lighting.js';
 import { updateChunks } from './terrain.js';
 import { updatePlayer, updateDashStreaks } from './player.js';
 import { updateEnemies, spawnEnemyAtEdge } from './enemies.js';
-import { shootBulletWave, updateBullets, updateEnemyBullets, updateOrbitBullets } from './weapons.js';
+import { shootBulletWave, updateBullets, updateEnemyBullets, updateOrbitBullets, performSlash, updateSlashEffects } from './weapons.js';
 import { updatePickups } from './pickups.js';
 import { updateParticles } from './particles.js';
 import { updateDamageNums } from './damageNumbers.js';
@@ -29,7 +29,6 @@ let fpsEMA = 60;
 const waveBannerEl     = document.getElementById('waveBanner');
 const waveBannerTextEl = document.getElementById('waveBannerText');
 let _waveBannerTimeout = null;
-
 function showWaveBanner(text, ms = 1800) {
   if (!waveBannerEl || !waveBannerTextEl) return;
   waveBannerTextEl.textContent = text;
@@ -68,7 +67,7 @@ export function tick() {
     startWave(state.wave);
   }
 
-  // FPS display
+
   fpsEMA = fpsEMA * 0.9 + (1 / Math.max(delta, 1e-6)) * 0.1;
   if (fpsTogEl?.checked && fpsValEl) fpsValEl.textContent = fpsEMA.toFixed(0);
 
@@ -142,12 +141,21 @@ export function tick() {
       state.wavePendingStart = true;
     });
   }
-  // Auto-shoot (runs on real delta so fire rate is unaffected by slowmo)
-  state.shootTimer -= delta;
-  if ((state.weaponTier ?? state.playerLevel) >= 2) state.bulletWaveAngle += 1.2 * delta;
-  if (state.shootTimer <= 0) {
-    shootBulletWave();
-    state.shootTimer = getFireInterval();
+  // ── Slash attack (always active, tier-independent) ────────────────────────
+  state.slashTimer -= delta;
+  if (state.slashTimer <= 0) {
+    performSlash();
+    state.slashTimer = 0.65;
+  }
+
+  // ── Bullet wave (unlocks at weapon tier 2+) ───────────────────────────────
+  if ((state.weaponTier ?? 1) >= 2) {
+    state.shootTimer -= delta;
+    state.bulletWaveAngle += 1.2 * delta;
+    if (state.shootTimer <= 0) {
+      shootBulletWave();
+      state.shootTimer = getFireInterval();
+    }
   }
 
   // ── Update world entities with worldDelta ─────────────────────────────────
@@ -160,6 +168,7 @@ export function tick() {
 
   updatePickups(worldDelta, state.playerLevel, state.elapsed);
   updateParticles(worldDelta);
+  updateSlashEffects(worldDelta);
   updateDamageNums(worldDelta);
   updateDashStreaks(delta);
 

@@ -28,6 +28,8 @@ export const state = {
   // ── Shoot timing ────────────────────────────────────────────────────────────
   shootTimer:      0,
   bulletWaveAngle: 0,
+  slashTimer:      0,
+  slashEffects:    [],
   spawnTickTimer:  0,
   maxEnemies:      50,
 

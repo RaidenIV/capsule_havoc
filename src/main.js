@@ -14,6 +14,7 @@ import { tick }             from './loop.js';
 import { togglePanel, togglePause } from './panel/index.js';
 import { initAudio, resumeAudioContext, playSound, playSplashSound, stopMusic } from './audio.js';
 import { initMenuUI }       from './ui/menu.js';
+import { initHudCoin }      from './hudCoin.js';
 
 // ── Wire cross-module callbacks (breaks enemies ↔ weapons circular deps) ──────
 setVictoryCallback(triggerVictory);
@@ -47,6 +48,7 @@ window.addEventListener('resize', () => {
 // ── Menu-driven start ─────────────────────────────────────────────────────────
 updateHealthBar();
 updateXP(0);
+initHudCoin();
 
 // Show menu first; defer tick()/spawns/countdown until Start is pressed.
 state.uiMode = 'menu';
