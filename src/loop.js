@@ -60,12 +60,6 @@ export function tick() {
     startWave(state.wave);
   }
 
-  
-    renderBloom();
-    labelRenderer.render(scene, camera);
-    return;
-  }
-
   const delta = Math.min(clock.getDelta(), 0.05);
 
   // Wave banner timing
