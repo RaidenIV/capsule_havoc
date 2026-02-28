@@ -286,26 +286,31 @@ const _trailVert = /* glsl */`
 const _trailFrag = /* glsl */`
   uniform float uProgress;  // 0→1: reveal arc from tail to leading edge
   uniform float uFade;      // 1→0: overall brightness after peak
+  uniform float uTime;
   uniform vec3  uColor;
   varying vec2  vUv;
+
+  float hash21(vec2 p){
+    p = fract(p * vec2(123.34, 456.21));
+    p += dot(p, p + 34.345);
+    return fract(p.x * p.y);
+  }
+
   void main(){
-    // Hide geometry past the current leading edge
     float mask = 1.0 - smoothstep(uProgress - 0.03, uProgress + 0.01, vUv.x);
     if (mask < 0.001) discard;
 
-    // Uniform brightness - no trail fade, same intensity from hilt to tip
-    // Only the base clips in over the first 6% so it doesn't hard-cut at origin
     float base = smoothstep(0.0, 0.06, vUv.x);
 
-    // Outer cutting edge: bright line at the outer radius
     float edge = exp(-(1.0 - vUv.y) * (1.0 - vUv.y) * 80.0);
-    // Arc body fill
     float body = pow(vUv.y, 1.0) * 0.45;
 
+    float n = hash21(vec2(vUv.x * 24.0, vUv.y * 6.0 + uTime * 0.35));
+    float shimmer = 0.92 + 0.16 * n;
+
     vec3 col = mix(uColor * 0.55, vec3(1.0, 1.0, 1.0), edge * 0.9);
-    float alpha = (body + edge) * base * mask * uFade;
-    alpha = clamp(alpha, 0.0, 1.0);
-    gl_FragColor = vec4(col, alpha);
+    float alpha = (body + edge) * base * mask * uFade * shimmer;
+    gl_FragColor = vec4(col, clamp(alpha, 0.0, 1.0));
   }
 `;
 
@@ -316,18 +321,60 @@ const _bladeVert = /* glsl */`
 `;
 const _bladeFrag = /* glsl */`
   uniform float uFade;
+  uniform float uTime;
   uniform vec3  uColor;
   varying vec2  vUv;
+
+  float hash21(vec2 p){
+    p = fract(p * vec2(123.34, 456.21));
+    p += dot(p, p + 34.345);
+    return fract(p.x * p.y);
+  }
+
   void main(){
-    float cy   = abs(vUv.y - 0.5) * 2.0;           // 0=centre, 1=edge
-    // Falloffs tuned so total visible width ≈ bullet diameter (0.09 world units)
-    float core = exp(-cy * cy * 800.0);             // razor white core
-    float glow = exp(-cy * cy * 120.0);             // tight blue halo, no spread
+    float cy   = abs(vUv.y - 0.5) * 2.0;
+    float core = exp(-cy * cy * 820.0);
+    float glow = exp(-cy * cy * 120.0);
+
+    float n = hash21(vec2(vUv.x * 38.0, uTime * 0.65));
+    float ripple = 0.92 + 0.14 * n;
+
     float taper = 1.0 - smoothstep(0.88, 1.0, vUv.x) * 0.75;
     float base  = smoothstep(0.0, 0.04, vUv.x);
 
-    vec3  col   = core * vec3(1.0) + glow * uColor * 2.2;
-    float alpha = (core * 4.0 + glow * 1.2) * taper * base * uFade;
+    vec3  col   = core * vec3(1.0) + glow * uColor * (2.15 * ripple);
+    float alpha = (core * 4.0 + glow * 1.25) * taper * base * uFade;
+    gl_FragColor = vec4(col, clamp(alpha, 0.0, 1.0));
+  }
+`;
+
+
+// Afterimage blade shader: wider/softer, lags behind the main blade
+const _bladeAfterFrag = /* glsl */`
+  uniform float uFade;
+  uniform float uTime;
+  uniform vec3  uColor;
+  varying vec2  vUv;
+
+  float hash21(vec2 p){
+    p = fract(p * vec2(123.34, 456.21));
+    p += dot(p, p + 34.345);
+    return fract(p.x * p.y);
+  }
+
+  void main(){
+    float cy   = abs(vUv.y - 0.5) * 2.0;
+    float core = exp(-cy * cy * 260.0);
+    float glow = exp(-cy * cy * 42.0);
+
+    float n = hash21(vec2(vUv.x * 22.0, uTime * 0.45));
+    float ripple = 0.90 + 0.18 * n;
+
+    float taper = 1.0 - smoothstep(0.84, 1.0, vUv.x) * 0.65;
+    float base  = smoothstep(0.0, 0.03, vUv.x);
+
+    vec3  col   = core * vec3(1.0) * 0.35 + glow * uColor * (1.35 * ripple);
+    float alpha = (core * 1.8 + glow * 1.15) * taper * base * uFade;
     gl_FragColor = vec4(col, clamp(alpha, 0.0, 1.0));
   }
 `;
@@ -338,6 +385,7 @@ function _makeTrailMat() {
     uniforms: {
       uProgress: { value: 0.0 },
       uFade:     { value: 1.0 },
+      uTime:     { value: 0.0 },
       uColor:    { value: new THREE.Vector3(0.15, 0.55, 1.0) },
     },
     transparent: true, depthWrite: false,
@@ -350,6 +398,20 @@ function _makeBladeMat() {
     vertexShader: _bladeVert, fragmentShader: _bladeFrag,
     uniforms: {
       uFade:  { value: 1.0 },
+      uTime:  { value: 0.0 },
+      uColor: { value: new THREE.Vector3(0.25, 0.65, 1.0) },
+    },
+    transparent: true, depthWrite: false,
+    blending: THREE.AdditiveBlending, side: THREE.DoubleSide,
+  });
+}
+
+function _makeBladeAfterMat() {
+  return new THREE.ShaderMaterial({
+    vertexShader: _bladeVert, fragmentShader: _bladeAfterFrag,
+    uniforms: {
+      uFade:  { value: 1.0 },
+      uTime:  { value: 0.0 },
       uColor: { value: new THREE.Vector3(0.25, 0.65, 1.0) },
     },
     transparent: true, depthWrite: false,
@@ -382,10 +444,19 @@ export function performSlash() {
   const bladeGeo  = _buildBladeGeo(SLASH_INNER_R, SLASH_RADIUS);
   const bladeMat  = _makeBladeMat();
   const bladeMesh = new THREE.Mesh(bladeGeo, bladeMat);
+
+  // Afterimage blade (lags slightly behind for cinematic motion persistence)
+  const bladeAfterMat  = _makeBladeAfterMat();
+  const bladeAfterMesh = new THREE.Mesh(bladeGeo, bladeAfterMat);
   bladeMesh.position.set(playerGroup.position.x, slashY + 0.06, playerGroup.position.z);
   bladeMesh.rotation.y = _bearingToRotY(startA);
   bladeMesh.layers.enable(2);
   scene.add(bladeMesh);
+
+  bladeAfterMesh.position.set(playerGroup.position.x, slashY + 0.06, playerGroup.position.z);
+  bladeAfterMesh.rotation.y = _bearingToRotY(startA);
+  bladeAfterMesh.layers.enable(2);
+  scene.add(bladeAfterMesh);
 
   const dmg = Math.round(SLASH_DAMAGE * (getBulletDamage() / 10));
   playSound('laser_sword', 0.7, 0.92 + Math.random() * 0.16);
@@ -393,6 +464,7 @@ export function performSlash() {
   state.slashEffects.push({
     trailMesh, arcGeo, trailMat,
     bladeMesh, bladeGeo, bladeMat,
+    bladeAfterMesh, bladeAfterMat,
     startA,
     endA: facing + half,
     life:    SLASH_DURATION,
@@ -415,6 +487,7 @@ export function updateSlashEffects(worldDelta) {
     if (s.life <= 0) {
       scene.remove(s.trailMesh); s.arcGeo.dispose();   s.trailMat.dispose();
       scene.remove(s.bladeMesh); s.bladeGeo.dispose(); s.bladeMat.dispose();
+      if (s.bladeAfterMesh) { scene.remove(s.bladeAfterMesh); s.bladeAfterMat.dispose(); }
       state.slashEffects.splice(i, 1);
       continue;
     }
@@ -423,6 +496,7 @@ export function updateSlashEffects(worldDelta) {
     const slashY = playerGroup.position.y + SLASH_Y_OFFSET;
     s.trailMesh.position.set(playerGroup.position.x, slashY,        playerGroup.position.z);
     s.bladeMesh.position.set(playerGroup.position.x, slashY + 0.06, playerGroup.position.z);
+    if (s.bladeAfterMesh) s.bladeAfterMesh.position.set(playerGroup.position.x, slashY + 0.06, playerGroup.position.z);
 
     // Swing progress: 0→1 over SLASH_SWING_TIME, ease-out
     const rawSwing = Math.min(1, s.elapsed / SLASH_SWING_TIME);
@@ -435,11 +509,22 @@ export function updateSlashEffects(worldDelta) {
 
     s.trailMat.uniforms.uProgress.value = swing;
     s.trailMat.uniforms.uFade.value     = fade;
+    if (s.trailMat.uniforms.uTime) s.trailMat.uniforms.uTime.value = s.elapsed;
 
     // Rotate blade to current leading edge
     const currentAngle = s.startA + swing * SLASH_VISUAL_ARC;
     s.bladeMesh.rotation.y = _bearingToRotY(currentAngle);
     s.bladeMat.uniforms.uFade.value = swing < 1.0 ? fade : fade * 0.6;
+    if (s.bladeMat.uniforms.uTime) s.bladeMat.uniforms.uTime.value = s.elapsed;
+
+    // Afterimage blade lags behind the main blade to create a Star Wars–style smear
+    if (s.bladeAfterMesh) {
+      const lag = 0.18 * (1.0 - rawSwing);
+      s.bladeAfterMesh.rotation.y = _bearingToRotY(currentAngle - lag);
+      s.bladeAfterMat.uniforms.uFade.value = (swing < 1.0 ? fade : fade * 0.6) * 0.45;
+      if (s.bladeAfterMat.uniforms.uTime) s.bladeAfterMat.uniforms.uTime.value = s.elapsed + 0.07;
+    }
+
 
     // Damage at 50% through swing
     if (!s.hitDone && swing >= 0.5) {
