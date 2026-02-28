@@ -2,31 +2,26 @@
 // Entry point. Imports all modules, wires callbacks between them,
 // then kicks off the game loop.
 
-import { state }           from './state.js';
+import { state }            from './state.js';
 import { onRendererResize } from './renderer.js';
-import { onBloomResize }   from './bloom.js';
-import { updateXP }        from './xp.js';
-import { updateHealthBar } from './player.js';
+import { onBloomResize }    from './bloom.js';
+import { updateXP }         from './xp.js';
+import { updateHealthBar }  from './player.js';
 import { setLevelUpCallback, setVictoryCallback } from './enemies.js';
-import { syncOrbitBullets } from './weapons.js';
 import { triggerVictory, restartGame, startCountdown } from './gameFlow.js';
-import { initInput }       from './input.js';
-import { tick }            from './loop.js';
-import { togglePanel, togglePause, updatePauseBtn } from './panel/index.js';
-import { initAudio, resumeAudioContext, playSound, playSplashSound } from './audio.js';
-import { stopMusic } from './audio.js';
-import { initMenuUI } from './ui/menu.js';
+import { initInput }        from './input.js';
+import { tick }             from './loop.js';
+import { togglePanel, togglePause } from './panel/index.js';
+import { initAudio, resumeAudioContext, playSound, playSplashSound, stopMusic } from './audio.js';
+import { initMenuUI }       from './ui/menu.js';
 
 // ── Wire cross-module callbacks (breaks enemies ↔ weapons circular deps) ──────
 setVictoryCallback(triggerVictory);
 
+// NOTE: Weapon upgrades are no longer level-based (they're purchased in the shop),
+// but we still keep the level-up SFX for feedback if XP/levels remain for UI.
 setLevelUpCallback(() => {
-  // Levels still exist for XP display/difficulty, but upgrades are purchased in the shop
   playSound('levelup', 0.8);
-});
-  syncOrbitBullets();
-  ELITE_TYPES.filter(et => et.minLevel <= newLevel)
-             .forEach(et => spawnLevelElites(et));
 });
 
 // ── Wire input callbacks ──────────────────────────────────────────────────────
@@ -37,7 +32,7 @@ initInput({
   togglePanel: guardedTogglePanel,
   togglePause: guardedTogglePause,
   restartGame,
-  onFirstKey: resumeAudioContext,  // satisfies browser autoplay policy
+  onFirstKey: resumeAudioContext, // satisfies browser autoplay policy
 });
 
 // ── Expose restart globally for the HTML restart button onclick ───────────────
@@ -49,7 +44,7 @@ window.addEventListener('resize', () => {
   onBloomResize();
 });
 
-// ── Menu-driven start ─────────────────────────────────────────────────
+// ── Menu-driven start ─────────────────────────────────────────────────────────
 updateHealthBar();
 updateXP(0);
 
@@ -83,11 +78,11 @@ const menuUI = initMenuUI({
     menuUI.hideMenu();
     state.uiMode = 'playing';
 
-    // Ensure audio is ready before countdown ends (musicEl exists)
+    // Ensure audio is ready before countdown ends
     await initAudio();
 
-    // Fresh run (but don't auto-start countdown until after audio init above)
-    restartGame({ startCountdown: false, skipInitialSpawn: false });
+    // Fresh run
+    restartGame({ startCountdown: false, skipInitialSpawn: true });
 
     // Start the main loop once
     if (!state.loopStarted) {
@@ -100,8 +95,7 @@ const menuUI = initMenuUI({
   }
 });
 
-// ── Expose showMainMenu for the pause menu quit button ────────────────────────
-// Defined after menuUI so the closure captures it correctly.
+// ── Expose showMainMenu for pause menu "Quit to Menu" ─────────────────────────
 window.showMainMenu = () => {
   stopMusic();
   state.gameOver = false;
