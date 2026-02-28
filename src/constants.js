@@ -4,14 +4,14 @@
 
 // ── Slash attack ──────────────────────────────────────────────────────────────
 export const SLASH_RADIUS      = 4.0;             // blade reach
-export const SLASH_INNER_R     = 0.4;             // inner radius (near hilt)
+export const SLASH_INNER_R     = 0.75;            // starts past player body (player radius=0.4)
 export const SLASH_VISUAL_ARC  = Math.PI * 0.70;  // ~126° visual sweep arc
 export const SLASH_HIT_ARC     = Math.PI * 0.85;  // hitbox slightly wider
 export const SLASH_INTERVAL    = 0.65;
 export const SLASH_DAMAGE      = 20;
 export const SLASH_DURATION    = 0.30;            // total life (s)
-export const SLASH_SWING_TIME  = 0.10;            // blade sweeps in this time
-export const SLASH_FADE_TIME   = 0.20;            // fades after peak
+export const SLASH_SWING_TIME  = 0.05;            // blade sweeps in this time (2× faster)
+export const SLASH_FADE_TIME   = 0.25;            // fades after peak
 
 // ── Movement ─────────────────────────────────────────────────────────────────
 export const PLAYER_SPEED          = 7;

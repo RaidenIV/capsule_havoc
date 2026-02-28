@@ -263,7 +263,7 @@ function _buildArcGeo(innerR, outerR, startAngle, totalArc, segs = 64) {
 // Blade-line geometry: extends along +X from innerR to outerR, thin in Z
 // Mesh is rotated via rotation.y each frame to follow the leading edge
 function _buildBladeGeo(innerR, outerR) {
-  const hw = 0.08; // half-thickness
+  const hw = 0.045; // laser-shot thickness
   const pos = new Float32Array([
     innerR, 0, -hw,   outerR, 0, -hw,
     outerR, 0,  hw,   innerR, 0,  hw,
@@ -290,20 +290,20 @@ const _trailFrag = /* glsl */`
   varying vec2  vUv;
   void main(){
     // Hide geometry past the current leading edge
-    float mask = 1.0 - smoothstep(uProgress - 0.04, uProgress + 0.01, vUv.x);
+    float mask = 1.0 - smoothstep(uProgress - 0.03, uProgress + 0.01, vUv.x);
     if (mask < 0.001) discard;
 
-    // Cutting-edge glow: outer radius (UV.y → 1) is brightest
-    float edgeFalloff = pow(vUv.y, 1.4);   // dim near hilt, bright at tip
+    // Full-length afterimage: trail is bright all the way from hilt to tip.
+    // Only the very tail (last 10%) fades, so it reads like a persistent blade echo.
+    float trailFade = smoothstep(0.0, 0.10, vUv.x);
 
-    // Trail fades toward the tail (UV.x=0)
-    float trailFade = pow(vUv.x / max(uProgress, 0.02), 2.5);
+    // Outer cutting edge: thin bright line along the full outer radius
+    float edge = exp(-(1.0 - vUv.y) * (1.0 - vUv.y) * 80.0);
+    // Inner glow: fills the arc body
+    float body = pow(vUv.y, 1.2) * 0.5;
 
-    // Thin bright line right at the outer edge
-    float edge = exp(-(1.0 - vUv.y) * (1.0 - vUv.y) * 90.0);
-
-    vec3 col = mix(uColor * 0.4, vec3(1.0, 1.0, 1.0), edge * 0.85);
-    float alpha = (edgeFalloff * 0.6 + edge * 0.9) * trailFade * mask * uFade;
+    vec3 col = mix(uColor * 0.5, vec3(1.0, 1.0, 1.0), edge * 0.9);
+    float alpha = (body + edge * 1.0) * trailFade * mask * uFade;
     alpha = clamp(alpha, 0.0, 1.0);
     gl_FragColor = vec4(col, alpha);
   }
@@ -319,14 +319,14 @@ const _bladeFrag = /* glsl */`
   uniform vec3  uColor;
   varying vec2  vUv;
   void main(){
-    float cy   = abs(vUv.y - 0.5) * 2.0;          // 0 = centre, 1 = edge
-    float core = exp(-cy * cy * 180.0);            // white-hot core
-    float glow = exp(-cy * cy *  18.0);            // blue glow
-    float taper = 1.0 - smoothstep(0.85, 1.0, vUv.x) * 0.7;  // tip taper
-    float base  = smoothstep(0.0, 0.06, vUv.x);               // base fade-in
+    float cy   = abs(vUv.y - 0.5) * 2.0;           // 0=centre, 1=edge
+    float core = exp(-cy * cy * 420.0);             // very tight white core (laser-thin)
+    float glow = exp(-cy * cy *  50.0);             // tight blue glow
+    float taper = 1.0 - smoothstep(0.88, 1.0, vUv.x) * 0.75;
+    float base  = smoothstep(0.0, 0.04, vUv.x);
 
-    vec3  col   = core * vec3(1.0) + glow * uColor * 1.8;
-    float alpha = (core * 2.5 + glow * 0.8) * taper * base * uFade;
+    vec3  col   = core * vec3(1.0) + glow * uColor * 2.0;
+    float alpha = (core * 3.0 + glow * 0.9) * taper * base * uFade;
     gl_FragColor = vec4(col, clamp(alpha, 0.0, 1.0));
   }
 `;
