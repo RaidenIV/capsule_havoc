@@ -79,6 +79,12 @@ export function tick() {
 
   const delta = Math.min(clock.getDelta(), 0.05);
 
+  // Kick off a new wave whenever flagged (initial wave 1 + every wave after upgrade shop)
+  if (state.wavePendingStart) {
+    state.wavePendingStart = false;
+    startWave(state.wave);
+  }
+
   hideWaveBannerIfDone(delta);
 
   // FPS display

@@ -155,11 +155,11 @@ export function restartGame(opts = {}) {
   state.coins       = 0;
   state.weaponTier  = 0;
   state.upgradeOpen = false;
-  state.waveIndex   = 1;
+  state.wave        = 1;
   state.wavePhase   = null;
-  state.waveRemainingToSpawn = null;
-  state.bossRemainingToSpawn = null;
-  state.waveActiveCap = null;
+  state.waveSpawnRemaining = 0;
+  state.bossSpawnRemaining = 0;
+  state.wavePendingStart   = true;
   state.gameOver    = false;
 
   updateHealthBar(); updateDashBar();
