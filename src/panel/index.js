@@ -162,24 +162,18 @@ function applyEmissive() {
 
 // ── Open / close ──────────────────────────────────────────────────────────────
 export function togglePanel() {
-  state.panelOpen = !state.panelOpen;
-  cpEl.classList.toggle('open', state.panelOpen);
-  uiEl.classList.toggle('po',   state.panelOpen);
-  hintEl.classList.toggle('po', state.panelOpen);
-  xpHudEl?.classList.toggle('po', state.panelOpen);
-  if (state.panelOpen) {
-    state.paused = true;
-    pauseEl.classList.add('show');
-    clock.getDelta();
-    pauseMusic();
-    loadPanel();
-  } else {
-    state.paused = false;
-    pauseEl.classList.remove('show');
-    resumeMusic();
+  const cp = document.getElementById('cp');
+  if (!cp) return;
+  state.cpOpen = !state.cpOpen;
+  cp.style.display = state.cpOpen ? 'block' : 'none';
+
+  // NOTE: Opening the Control Panel should NOT pause/unpause gameplay anymore.
+  // Pause is controlled only by the Pause button / pause overlay.
+
+  if (state.cpOpen) {
+    loadPanelFromState();
   }
-  updatePauseBtn();
-  state.keys.w = state.keys.a = state.keys.s = state.keys.d = false;
+
 }
 g('cp-close').addEventListener('click', togglePanel);
 

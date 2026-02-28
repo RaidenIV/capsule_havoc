@@ -806,172 +806,90 @@ body.mode-playing #menu-screen { display: none !important; }
 /* end of menu styles */
 
 
-/* ─────────────────────────────────────────────────────────────
-   Wave transition banner
-   ───────────────────────────────────────────────────────────── */
-.wave-banner{
-  position: fixed;
-  left: 50%;
-  top: 18%;
-  transform: translateX(-50%) translateY(-10px) scale(0.98);
-  opacity: 0;
-  pointer-events: none;
-  z-index: 2000;
-  transition: opacity 220ms ease, transform 220ms ease;
-}
-.wave-banner.show{
-  opacity: 1;
-  transform: translateX(-50%) translateY(0) scale(1);
-}
-.wave-banner__text{
-  font-family: 'Inter', system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  font-weight: 900;
-  font-size: clamp(28px, 4vw, 64px);
-  color: rgba(255,255,255,0.92);
-  text-shadow: 0 8px 26px rgba(0,0,0,0.55);
-  padding: 10px 18px;
-  border-radius: 14px;
-  background: rgba(0,0,0,0.20);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
-  border: 1px solid rgba(255,255,255,0.12);
-}
-@media (prefers-reduced-motion: reduce){
-  .wave-banner{ transition: none; }
-}
-
-
-/* ─────────────────────────────────────────────────────────────────────────────
-   Upgrade Shop (Wave between-waves overlay)
-   ───────────────────────────────────────────────────────────────────────────── */
-.upgrade-overlay{
+/* ── Upgrade Shop Overlay (added) ───────────────────────────────────────── */
+#upgrade-overlay{
   position:fixed; inset:0;
   display:none;
-  align-items:center;
-  justify-content:center;
-  padding:24px;
-  background:rgba(0,0,0,.55);
-  z-index: 1200;
+  align-items:center; justify-content:center;
+  background: rgba(0,0,0,0.55);
+  z-index: 9999;
 }
-.upgrade-overlay.show{ display:flex; }
-
-.upgrade-modal{
-  width:min(920px, calc(100vw - 32px));
-  max-height:min(78vh, 720px);
-  display:flex;
-  flex-direction:column;
-  gap:12px;
-  padding:18px 18px 14px;
-  border-radius:18px;
-  background: rgba(20, 20, 22, 0.55);
+#upgrade-overlay .upgrade-card{
+  width:min(680px, calc(100vw - 32px));
+  border-radius: 18px;
+  padding: 18px 18px 14px;
+  background: rgba(20,22,25,0.72);
   border: 1px solid rgba(255,255,255,0.10);
-  box-shadow: 0 18px 60px rgba(0,0,0,0.55);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-}
-
-.upgrade-hdr{
-  display:flex;
-  align-items:flex-end;
-  justify-content:space-between;
-  gap:12px;
-}
-.upgrade-title{
-  font-family: var(--font-ui, 'Rajdhani', system-ui);
-  font-weight: 800;
-  letter-spacing: 0.14em;
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  box-shadow: 0 18px 50px rgba(0,0,0,0.55);
   color: rgba(255,255,255,0.92);
-  font-size: 18px;
+  font-family: inherit;
 }
-.upgrade-coins{
-  font-family: var(--font-ui, 'Rajdhani', system-ui);
-  font-weight:700;
-  letter-spacing: 0.10em;
-  color: rgba(255,255,255,0.78);
-  font-size: 13px;
-}
-.upgrade-body{
-  overflow:auto;
-  padding-right: 4px;
-}
-.upgrade-note{
-  font-family: var(--font-ui, 'Rajdhani', system-ui);
-  color: rgba(255,255,255,0.72);
-  font-size: 12px;
-  margin: 2px 0 10px;
-}
-
-.upgrade-tier-list{
-  display:flex;
-  flex-direction:column;
-  gap:10px;
-}
-.upgrade-tier{
-  display:flex;
-  justify-content:space-between;
-  gap:12px;
-  padding:12px 12px;
-  border-radius:14px;
-  background: rgba(255,255,255,0.06);
-  border: 1px solid rgba(255,255,255,0.10);
-}
-.upgrade-tier.owned{
-  opacity:0.70;
-}
-.upgrade-tier.locked{
-  opacity:0.55;
-}
-
-.upgrade-tier-left{ display:flex; flex-direction:column; gap:4px; }
-.upgrade-tier-name{
-  font-family: var(--font-ui, 'Rajdhani', system-ui);
-  color: rgba(255,255,255,0.92);
+#upgrade-overlay .upgrade-title{
   font-weight: 800;
   letter-spacing: 0.12em;
-  font-size: 13px;
+  font-size: 18px;
 }
-.upgrade-tier-meta{
-  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-  color: rgba(255,255,255,0.70);
-  font-size: 11px;
+#upgrade-overlay .upgrade-sub{
+  margin-top: 6px;
+  opacity: 0.85;
+  font-size: 14px;
 }
-
-.upgrade-buy-btn{
-  min-width: 140px;
+#upgrade-overlay .upgrade-coins{
+  margin-top: 10px;
+  font-weight: 700;
+  opacity: 0.9;
+}
+#upgrade-overlay .upgrade-list{
+  margin-top: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  max-height: min(52vh, 440px);
+  overflow:auto;
+  padding-right: 6px;
+}
+#upgrade-overlay .upgrade-row{
+  display:flex;
+  gap: 12px;
+  align-items:center;
+  justify-content:space-between;
+  padding: 12px;
+  border-radius: 14px;
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.08);
+}
+#upgrade-overlay .upgrade-row.owned{ opacity: 0.65; }
+#upgrade-overlay .upgrade-tier{ font-weight: 800; }
+#upgrade-overlay .upgrade-desc{ font-size: 12px; opacity: 0.8; margin-top: 3px; }
+#upgrade-overlay .upgrade-buy{
   padding: 10px 12px;
   border-radius: 12px;
-  border: 1px solid rgba(255,255,255,0.14);
-  background: rgba(0, 170, 255, 0.16);
-  color: rgba(255,255,255,0.92);
-  font-family: var(--font-ui, 'Rajdhani', system-ui);
+  border: 1px solid rgba(255,255,255,0.12);
+  background: rgba(0,170,255,0.18);
+  color: rgba(255,255,255,0.95);
   font-weight: 800;
-  letter-spacing: 0.10em;
+  letter-spacing: 0.06em;
   cursor:pointer;
 }
-.upgrade-buy-btn:disabled{
-  background: rgba(255,255,255,0.06);
-  color: rgba(255,255,255,0.55);
-  cursor:not-allowed;
+#upgrade-overlay .upgrade-buy:disabled{
+  cursor: default;
+  background: rgba(255,255,255,0.08);
+  opacity: 0.8;
 }
-
-.upgrade-footer{
+#upgrade-overlay .upgrade-footer{
+  margin-top: 12px;
   display:flex;
   justify-content:flex-end;
-  padding-top: 2px;
 }
-.upgrade-continue-btn{
+#upgrade-overlay .upgrade-continue{
   padding: 12px 16px;
   border-radius: 14px;
-  border: 1px solid rgba(255,255,255,0.18);
+  border: 1px solid rgba(255,255,255,0.12);
   background: rgba(255,255,255,0.10);
-  color: rgba(255,255,255,0.90);
-  font-family: var(--font-ui, 'Rajdhani', system-ui);
+  color: rgba(255,255,255,0.95);
   font-weight: 900;
-  letter-spacing: 0.14em;
+  letter-spacing: 0.10em;
   cursor:pointer;
-}
-.upgrade-continue-btn:hover{
-  background: rgba(255,255,255,0.14);
 }
