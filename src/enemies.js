@@ -28,36 +28,50 @@ const _eBulletQ   = new THREE.Quaternion();
 export function spawnEnemy(x, z, eliteTypeOrCfg = null) {
   const grp = new THREE.Group();
   grp.position.set(x, 0, z);
-  const isCfg = eliteTypeOrCfg && (eliteTypeOrCfg.isBoss || eliteTypeOrCfg.color || eliteTypeOrCfg.sizeMult || eliteTypeOrCfg.health || eliteTypeOrCfg.expMult || eliteTypeOrCfg.coinMult);
+
+  // eliteTypeOrCfg can be either:
+  //  - an eliteType object from ELITE_TYPES, or
+  //  - a config object for bosses/wave spawns (isBoss/color/sizeMult/health/expMult/coinMult/fireRate)
+  const isCfg = !!(eliteTypeOrCfg && (
+    eliteTypeOrCfg.isBoss ||
+    eliteTypeOrCfg.color !== undefined ||
+    eliteTypeOrCfg.sizeMult !== undefined ||
+    eliteTypeOrCfg.health !== undefined ||
+    eliteTypeOrCfg.expMult !== undefined ||
+    eliteTypeOrCfg.coinMult !== undefined ||
+    eliteTypeOrCfg.fireRate !== undefined
+  ));
+
   const eliteType = isCfg ? null : eliteTypeOrCfg;
-  const cfg = isCfg ? eliteTypeOrCfg : null;
+  const cfg       = isCfg ? eliteTypeOrCfg : null;
 
   const color     = cfg ? (cfg.color ?? 0x888888) : (eliteType ? eliteType.color : 0x888888);
-  const scaleMult = cfg ? (cfg.sizeMult ?? 1)    : (eliteType ? eliteType.sizeMult : 1);
-  const hpMult    = cfg ? 1                      : (eliteType ? eliteType.hpMult   : 1);
-  const expMult   = cfg ? (cfg.expMult ?? 1)     : (eliteType ? eliteType.expMult  : 1);
-  const coinMult  = cfg ? (cfg.coinMult ?? 1)    : (eliteType ? eliteType.coinMult : 1);
-
-  const cfg = (eliteTypeOrCfg && !eliteTypeOrCfg.color && !eliteTypeOrCfg.isBoss) ? eliteTypeOrCfg : eliteTypeOrCfg;
-  const scaleMult = eliteType ? eliteType.sizeMult : 1;
-  const hpMult    = eliteType ? eliteType.hpMult   : 1;
-  const expMult   = eliteType ? eliteType.expMult  : 1;
-  const coinMult  = eliteType ? eliteType.coinMult : 1;
+  const scaleMult = cfg ? (cfg.sizeMult ?? 1)     : (eliteType ? eliteType.sizeMult : 1);
+  const hpMult    = cfg ? 1                       : (eliteType ? eliteType.hpMult   : 1);
+  const expMult   = cfg ? (cfg.expMult ?? 1)      : (eliteType ? eliteType.expMult  : 1);
+  const coinMult  = cfg ? (cfg.coinMult ?? 1)     : (eliteType ? eliteType.coinMult : 1);
 
   const mat = enemyMat.clone();
   mat.color.set(color);
+
   const geo = new THREE.CapsuleGeometry(
     enemyGeoParams.radius * scaleMult, enemyGeoParams.length * scaleMult,
     enemyGeoParams.capSegs, enemyGeoParams.radial
   );
+
   const mesh = new THREE.Mesh(geo, mat);
   mesh.position.y = (enemyGeoParams.radius + enemyGeoParams.length / 2) * scaleMult;
   mesh.castShadow = true;
   grp.add(mesh);
   scene.add(grp);
 
-  const hp = cfg && Number.isFinite(cfg.health) ? Math.round(cfg.health) : Math.round(getEnemyHP() * hpMult);
-  const fireRate = cfg && Number.isFinite(cfg.fireRate) ? cfg.fireRate : (eliteType ? (ELITE_FIRE_RATE[eliteType.minLevel] ?? 2.0) : null);
+  const hp = (cfg && Number.isFinite(cfg.health))
+    ? Math.round(cfg.health)
+    : Math.round(getEnemyHP() * hpMult);
+
+  const fireRate = (cfg && Number.isFinite(cfg.fireRate))
+    ? cfg.fireRate
+    : (eliteType ? (ELITE_FIRE_RATE[eliteType.minLevel] ?? 2.0) : null);
 
   let eliteBarFill = null;
   if (eliteType) {
@@ -84,8 +98,11 @@ export function spawnEnemy(x, z, eliteTypeOrCfg = null) {
   });
 
   // Spawn fade-in
-  mat.transparent = true; mat.opacity = 0; mesh.castShadow = false;
+  mat.transparent = true;
+  mat.opacity = 0;
+  mesh.castShadow = false;
 }
+
 
 export function spawnEnemyAtEdge(eliteTypeOrCfg = null) {
   if (state.enemies.length >= state.maxEnemies) return;
