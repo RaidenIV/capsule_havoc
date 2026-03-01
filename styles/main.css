@@ -78,8 +78,8 @@ canvas { display: block; }
 }
 #restart-btn:hover { background: rgba(255,255,255,0.08); box-shadow: 0 0 30px rgba(255,255,255,0.2); }
 
-.health-bar-wrap { width: 72px; height: 16px; background: #000d00; border: 1px solid #004400; border-radius: 8px; overflow: hidden; }
-.health-bar-fill { height: 100%; background: linear-gradient(to right, #00aa00, #44ff44); border-radius: 8px; transition: width 0.08s; }
+.health-bar-wrap { width: 72px; height: 8px; background: #000d00; border: 1px solid #004400; border-radius: 4px; overflow: hidden; }
+.health-bar-fill { height: 100%; background: linear-gradient(to right, #00aa00, #44ff44); border-radius: 4px; transition: width 0.08s; }
 .elite-bar-wrap { height: 8px; background: rgba(0,0,0,0.7); border: 1px solid rgba(255,255,255,0.25); border-radius: 4px; overflow: hidden; pointer-events: none; }
 .elite-bar-fill { height: 100%; border-radius: 4px; transition: width 0.08s; }
 .dmg-num {
@@ -277,7 +277,7 @@ canvas { display: block; }
 
 /* ── Coin counter (top-left) ── */
 #hud-top-left{
-  position: fixed; top: 10px; left: 24px; z-index: 60;
+  position: fixed; top: calc(10px + var(--xp-topbar-offset, 40px)); left: 24px; z-index: 60;
   display: flex; align-items: center; gap: 12px;
   pointer-events: none;
   transition: opacity 0.3s;
@@ -998,7 +998,8 @@ body.mode-playing #menu-screen { display: none !important; }
 
 /* ── XP Top Bar (Holographic HUD) ─────────────────────────────────────────── */
 .xp-topbar{
-  position: fixed;
+    --xp-topbar-offset: 44px;
+position: fixed;
   top: 0; left: 0; right: 0;
   height: 28px;
   padding: 8px 14px 6px 14px;
