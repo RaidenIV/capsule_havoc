@@ -11,6 +11,8 @@ renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
 renderer.toneMappingExposure = 0.3;
 document.body.appendChild(renderer.domElement);
+// Ensure WebGL canvas covers the full viewport (prevents top bars from layout)
+renderer.domElement.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;display:block;z-index:1;';
 
 // ── CSS2D Renderer (health bars, damage numbers) ──────────────────────────────
 export const labelRenderer = new CSS2DRenderer();

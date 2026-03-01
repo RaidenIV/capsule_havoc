@@ -162,22 +162,18 @@ export function tick() {
     });
   }
   // Auto-shoot (runs on real delta so fire rate is unaffected by slowmo)
-  state.shootTimer -= delta;
-  if ((state.weaponTier ?? state.playerLevel) >= 2) state.bulletWaveAngle += 1.2 * delta;
-  if (state.shootTimer <= 0) {
-    shootBulletWave();
-    state.shootTimer = getFireInterval();
+  // Auto-shoot (runs on real delta so fire rate is unaffected by slowmo)
+  // Weapon tier 0 = no starting laser; player must buy Tier 1 in the shop.
+  if ((state.weaponTier || 0) > 0) {
+    state.shootTimer -= delta;
+    if (state.weaponTier >= 2) state.bulletWaveAngle += 1.2 * delta;
+    if (state.shootTimer <= 0) {
+      shootBulletWave();
+      state.shootTimer = getFireInterval();
+    }
   }
 
-  // ── Slash attack ──────────────────────────────────────────────────────────
-  if (!state.slashTimer) state.slashTimer = 0;
-  state.slashTimer -= delta;
-  if (state.slashTimer <= 0) {
-    performSlash();
-    state.slashTimer = 1.0;
-  }
-
-  // ── Update world entities with worldDelta ─────────────────────────────────
+// ── Update world entities with worldDelta ─────────────────────────────────
   updateBullets(worldDelta);
   updateEnemyBullets(worldDelta);
   if (state.orbitRings.length > 0) updateOrbitBullets(worldDelta);

@@ -41,7 +41,7 @@ export const state = {
   wavePendingStart: false,
 
   upgradeOpen: false,
-  weaponTier: 1,
+  weaponTier: 0,
   // ── Dash / Slow-motion ───────────────────────────────────────────────────────
   hasDash:       false,  // unlocked via upgrade shop
   dashTimer:     0,
