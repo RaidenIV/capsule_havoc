@@ -432,10 +432,10 @@ export function performSlash() {
   if (state.slashEffects.length > 8) return;
 
   // Start angle: player facing direction. Sweep CW or CCW alternating.
-  const mx = state.lastMoveX || 0, mz = state.lastMoveZ || 1;
-  const dir    = Math.atan2(mz, mx);
+  // Fixed start at world -X (left side of screen) so the ellipse major axis
+  // always stays aligned to world X — gives perfect left/right symmetry.
   state._sf    = ((state._sf | 0) + 1) & 1;
-  const startA = dir - S_SWEEP * 0.15;                    // start slightly behind facing
+  const startA = Math.PI;                                  // always start from left (-X)
   const sweepA = state._sf ? S_SWEEP : -S_SWEEP;          // alternate CW/CCW
 
   const range = S_RANGE, inner = S_INNER;
