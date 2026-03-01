@@ -219,14 +219,14 @@ export function updateOrbitBullets(worldDelta) {
 //  360° SPIN-SLASH
 // ═══════════════════════════════════════════════════════════════════════════════
 
-const S_RANGE   = 5.0;
-const S_INNER   = 0.75;
-const S_RX      = 1.00;
-const S_RZ      = 1.00;
-const S_SWEEP   = Math.PI * 1.94;
-const S_SWING_T = 0.16;
-const S_FADE_T  = 0.14;
-const S_Y       = 1.0;
+const S_RANGE   = 5.0; // outer radius
+const S_INNER   = 0.75; // gap between player body and blade
+const S_RX      = 1.00; // ellipse X scale (world X axis)
+const S_RZ      = 1.00; // circular (equal axes = blade stays radially aligned)
+const S_SWEEP   = Math.PI * 1.94; // ~349° sweep — nearly full circle
+const S_SWING_T = 0.16; // time to complete the full spin
+const S_FADE_T  = 0.14; // fade-out duration
+const S_Y       = 1.0; // player y offset (half capsule height)
 
 const _sv = /* glsl */`
   varying vec2 vUv;
