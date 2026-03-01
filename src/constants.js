@@ -46,7 +46,110 @@ export const HEALTH_RESTORE       = 25;
 export const ELITE_FIRE_RATE = { 1: 3.0, 3: 2.5, 5: 2.0, 7: 1.5, 9: 1.2, 10: 0.9 };
 
 // ── XP / Levelling ────────────────────────────────────────────────────────────
-export const XP_THRESHOLDS = [0, 500, 1500, 4000, 8000, 16000, 32000, 64000, 128000, 256000, 512000];
+export const MAX_LEVEL = 100;
+export const XP_THRESHOLDS = [
+  0, // 0
+  0, // 1
+  100, // 2
+  220, // 3
+  370, // 4
+  560, // 5
+  800, // 6
+  1100, // 7
+  1470, // 8
+  1920, // 9
+  2460, // 10
+  3100, // 11
+  3850, // 12
+  4720, // 13
+  5720, // 14
+  6860, // 15
+  8150, // 16
+  9600, // 17
+  11220, // 18
+  13020, // 19
+  15010, // 20
+  17200, // 21
+  19600, // 22
+  22220, // 23
+  25070, // 24
+  28160, // 25
+  31500, // 26
+  35100, // 27
+  38970, // 28
+  43120, // 29
+  47560, // 30
+  52300, // 31
+  57350, // 32
+  62720, // 33
+  68420, // 34
+  74460, // 35
+  80850, // 36
+  87600, // 37
+  94720, // 38
+  102220, // 39
+  110110, // 40
+  118400, // 41
+  127100, // 42
+  136220, // 43
+  145770, // 44
+  155760, // 45
+  166200, // 46
+  177100, // 47
+  188470, // 48
+  200320, // 49
+  212660, // 50
+  225500, // 51
+  238850, // 52
+  252720, // 53
+  267120, // 54
+  282060, // 55
+  297550, // 56
+  313600, // 57
+  330220, // 58
+  347420, // 59
+  365210, // 60
+  383600, // 61
+  402600, // 62
+  422220, // 63
+  442470, // 64
+  463360, // 65
+  484900, // 66
+  507100, // 67
+  529970, // 68
+  553520, // 69
+  577760, // 70
+  602700, // 71
+  628350, // 72
+  654720, // 73
+  681820, // 74
+  709660, // 75
+  738250, // 76
+  767600, // 77
+  797720, // 78
+  828620, // 79
+  860310, // 80
+  892800, // 81
+  926100, // 82
+  960220, // 83
+  995170, // 84
+  1030960, // 85
+  1067600, // 86
+  1105100, // 87
+  1143470, // 88
+  1182720, // 89
+  1222860, // 90
+  1263900, // 91
+  1305850, // 92
+  1348720, // 93
+  1392520, // 94
+  1437260, // 95
+  1482950, // 96
+  1529600, // 97
+  1577220, // 98
+  1625820, // 99
+  1675410, // 100
+];
 export const XP_PER_KILL_BY_LEVEL  = [10, 10, 20,  40,  50,  75, 100, 125, 150, 175, 200];
 export const COIN_VALUE_BY_LEVEL   = [ 1,  2,  4,   8,  16,  32,  64, 128, 256, 512, 1024];
 
@@ -98,3 +201,77 @@ export const WAVE_CONFIG = [
   { wave: 9, standardCount: 250, boss: { color: 0xaa00ff, sizeMult: 3.0, health: 900, expMult: 512, count: 10 } },
   { wave: 10, standardCount: 300, boss: { color: 0x0088ff, sizeMult: 1.0, health: 1000, expMult: 1024, count: 4 } },
 ];
+
+
+// ── Design-doc enemy progression helpers (Option B) ───────────────────────────
+export const ENEMY_TYPE = Object.freeze({
+  RUSHER: 'RUSHER',
+  ORBITER: 'ORBITER',
+  TANKER: 'TANKER',
+  SNIPER: 'SNIPER',
+  TELEPORTER: 'TELEPORTER',
+  SHIELDED: 'SHIELDED',
+  SPLITTER: 'SPLITTER',
+  BOSS: 'BOSS',
+});
+
+export function getEnemyCapForLevel(level){
+  const L = Math.max(1, Math.floor(level||1));
+  if (L <= 5) return 20;
+  if (L <= 9) return 25;
+  if (L <= 10) return 25;
+  if (L <= 19) return 30;
+  if (L <= 20) return 30;
+  if (L <= 29) return 35;
+  if (L <= 30) return 35;
+  if (L <= 39) return 35;
+  if (L <= 40) return 40;
+  if (L <= 49) return 40;
+  if (L <= 50) return 40;
+  if (L <= 59) return 45;
+  if (L <= 60) return 45;
+  return 50;
+}
+
+export function getActiveEnemyTypesForLevel(level){
+  const L = Math.max(1, Math.floor(level||1));
+  const types = [ENEMY_TYPE.RUSHER];
+  if (L >= 6) types.push(ENEMY_TYPE.ORBITER);
+  if (L >= 11) types.push(ENEMY_TYPE.TANKER);
+  if (L >= 21) types.push(ENEMY_TYPE.SNIPER);
+  if (L >= 31) types.push(ENEMY_TYPE.TELEPORTER);
+  if (L >= 41) types.push(ENEMY_TYPE.SHIELDED);
+  if (L >= 51) types.push(ENEMY_TYPE.SPLITTER);
+  return types;
+}
+
+// enemy defs: percent values are fractions of player max HP (e.g. 0.10 = 10%)
+export const ENEMY_DEFS = Object.freeze({
+  [ENEMY_TYPE.RUSHER]:     { color: 0x888888, sizeMult: 0.75, hpPct: 0.50, contactPct: 0.10, shoot: false, metallic: false },
+  [ENEMY_TYPE.ORBITER]:    { color: 0x242424, sizeMult: 1.00, hpPct: 0.50, contactPct: 0.10, shoot: false, metallic: true,  orbitR: 6.5 },
+  [ENEMY_TYPE.TANKER]:     { color: 0xffcc00, sizeMult: 1.50, hpPct: 3.00, contactPct: 0.20, shoot: true,  bulletPct: 0.20, fireRate: 2.25, bulletSpeedMult: 0.85, metallic: true },
+  [ENEMY_TYPE.SNIPER]:     { color: 0x9b30ff, sizeMult: 1.00, hpPct: 3.00, contactPct: 0.10, shoot: true,  bulletPct: 0.333, fireRate: 1.85, bulletSpeedMult: 1.35, metallic: false },
+  [ENEMY_TYPE.TELEPORTER]: { color: 0x00cccc, sizeMult: 0.75, hpPct: 3.00, contactPct: 0.333, shoot: false, metallic: true,  teleportWhenBelow: 0.50 },
+  [ENEMY_TYPE.SHIELDED]:   { color: 0x4aa3ff, sizeMult: 1.25, hpPct: 0.50, shieldPct: 1.50, contactPct: 0.20, shoot: false, metallic: false },
+  [ENEMY_TYPE.SPLITTER]:   { color: 0x00ff66, sizeMult: 1.25, hpPct: 3.00, contactPct: 0.20, shoot: true, bulletPct: 0.20, fireRate: 2.35, bulletSpeedMult: 0.90, metallic: true, splitCountMin: 2, splitCountMax: 3 },
+  [ENEMY_TYPE.BOSS]:       { color: 0x111111, sizeMult: 3.00, hpPct: 4.00, contactPct: 0.50, shoot: true,  bulletPct: 0.33, fireRate: 1.75, bulletSpeedMult: 1.10, metallic: true },
+});
+
+export function isBossLevel(level){
+  const L = Math.max(1, Math.floor(level||1));
+  return L >= 10 && (L % 10 === 0);
+}
+
+export function getBossScaleForLevel(level){
+  // Section 5: for 71+ boss scales +20% HP / +10% DMG per boss wave (10 levels)
+  const L = Math.max(1, Math.floor(level||1));
+  if (L < 70) return { hpMult: 1, dmgMult: 1 };
+  const wave = Math.floor((L - 70) / 10); // 70 =>0, 80=>1, 90=>2, 100=>3
+  return { hpMult: 1 + 0.20 * wave, dmgMult: 1 + 0.10 * wave };
+}
+
+// Player scaling (Section 6)
+export function getPlayerMaxHPForLevel(level){
+  const L = Math.max(1, Math.floor(level||1));
+  return 100 + 5 * (L - 1);
+}

@@ -47,7 +47,8 @@ export function updateDashBar() {
   dashFill.style.width = (pct * 100) + '%';
 }
 export function updateHealthBar() {
-  const pct = Math.max(0, state.playerHP / PLAYER_MAX_HP) * 100;
+  const maxHP = (state.playerMaxHP ?? PLAYER_MAX_HP);
+  const pct = Math.max(0, state.playerHP / maxHP) * 100;
   hbFill.style.width = pct + '%';
   hbFill.style.background = pct < 30
     ? 'linear-gradient(to right,#006600,#00aa00)'

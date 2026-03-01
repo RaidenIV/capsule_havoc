@@ -3,7 +3,7 @@ import * as THREE from 'three';
 import { renderer, scene, camera, labelRenderer } from './renderer.js';
 import { renderBloom, consumeExplBloomDirty } from './bloom.js';
 import { state } from './state.js';
-import {PLAYER_MAX_HP, WAVE_CONFIG} from './constants.js';
+import {PLAYER_MAX_HP, getEnemyCapForLevel, getActiveEnemyTypesForLevel, isBossLevel, ENEMY_TYPE, ENEMY_DEFS, getBossScaleForLevel} from './constants.js';
 import { updateSunPosition, updateOrbitLights } from './lighting.js';
 import { updateChunks } from './terrain.js';
 import { updatePlayer, updateDashStreaks, updateHealthBar } from './player.js';
@@ -61,7 +61,7 @@ function hideWaveBannerIfDone(delta){
   }
 }
 function startWave(waveNum){
-  const cfg = WAVE_CONFIG[Math.max(0, Math.min(waveNum - 1, WAVE_CONFIG.length - 1))];
+  const cfg = [][Math.max(0, Math.min(waveNum - 1, [].length - 1))];
   state.wave = cfg.wave;
   state.wavePhase = 'standard';
   state.waveSpawnRemaining = cfg.standardCount;
@@ -109,6 +109,50 @@ export function tick() {
   updatePlayer(delta, state.worldScale);
   const worldDelta = delta * state.worldScale;
 
+  // ── Level-driven spawn system (Option B) ───────────────────────────────────
+  // Cap is driven by player level per design doc.
+  state.maxEnemies = getEnemyCapForLevel(state.playerLevel);
+
+  // Open upgrade shop every 5 levels (set by xp.js) except boss levels.
+  if (state.pendingShop && !state.upgradeOpen) {
+    state.pendingShop = false;
+    openUpgradeShop(state.playerLevel);
+  }
+
+  // Boss presence on boss levels (every 10). Boss respawns if killed.
+  if (isBossLevel(state.playerLevel)) {
+    if (!state.bossAlive) {
+      state.bossRespawnTimer -= worldDelta;
+      if (state.bossRespawnTimer <= 0) {
+        // spawn boss using ENEMY_TYPE.BOSS with scaling
+        const scale = getBossScaleForLevel(state.playerLevel);
+        const def = ENEMY_DEFS[ENEMY_TYPE.BOSS];
+        spawnEnemyAtEdge({ isBoss:true, color:def.color, sizeMult:def.sizeMult, health: Math.round((state.playerMaxHP ?? PLAYER_MAX_HP) * def.hpPct * scale.hpMult), fireRate: def.fireRate });
+        state.bossAlive = true;
+        state.bossRespawnTimer = 6.0;
+      }
+    }
+  } else {
+    state.bossAlive = false;
+    state.bossRespawnTimer = 0;
+  }
+
+  // Spawn timer: continuous spawning toward cap.
+  state.spawnTimer -= worldDelta;
+  const spawnInterval = Math.max(0.22, 1.05 - Math.min(0.65, state.playerLevel * 0.012));
+  if (!state.paused && !state.gameOver && !state.upgradeOpen && state.spawnTimer <= 0) {
+    state.spawnTimer = spawnInterval * (0.85 + Math.random() * 0.3);
+    // swarmers spawn in groups early game
+    const types = getActiveEnemyTypesForLevel(state.playerLevel);
+    const t = types[(Math.random()*types.length)|0];
+    if (t === ENEMY_TYPE.RUSHER && state.playerLevel <= 12 && Math.random() < 0.55) {
+      const n = 8 + ((Math.random()*5)|0); // 8–12
+      for (let i=0;i<n;i++) spawnEnemyAtEdge(ENEMY_TYPE.RUSHER);
+    } else {
+      spawnEnemyAtEdge(t);
+    }
+  }
+
   // ── World ──────────────────────────────────────────────────────────────────
   updateChunks(playerGroup.position);
   updateSunPosition(playerGroup.position);
@@ -129,7 +173,7 @@ export function tick() {
 
   state.spawnTickTimer -= delta;
   if (state.spawnTickTimer <= 0) {
-    const waveCfg = WAVE_CONFIG[Math.max(0, Math.min(state.wave - 1, WAVE_CONFIG.length - 1))];
+    const waveCfg = [][Math.max(0, Math.min(state.wave - 1, [].length - 1))];
     const space = Math.max(0, state.maxEnemies - state.enemies.length);
 
     if (state.wavePhase === 'standard' && state.waveSpawnRemaining > 0 && space > 0) {
@@ -148,7 +192,7 @@ export function tick() {
 
   // ── Wave transitions ────────────────────────────────────────────────────────
   if (state.wavePhase === 'standard' && state.waveSpawnRemaining <= 0 && state.enemies.length === 0) {
-    const waveCfg = WAVE_CONFIG[Math.max(0, Math.min(state.wave - 1, WAVE_CONFIG.length - 1))];
+    const waveCfg = [][Math.max(0, Math.min(state.wave - 1, [].length - 1))];
     state.wavePhase = 'boss';
     state.bossSpawnRemaining = waveCfg.boss.count;
     showWaveBanner('BOSS');

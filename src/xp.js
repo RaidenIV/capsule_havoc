@@ -1,6 +1,6 @@
 // ─── xp.js ───────────────────────────────────────────────────────────────────
 import { state } from './state.js';
-import { XP_THRESHOLDS, XP_PER_KILL_BY_LEVEL, COIN_VALUE_BY_LEVEL, LEVEL_ENEMY_CONFIG, WEAPON_CONFIG } from './constants.js';
+import { XP_THRESHOLDS, XP_PER_KILL_BY_LEVEL, COIN_VALUE_BY_LEVEL, LEVEL_ENEMY_CONFIG, WEAPON_CONFIG, getPlayerMaxHPForLevel } from './constants.js';
 
 // DOM refs (populated in ui.js but needed here for updates)
 const xpLevelLabelEl = document.getElementById('xp-level-label');
@@ -26,7 +26,16 @@ export function updateXP(amount) {
   const MAX = XP_THRESHOLDS.length - 1;
   state.playerXP += amount;
   while (state.playerLevel < MAX && state.playerXP >= XP_THRESHOLDS[state.playerLevel + 1]) {
+    const prevLevel = state.playerLevel;
     state.playerLevel++;
+    // update player max HP based on level (design doc)
+    const prevMax = state.playerMaxHP || getPlayerMaxHPForLevel(prevLevel);
+    const newMax  = getPlayerMaxHPForLevel(state.playerLevel);
+    const pct = prevMax > 0 ? (state.playerHP / prevMax) : 1;
+    state.playerMaxHP = newMax;
+    state.playerHP = Math.max(1, pct * newMax);
+    // open shop every 5 levels (except boss levels)
+    if (state.playerLevel % 5 === 0 && state.playerLevel % 10 !== 0) state.pendingShop = true;
   }
   const isMax     = state.playerLevel >= MAX;
   const cur       = XP_THRESHOLDS[state.playerLevel];

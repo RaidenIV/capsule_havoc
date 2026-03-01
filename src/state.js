@@ -6,7 +6,11 @@
 export const state = {
   // ── Game flow ───────────────────────────────────────────────────────────────
   gameOver:    false,
-  paused:      false,
+  paused: false,
+  pendingShop: false,
+  spawnTimer: 0,
+  bossRespawnTimer: 0,
+  bossAlive: false,
   invincible:  false,
   gameSession: 0,
 
@@ -21,7 +25,8 @@ export const state = {
   coins:   0,
 
   // ── Player ───────────────────────────────────────────────────────────────────
-  playerHP:    100,
+  playerMaxHP: 100,
+  playerHP: 100,
   playerXP:    0,
   playerLevel: 0,
 

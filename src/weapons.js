@@ -151,8 +151,9 @@ export function updateEnemyBullets(worldDelta) {
     if (pdx*pdx + pdz*pdz < 0.36) {
       playSound('player_hit', 0.7, 0.95 + Math.random() * 0.1);
       if (!state.invincible) {
-        state.playerHP -= ENEMY_BULLET_DMG;
-        spawnPlayerDamageNum(ENEMY_BULLET_DMG);
+        const dmg = (Number.isFinite(b.dmg) ? b.dmg : ENEMY_BULLET_DMG);
+        state.playerHP -= dmg;
+        spawnPlayerDamageNum(Math.round(dmg));
         updateHealthBar();
         if (state.playerHP <= 0) return 'DEAD';
       }
