@@ -77,3 +77,17 @@ export function syncEnemyMats(enemies) {
 export function setPlayerGeo(g) { playerGeo = g; }
 export function setEnemyGeo(g)  { enemyGeo  = g; }
 export function setBulletGeo(g) { bulletGeo = g; }
+
+// ── Cosmetics ───────────────────────────────────────────────────────────────
+export function applyCosmetics() {
+  const c = state?.cosmetic?.playerColor || 'default';
+  const col = (
+    c === 'cyan'    ? new THREE.Color(0x00e5ff) :
+    c === 'magenta' ? new THREE.Color(0xff2bd6) :
+    c === 'gold'    ? new THREE.Color(0xffd24a) :
+                      new THREE.Color(0x0044cc)
+  );
+  playerMat.color.copy(col);
+  playerBaseColor.copy(col);
+  playerMat.needsUpdate = true;
+}

@@ -1,7 +1,7 @@
 // ─── gameFlow.js ──────────────────────────────────────────────────────────────
 import { state } from './state.js';
 import { PLAYER_MAX_HP } from './constants.js';
-import { scene } from './renderer.js';
+import { scene, renderer, labelRenderer } from './renderer.js';
 import { playerGroup, playerMesh, hbObj, dashBarObj, updateHealthBar, updateDashBar } from './player.js';
 import { updateXP } from './xp.js';
 import { spawnEnemyAtEdge, removeCSS2DFromGroup } from './enemies.js';
@@ -9,6 +9,7 @@ import { destroyOrbitBullets, syncOrbitBullets } from './weapons.js';
 import { _particleMeshPool } from './particles.js';
 import { startMusic, stopMusic, pauseMusic, resumeMusic, playSound } from './audio.js';
 import { recordRun } from './ui/highScores.js';
+import { applyCosmetics } from './materials.js';
 
 export { pauseMusic, resumeMusic }; // re-export so panel/index.js can use them
 
@@ -28,6 +29,11 @@ export function formatTime(secs) {
 
 // ── Countdown overlay ─────────────────────────────────────────────────────────
 export function startCountdown(onDone) {
+  // Nothing (including floor) should be visible/loaded during countdown.
+  // Hide renderers entirely until the countdown completes.
+  if (renderer?.domElement) renderer.domElement.style.display = 'none';
+  if (labelRenderer?.domElement) labelRenderer.domElement.style.display = 'none';
+
   playerMesh.visible = false; hbObj.visible = false; dashBarObj.visible = false;
 
   // Hide HUD during countdown
@@ -68,6 +74,11 @@ export function startCountdown(onDone) {
       setTimeout(() => {
         countdownEl.classList.remove('show');
         state.paused = false;
+
+        // Reveal renderers only once the countdown finishes.
+        if (renderer?.domElement) renderer.domElement.style.display = '';
+        if (labelRenderer?.domElement) labelRenderer.domElement.style.display = '';
+
         playerMesh.visible = hbObj.visible = dashBarObj.visible = true;
         // Restore HUD
         hudEls.forEach(el => { if (el) el.style.visibility = ''; });
@@ -154,6 +165,9 @@ export function restartGame(opts = {}) {
   state.playerLevel = 0;
   state.coins       = 0;
   state.weaponTier  = 0;
+  state.pickupRangeLvl = 0;
+  state.extraLives  = 0;
+  if (state.cosmetic) state.cosmetic.playerColor = 'default';
   state.upgradeOpen = false;
   state.wave        = 1;
   state.wavePhase   = null;
@@ -165,6 +179,7 @@ export function restartGame(opts = {}) {
   updateHealthBar(); updateDashBar();
   updateXP(0);
   syncOrbitBullets();
+  try { applyCosmetics(); } catch {}
 
   if (killsEl)     killsEl.textContent    = '0';
   if (timerEl)     timerEl.textContent    = '00:00';

@@ -73,7 +73,9 @@ const COLLECT_COIN      = 0.7;
 const COLLECT_HP        = 0.8;
 
 export function updatePickups(worldDelta, playerLevel, elapsed) {
-  const attractDist = ATTRACT_DIST_COIN[Math.min(playerLevel, 10)];
+  const baseAttract = ATTRACT_DIST_COIN[Math.min(playerLevel, 10)];
+  const bonus = (state.pickupRangeLvl || 0) * 1.25; // shop upgrade
+  const attractDist = baseAttract + bonus;
 
   // ── Coins ───────────────────────────────────────────────────────────────────
   for (let i = state.coinPickups.length - 1; i >= 0; i--) {

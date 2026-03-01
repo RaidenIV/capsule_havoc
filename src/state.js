@@ -42,6 +42,13 @@ export const state = {
 
   upgradeOpen: false,
   weaponTier: 0,
+
+  // ── Shop upgrades ─────────────────────────────────────────────────────────
+  pickupRangeLvl: 0,   // increases coin attraction distance
+  extraLives:     0,   // consumed on death
+  cosmetic: {
+    playerColor: 'default',
+  },
   // ── Dash / Slow-motion ───────────────────────────────────────────────────────
   hasDash:       false,  // unlocked via upgrade shop
   dashTimer:     0,

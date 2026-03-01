@@ -39,7 +39,8 @@ function makePropMaterial(cx, cz, idx) {
   const ei = v < 0.15 ? 0.25 : 0;
   const col = v < 0.5 ? new THREE.Color(0x0d0e1f) : new THREE.Color(0x12131f);
   return new THREE.MeshStandardMaterial({
-    color: col, metalness: 0.6, roughness: 0.65,
+    // Landscape props should read as matte (no metallic look)
+    color: col, metalness: 0.0, roughness: 0.95,
     emissive: new THREE.Color(0x000820), emissiveIntensity: ei,
   });
 }
@@ -71,6 +72,8 @@ function createChunk(cx, cz) {
   const halfC     = CHUNK_SIZE * 0.5 - 2.5;
 
   for (let p = 0; p < propCount; p++) {
+    // 50% less likely to generate props
+    if (cRand(cx, cz, p * 11 + 99) < 0.5) continue;
     const lx   = (cRand(cx, cz, p*7+2) * 2 - 1) * halfC;
     const lz   = (cRand(cx, cz, p*7+3) * 2 - 1) * halfC;
     const useBox   = cRand(cx, cz, p*7+4) > 0.45;

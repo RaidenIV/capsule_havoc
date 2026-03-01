@@ -614,6 +614,7 @@ body.mode-menu #countdown,
 body.mode-menu #notif,
 body.mode-menu #game-over,
 body.mode-menu #cp,
+body.mode-menu #label-layer,
 body.mode-menu canvas {
   display: none !important;
 }
@@ -883,6 +884,16 @@ body.mode-playing #menu-screen { display: none !important; }
   gap: 10px;
   max-height: min(52vh, 520px);
   overflow: auto;
+}
+
+.upgrade-cat{
+  margin-top: 6px;
+  padding: 6px 2px 2px;
+  font-family: Rajdhani, system-ui, sans-serif;
+  font-weight: 900;
+  letter-spacing: 0.16em;
+  color: rgba(255,255,255,0.72);
+  font-size: 12px;
 }
 .upgrade-row{
   display: flex;

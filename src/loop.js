@@ -6,8 +6,8 @@ import { state } from './state.js';
 import {PLAYER_MAX_HP, WAVE_CONFIG} from './constants.js';
 import { updateSunPosition, updateOrbitLights } from './lighting.js';
 import { updateChunks } from './terrain.js';
-import { updatePlayer, updateDashStreaks } from './player.js';
-import { updateEnemies, spawnEnemyAtEdge } from './enemies.js';
+import { updatePlayer, updateDashStreaks, updateHealthBar } from './player.js';
+import { updateEnemies, spawnEnemyAtEdge, removeCSS2DFromGroup } from './enemies.js';
 import { shootBulletWave, updateBullets, updateEnemyBullets, updateOrbitBullets, performSlash, updateSlashEffects } from './weapons.js';
 import { updatePickups } from './pickups.js';
 import { updateParticles } from './particles.js';
@@ -187,7 +187,27 @@ export function tick() {
   if (state.orbitRings.length > 0) updateOrbitBullets(worldDelta);
 
   const enemyResult = updateEnemies(delta, worldDelta, state.elapsed);
-  if (enemyResult === 'DEAD') { triggerGameOver(); return; }
+  if (enemyResult === 'DEAD') {
+    if ((state.extraLives || 0) > 0) {
+      // Consume a life and "revive": clear immediate threats + brief invulnerability.
+      state.extraLives -= 1;
+      state.playerHP = PLAYER_MAX_HP;
+      updateHealthBar();
+
+      // Clear enemies and enemy bullets so we don't instantly re-die.
+      state.enemies.forEach(e => { try { removeCSS2DFromGroup(e.grp); scene.remove(e.grp); } catch {} });
+      state.enemies.length = 0;
+      state.enemyBullets.forEach(b => { try { scene.remove(b.mesh); } catch {} });
+      state.enemyBullets.length = 0;
+
+      const sess = state.gameSession;
+      state.invincible = true;
+      setTimeout(() => { if (state.gameSession === sess) state.invincible = false; }, 1200);
+    } else {
+      triggerGameOver();
+      return;
+    }
+  }
 
   updatePickups(worldDelta, state.playerLevel, state.elapsed);
   updateParticles(worldDelta);

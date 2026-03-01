@@ -3,6 +3,7 @@ import { state } from '../state.js';
 import { WEAPON_TIER_COSTS } from '../constants.js';
 import { playSound } from '../audio.js';
 import { syncOrbitBullets } from '../weapons.js';
+import { applyCosmetics } from '../materials.js';
 
 let _onClose = null;
 
@@ -27,31 +28,33 @@ function renderList(){
 
   list.innerHTML = '';
 
-  // ── Dash upgrade ──────────────────────────────────────────────────────────
-  {
-    const dashOwned = !!state.hasDash;
-    const dashCost  = 1;
-    const affordable = (state.coins || 0) >= dashCost;
+  function addCategory(title){
+    const h = document.createElement('div');
+    h.className = 'upgrade-cat';
+    h.textContent = title;
+    list.appendChild(h);
+  }
 
+  function makeRow({ nameText, metaText, buttonText, cost, disabled, onBuy }){
     const row  = document.createElement('div');
     row.className = 'upgrade-row';
 
     const left = document.createElement('div');
     const name = document.createElement('div');
     name.className = 'upg-name';
-    name.textContent = 'DASH';
+    name.textContent = nameText;
     const meta = document.createElement('div');
     meta.className = 'upg-meta';
-    meta.textContent = dashOwned ? 'OWNED' : 'SHIFT to dash in movement direction · invincibility frames';
+    meta.textContent = metaText;
     left.appendChild(name);
     left.appendChild(meta);
 
     const btn  = document.createElement('button');
     btn.className = 'upg-buy';
-    btn.disabled  = dashOwned || !affordable;
+    btn.disabled  = !!disabled;
 
     const label = document.createElement('span');
-    label.textContent = dashOwned ? 'OWNED' : (affordable ? 'BUY' : 'NEED');
+    label.textContent = buttonText;
 
     const pill  = document.createElement('span');
     pill.className = 'upgrade-coins';
@@ -61,91 +64,151 @@ function renderList(){
     coin.style.animation = 'none';
     const count = document.createElement('span');
     count.className = 'coin-count';
-    count.textContent = String(dashCost);
+    count.textContent = String(cost);
     pill.appendChild(coin);
     pill.appendChild(count);
 
     btn.appendChild(label);
     btn.appendChild(pill);
-
-    btn.addEventListener('click', () => {
-      if (btn.disabled) return;
-      const coins = state.coins || 0;
-      if (coins < dashCost) return;
-      state.coins   = coins - dashCost;
-      state.hasDash = true;
-      playSound?.('purchase', 0.8);
-      updateCoinsUI();
-      renderList();
-    });
+    btn.addEventListener('click', () => { if (!btn.disabled) onBuy?.(); });
 
     row.appendChild(left);
     row.appendChild(btn);
     list.appendChild(row);
   }
 
-  const currentTier = Math.max(0, state.weaponTier || 0);
-  const maxTier = WEAPON_TIER_COSTS.length; // tiers 1..maxTier are purchasable; tier 0 = none
 
-  for (let tier = 1; tier <= maxTier; tier++){
-    const cost = WEAPON_TIER_COSTS[tier - 1] ?? WEAPON_TIER_COSTS[WEAPON_TIER_COSTS.length - 1];
-    const affordable = (state.coins || 0) >= cost;
-    const owned = tier <= currentTier;
+  // ── Weapons ───────────────────────────────────────────────────────────────
+  addCategory('WEAPONS');
+  {
+    const currentTier = Math.max(0, state.weaponTier || 0);
+    const maxTier = WEAPON_TIER_COSTS.length; // tiers 1..maxTier purchasable; tier 0 = none
+    for (let tier = 1; tier <= maxTier; tier++){
+      const cost = WEAPON_TIER_COSTS[tier - 1] ?? WEAPON_TIER_COSTS[WEAPON_TIER_COSTS.length - 1];
+      const affordable = (state.coins || 0) >= cost;
+      const owned = tier <= currentTier;
+      makeRow({
+        nameText: 'WEAPON TIER ' + tier,
+        metaText: owned ? 'OWNED' : (TIER_DESCS[tier] || 'Unlock stronger fire rate / waves / orbit'),
+        buttonText: owned ? 'OWNED' : (affordable ? 'BUY' : 'NEED'),
+        cost,
+        disabled: owned || !affordable,
+        onBuy: () => {
+          const coins = state.coins || 0;
+          if (coins < cost) return;
+          state.coins = coins - cost;
+          state.weaponTier = tier;
+          try { syncOrbitBullets(); } catch {}
+          playSound?.('purchase', 0.8);
+          updateCoinsUI();
+          renderList();
+        }
+      });
+    }
+  }
 
-    const row = document.createElement('div');
-    row.className = 'upgrade-row';
-
-    const left = document.createElement('div');
-    const name = document.createElement('div');
-    name.className = 'upg-name';
-    name.textContent = 'WEAPON TIER ' + tier;
-    const meta = document.createElement('div');
-    meta.className = 'upg-meta';
-    meta.textContent = owned ? 'OWNED' : (TIER_DESCS[tier] || 'Unlock stronger fire rate / waves / orbit');
-
-    left.appendChild(name);
-    left.appendChild(meta);
-
-    const btn = document.createElement('button');
-    btn.className = 'upg-buy';
-    btn.disabled = owned || !affordable;
-
-    const label = document.createElement('span');
-    label.textContent = owned ? 'OWNED' : (affordable ? 'BUY' : 'NEED');
-
-    const pill = document.createElement('span');
-    pill.className = 'upgrade-coins';
-    pill.style.padding = '6px 10px';
-    const coin = document.createElement('span');
-    coin.className = 'coin-icon';
-    const count = document.createElement('span');
-    count.className = 'coin-count';
-    count.textContent = String(cost);
-    pill.appendChild(coin);
-    pill.appendChild(count);
-
-    // Buy buttons do NOT animate coins (per preference)
-    coin.style.animation = 'none';
-
-    btn.appendChild(label);
-    btn.appendChild(pill);
-
-    btn.addEventListener('click', () => {
-      if (btn.disabled) return;
-      const coins = state.coins || 0;
-      if (coins < cost) return;
-
-      state.coins = coins - cost;
-      state.weaponTier = tier;
-      try { syncOrbitBullets(); } catch {}
-      playSound?.('purchase', 0.8);
-      updateCoinsUI();
-      renderList();
+  // ── Movement ──────────────────────────────────────────────────────────────
+  addCategory('MOVEMENT');
+  {
+    const dashOwned = !!state.hasDash;
+    const dashCost  = 1;
+    const affordable = (state.coins || 0) >= dashCost;
+    makeRow({
+      nameText: 'DASH',
+      metaText: dashOwned ? 'OWNED' : 'SHIFT to dash in movement direction · invincibility frames',
+      buttonText: dashOwned ? 'OWNED' : (affordable ? 'BUY' : 'NEED'),
+      cost: dashCost,
+      disabled: dashOwned || !affordable,
+      onBuy: () => {
+        const coins = state.coins || 0;
+        if (coins < dashCost) return;
+        state.coins   = coins - dashCost;
+        state.hasDash = true;
+        playSound?.('purchase', 0.8);
+        updateCoinsUI();
+        renderList();
+      }
     });
 
-    row.appendChild(left);
-    row.appendChild(btn);
-    list.appendChild(row);
+    const lvl = state.pickupRangeLvl || 0;
+    const max = 5;
+    const cost = 2 * Math.pow(2, lvl); // 2,4,8,16,32
+    const affordable2 = (state.coins || 0) >= cost;
+    const owned = lvl >= max;
+    makeRow({
+      nameText: 'PICKUP RANGE',
+      metaText: owned ? 'MAXED' : `+${(lvl + 1) * 1.25}m coin attraction (current +${(lvl) * 1.25}m)`,
+      buttonText: owned ? 'MAX' : (affordable2 ? 'BUY' : 'NEED'),
+      cost,
+      disabled: owned || !affordable2,
+      onBuy: () => {
+        const coins = state.coins || 0;
+        if (coins < cost) return;
+        state.coins = coins - cost;
+        state.pickupRangeLvl = Math.min(max, (state.pickupRangeLvl || 0) + 1);
+        playSound?.('purchase', 0.8);
+        updateCoinsUI();
+        renderList();
+      }
+    });
+  }
+
+  // ── Lives ─────────────────────────────────────────────────────────────────
+  addCategory('LIVES');
+  {
+    const owned = (state.extraLives || 0) >= 3;
+    const cost = 10 * Math.pow(2, (state.extraLives || 0)); // 10,20,40
+    const affordable = (state.coins || 0) >= cost;
+    makeRow({
+      nameText: 'EXTRA LIFE',
+      metaText: owned ? 'MAXED (3)' : `Buy an extra life (current ${state.extraLives || 0})`,
+      buttonText: owned ? 'MAX' : (affordable ? 'BUY' : 'NEED'),
+      cost,
+      disabled: owned || !affordable,
+      onBuy: () => {
+        const coins = state.coins || 0;
+        if (coins < cost) return;
+        state.coins = coins - cost;
+        state.extraLives = Math.min(3, (state.extraLives || 0) + 1);
+        playSound?.('purchase', 0.8);
+        updateCoinsUI();
+        renderList();
+      }
+    });
+  }
+
+  // ── Cosmetics ─────────────────────────────────────────────────────────────
+  addCategory('COSMETICS');
+  {
+    const current = state.cosmetic?.playerColor || 'default';
+    const options = [
+      { key: 'cyan',    label: 'PLAYER COLOR — CYAN' },
+      { key: 'magenta', label: 'PLAYER COLOR — MAGENTA' },
+      { key: 'gold',    label: 'PLAYER COLOR — GOLD' },
+    ];
+    options.forEach((o, idx) => {
+      const owned = current === o.key;
+      const cost = 5;
+      const affordable = (state.coins || 0) >= cost;
+      makeRow({
+        nameText: o.label,
+        metaText: owned ? 'ACTIVE' : 'Cosmetic only',
+        buttonText: owned ? 'ACTIVE' : (affordable ? 'APPLY' : 'NEED'),
+        cost,
+        disabled: owned || !affordable,
+        onBuy: () => {
+          const coins = state.coins || 0;
+          if (coins < cost) return;
+          state.coins = coins - cost;
+          if (!state.cosmetic) state.cosmetic = { playerColor: 'default' };
+          state.cosmetic.playerColor = o.key;
+          try { applyCosmetics(); } catch {}
+          playSound?.('purchase', 0.8);
+          updateCoinsUI();
+          renderList();
+        }
+      });
+    });
   }
 }
 
