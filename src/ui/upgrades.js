@@ -8,6 +8,19 @@ let _onClose = null;
 
 function $(id){ return document.getElementById(id); }
 
+const TIER_DESCS = {
+  2: '1.2/s fire rate · 1.5× damage',
+  3: '2.4/s fire rate · 1.5× damage · 6 orbit bullets',
+  4: '2.4/s fire rate · 2.0× damage · 8 orbit bullets',
+  5: '2.4/s fire rate · 2.0× damage · 10 orbit bullets',
+  6: '4.7/s fire rate · 4.0× damage · 10 orbit bullets',
+  7: '4.7/s fire rate · 4.0× damage · 12 orbit bullets',
+  8: '4.7/s fire rate · 8.0× damage · 12 orbit bullets',
+  9: '9.4/s fire rate · 8.0× damage · 12 orbit bullets',
+  10: '9.4/s fire rate · 16.0× damage · 14 orbit bullets',
+  11: '9.4/s fire rate · 16.0× damage · 16 orbit bullets',
+};
+
 function renderList(){
   const list = $('upgradeList');
   if (!list) return;
@@ -31,7 +44,7 @@ function renderList(){
     name.textContent = 'WEAPON TIER ' + tier;
     const meta = document.createElement('div');
     meta.className = 'upg-meta';
-    meta.textContent = owned ? 'OWNED' : 'Unlock stronger fire rate / waves / orbit';
+    meta.textContent = owned ? 'OWNED' : (TIER_DESCS[tier] || 'Unlock stronger fire rate / waves / orbit');
 
     left.appendChild(name);
     left.appendChild(meta);
