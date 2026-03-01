@@ -1037,3 +1037,19 @@ body.mode-playing #menu-screen { display: none !important; }
   white-space: nowrap;
 }
 
+
+/* --- XP Top Bar override (ensure holographic top bar wins over legacy #xp-hud styles) --- */
+#xp-hud.xp-topbar{
+  position: fixed;
+  top: 0; left: 0; right: 0;
+  width: auto;
+  height: 28px;
+  padding: 8px 14px 6px 14px;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 12px;
+  z-index: 120;
+  pointer-events: none;
+}
+
