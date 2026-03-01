@@ -33,7 +33,11 @@
       <div class="menu-eyebrow">▶ BULLET HEAVEN</div>
       <h1 class="menu-title">CAPSULE<br>HAVOC</h1>
       <div class="menu-tagline">Survive. Level up. Dominate.</div>
-
+      <div class="menu-controls-hint">
+        <span>WASD</span> Move &nbsp;·&nbsp;
+        <span>SHIFT</span> Dash &nbsp;·&nbsp;
+        <span>TAB</span> Settings
+      </div>
     </div>
 
     <!-- RIGHT — pages -->
@@ -109,7 +113,7 @@
 
 <!-- ── Coin counter ── -->
 <div id="coin-hud">
-  <div id="coin-icon"></div>
+  <canvas id="coin-canvas" width="28" height="28" style="width:28px;height:28px;"></canvas>
   <span id="coin-count">0</span>
 </div>
 
@@ -144,7 +148,6 @@
       <!-- ── Page: Main ── -->
       <div class="pause-page active" id="pause-page-main">
         <button class="pause-action-btn resume"   id="pause-resume-btn">RESUME</button>
-        <button class="pause-action-btn restart" id="pause-restart-btn">RESTART</button>
         <button class="pause-action-btn settings" id="pause-settings-btn">SETTINGS</button>
         <button class="pause-action-btn quit"     id="pause-quit-btn">QUIT TO MENU</button>
       </div>
