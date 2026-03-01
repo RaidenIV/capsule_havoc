@@ -18,6 +18,12 @@ const propGeoSphere  = new THREE.SphereGeometry(0.55, 10, 8);
 const propGeoTetra   = new THREE.TetrahedronGeometry(0.7, 0);
 const propGeoOcta    = new THREE.OctahedronGeometry(0.7, 0);
 
+// Ensure props sit on the ground (some geometries are not centered symmetrically)
+function getPropBaseOffsetY(geo) {
+  if (!geo.boundingBox) geo.computeBoundingBox();
+  return -geo.boundingBox.min.y;
+}
+
 // ── Flat collider list for per-frame checks: { wx, wz, radius } ───────────────
 export const propColliders = [];
 
@@ -97,7 +103,8 @@ function createChunk(cx, cz) {
 
     const mesh = new THREE.Mesh(geo, makePropMaterial(cx, cz, p));
     mesh.scale.set(scaleXZ, scaleY, scaleXZ);
-    mesh.position.set(lx, scaleY * 0.5, lz);
+        const baseY = getPropBaseOffsetY(geo) * scaleY;
+    mesh.position.set(lx, baseY, lz);
     mesh.castShadow = mesh.receiveShadow = true;
     grp.add(mesh);
 
