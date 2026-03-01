@@ -45,7 +45,7 @@ canvas { display: block; }
 #ui {
   position: fixed; top: 0; left: 0; right: 0;
   display: flex; justify-content: center; gap: 80px;
-  padding: 18px 24px;
+  padding: 8px 24px;
   pointer-events: none; z-index: 10;
   transition: right 0.3s ease;
 }
@@ -277,7 +277,7 @@ canvas { display: block; }
 
 /* ── Coin counter (top-left) ── */
 #coin-hud {
-  position: fixed; top: 18px; left: 24px;
+  position: fixed; top: 10px; left: 24px;
   display: flex; align-items: center; gap: 8px;
   pointer-events: none; z-index: 10;
   transition: opacity 0.3s;
@@ -295,7 +295,7 @@ canvas { display: block; }
 }
 
 #notif {
-  position: fixed; top: 16px; left: 50%;
+  position: fixed; top: 10px; left: 50%;
   transform: translateX(-50%) translateY(-70px);
   background: var(--panel); border: 1px solid var(--success); color: var(--success);
   padding: 8px 20px; font-size: 9px; letter-spacing: 3px; text-transform: uppercase;
@@ -558,7 +558,7 @@ input[type=color]::-webkit-color-swatch { border: none; border-radius: 3px; }
 .fp-btn.rst:hover { background: var(--cp-btn-h); }
 /* ── EXP Bar ── */
 #xp-hud {
-  position: fixed; top: 18px; right: 24px;
+  position: fixed; top: 10px; right: 24px;
   display: flex; flex-direction: column; gap: 5px;
   pointer-events: none; z-index: 10; width: 180px;
   transition: right 0.3s ease;
@@ -589,7 +589,7 @@ input[type=color]::-webkit-color-swatch { border: none; border-radius: 3px; }
 #xp-bar-fill.max { background: linear-gradient(to right, #ff8c00, #ffe566); box-shadow: 0 0 16px rgba(255,165,0,0.8); }
 
 #fpsOverlay {
-  position: fixed; top: 10px; left: 160px; z-index: 60;
+  position: fixed; top: 6px; left: 160px; z-index: 60;
   pointer-events: none; display: block;
   padding: 6px 8px; border-radius: 10px;
   background: rgba(0,0,0,0.55); border: 1px solid rgba(255,255,255,0.12);
