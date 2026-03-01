@@ -334,7 +334,6 @@ export function performSlash() {
   const arcMesh = new THREE.Mesh(arcGeo, arcMat);
   arcMesh.position.set(px, y - 0.02, pz);
   arcMesh.frustumCulled = false;
-  arcMesh.layers.enable(0);
   arcMesh.layers.enable(1); arcMesh.layers.enable(2);
   scene.add(arcMesh);
 
