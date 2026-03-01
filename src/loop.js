@@ -21,6 +21,9 @@ const timerEl  = document.getElementById('timer-value');
 const fpsTogEl = document.getElementById('s-fps');
 const fpsOvEl  = document.getElementById('fpsOverlay');
 const fpsValEl = document.getElementById('fpsVal');
+const livesHudEl = document.getElementById('livesHud');
+const livesValEl = document.getElementById('livesVal');
+let _lastLives = null;
 
 export const clock = new THREE.Clock();
 let fpsEMA = 60;
@@ -87,7 +90,15 @@ export function tick() {
 
   hideWaveBannerIfDone(delta);
 
-  // FPS display
+  // Lives HUD
+  const livesNow = (state.extraLives || 0);
+  if (_lastLives !== livesNow) {
+    _lastLives = livesNow;
+    if (livesValEl) livesValEl.textContent = String(livesNow);
+    if (livesHudEl) livesHudEl.style.opacity = livesNow > 0 ? '1' : '0';
+  }
+
+// FPS display
   fpsEMA = fpsEMA * 0.9 + (1 / Math.max(delta, 1e-6)) * 0.1;
   if (fpsTogEl?.checked && fpsValEl) fpsValEl.textContent = fpsEMA.toFixed(0);
 

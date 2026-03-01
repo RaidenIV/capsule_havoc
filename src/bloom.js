@@ -143,13 +143,25 @@ export function renderBloom() {
   renderer.render(scene, camera);
 
   // 2) Bullet bloom (layer 1)
+  // Depth-prepass: render the main scene (layer 0) into the bullet RT depth buffer
+  // with color writes disabled, so bullet bloom is occluded by world geometry.
   if (bulletBloom.enabled) {
-    camera.layers.set(1);
     renderer.setRenderTarget(rtBulletScene);
     renderer.clear();
+
+    const gl = renderer.getContext();
+    gl.colorMask(false, false, false, false);
+    camera.layers.set(0);
+    renderer.render(scene, camera);
+    gl.colorMask(true, true, true, true);
+
+    // Clear ONLY the color buffer, preserve depth from the prepass
+    renderer.clear(true, false, false);
+
+    camera.layers.set(1);
     renderer.render(scene, camera);
 
-    threshMat.uniforms.tDiffuse.value  = rtBulletScene.texture;
+threshMat.uniforms.tDiffuse.value  = rtBulletScene.texture;
     threshMat.uniforms.threshold.value = bulletBloom.threshold;
     fsPass(threshMat, rtBulletBright);
 

@@ -106,25 +106,20 @@
   <div class="ui-panel"><span class="ui-label">Kills</span><span class="ui-value" id="kills-value">0</span></div>
 </div>
 
-<!-- ── Coin counter ── -->
-<div id="coin-hud">
-  <canvas id="coin-canvas" width="28" height="28" style="width:28px;height:28px;"></canvas>
-  <span id="coin-count">0</span>
-</div>
-
-<!-- EXP Bar — top right -->
-<div id="xp-hud">
-  <div id="xp-level-row">
-    <span id="xp-level-label">LVL <span id="xp-level">0</span></span>
-    <span id="xp-values"><span id="xp-cur">0</span> / <span id="xp-next">100</span> EXP</span>
+<!-- HUD (top-left) -->
+<div id="hud-top-left">
+  <div id="coin-hud">
+    <canvas id="coin-canvas" width="28" height="28" style="width:28px;height:28px;"></canvas>
+    <span id="coin-count">0</span>
   </div>
-  <div id="xp-bar-track">
-    <div id="xp-bar-fill"></div>
+
+  <div id="fpsOverlay">FPS: <span id="fpsVal">0</span></div>
+
+  <div id="livesHud" aria-label="extra lives">
+    <span class="lives-label">LIVES:</span>
+    <span id="livesVal">0</span>
   </div>
 </div>
-
-<!-- FPS overlay -->
-<div id="fpsOverlay">FPS: <span id="fpsVal">0</span></div>
 
 <!-- ── Instructions ── -->
 <div id="instructions">WASD · SHIFT DASH · AUTO SHOOT · TAB SETTINGS</div>

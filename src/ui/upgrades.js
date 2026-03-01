@@ -28,11 +28,19 @@ function renderList(){
 
   list.innerHTML = '';
 
+  let _currentSection = null;
+
   function addCategory(title){
+    const sec = document.createElement('div');
+    sec.className = 'upg-section';
+
     const h = document.createElement('div');
-    h.className = 'upgrade-cat';
+    h.className = 'cp-section-label upg-section-label';
     h.textContent = title;
-    list.appendChild(h);
+
+    sec.appendChild(h);
+    list.appendChild(sec);
+    _currentSection = sec;
   }
 
   function makeRow({ nameText, metaText, buttonText, cost, disabled, onBuy }){
@@ -74,7 +82,7 @@ function renderList(){
 
     row.appendChild(left);
     row.appendChild(btn);
-    list.appendChild(row);
+    (_currentSection || list).appendChild(row);
   }
 
 
@@ -172,6 +180,7 @@ function renderList(){
         state.extraLives = Math.min(3, (state.extraLives || 0) + 1);
         playSound?.('purchase', 0.8);
         updateCoinsUI();
+        updateLivesUI();
         renderList();
       }
     });
@@ -217,6 +226,14 @@ function updateCoinsUI(){
   if (el) el.textContent = String(state.coins || 0);
 }
 
+function updateLivesUI(){
+  const v = document.getElementById('livesVal');
+  const hud = document.getElementById('livesHud');
+  const lives = (state.extraLives || 0);
+  if (v) v.textContent = String(lives);
+  if (hud) hud.style.opacity = lives > 0 ? '1' : '0';
+}
+
 export function openUpgradeShop(waveNum, onClose){
   _onClose = typeof onClose === 'function' ? onClose : null;
 
@@ -227,6 +244,7 @@ export function openUpgradeShop(waveNum, onClose){
   state.paused = true;
 
   updateCoinsUI();
+  updateLivesUI();
   renderList();
 
   overlay.classList.add('show');
