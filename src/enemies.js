@@ -95,9 +95,6 @@ export function spawnEnemy(x, z, eliteTypeOrCfg = null) {
     fireRate, shootTimer: fireRate ? Math.random() * fireRate : 0,
     staggerTimer: 0, baseColor: new THREE.Color(color),
     spawnFlashTimer: SPAWN_FLASH_DURATION, matDirty: true,
-    stuckTimer: 0,
-    lastCheckPos: null,
-    posCheckTimer: 0,
   });
 
   // Spawn fade-in
@@ -256,37 +253,6 @@ export function updateEnemies(delta, worldDelta, elapsed) {
     }
     pushOutOfProps(e.grp.position, enemyGeoParams.radius * (e.scaleMult || 1));
 
-    // ── Stuck detection ───────────────────────────────────────────────────────
-    // Every 1.5s, record position. If enemy barely moved, start draining HP.
-    e.posCheckTimer -= delta;
-    if (e.posCheckTimer <= 0) {
-      e.posCheckTimer = 1.5;
-      const px = e.grp.position.x, pz = e.grp.position.z;
-      if (e.lastCheckPos) {
-        const moved = Math.abs(px - e.lastCheckPos.x) + Math.abs(pz - e.lastCheckPos.z);
-        if (moved < 0.4 && dist > 1.5) {
-          // Enemy is stuck and not already in contact with player
-          e.stuckTimer += 1.5;
-        } else {
-          e.stuckTimer = 0;
-        }
-      }
-      e.lastCheckPos = { x: px, z: pz };
-    }
-    if (e.stuckTimer > 3.0) {
-      // Been stuck >3s: drain 15% max HP per second until they despawn
-      e.hp -= e.maxHp * 0.15 * delta;
-      e.stuckTimer = 3.0; // clamp so it doesn't accumulate further
-      if (e.hp <= 0) {
-        // Silent despawn (no kill credit, no drops — it just gets out of the way)
-        scene.remove(e.grp);
-        e.dead = true;
-        state.enemies.splice(i, 1);
-        state.waveSpawnRemaining = (state.waveSpawnRemaining || 0) + 1;
-        continue;
-      }
-    }
-
     // Bob + face player
     const eFloorY = (enemyGeoParams.radius + enemyGeoParams.length / 2) * (e.scaleMult || 1);
     e.mesh.position.y  = eFloorY + Math.sin(elapsed * 3 + i) * 0.05;
@@ -335,7 +301,7 @@ export function updateEnemies(delta, worldDelta, elapsed) {
     for (let j = i + 1; j < state.enemies.length; j++) {
       const b = state.enemies[j]; if (b.dead) continue;
       const rb   = enemyGeoParams.radius * (b.scaleMult || 1) * 1.05;
-      const minD = ra + rb;
+      const minD = ra + rb + 0.5;   // maintain 0.5-unit gap between enemies
       const dx = b.grp.position.x - a.grp.position.x;
       const dz = b.grp.position.z - a.grp.position.z;
       const d2 = dx*dx + dz*dz;
