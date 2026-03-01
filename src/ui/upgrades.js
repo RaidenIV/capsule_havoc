@@ -84,11 +84,11 @@ function renderList(){
     list.appendChild(row);
   }
 
-  const currentTier = Math.max(1, state.weaponTier || 1);
-  const maxTier = WEAPON_TIER_COSTS.length + 1; // tier 1 is base (free), costs start at tier 2
+  const currentTier = Math.max(0, state.weaponTier || 0);
+  const maxTier = WEAPON_TIER_COSTS.length; // tiers 1..maxTier are purchasable; tier 0 = none
 
-  for (let tier = 2; tier <= maxTier; tier++){
-    const cost = WEAPON_TIER_COSTS[tier - 2] ?? WEAPON_TIER_COSTS[WEAPON_TIER_COSTS.length - 1];
+  for (let tier = 1; tier <= maxTier; tier++){
+    const cost = WEAPON_TIER_COSTS[tier - 1] ?? WEAPON_TIER_COSTS[WEAPON_TIER_COSTS.length - 1];
     const affordable = (state.coins || 0) >= cost;
     const owned = tier <= currentTier;
 
