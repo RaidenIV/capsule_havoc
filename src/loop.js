@@ -145,7 +145,7 @@ export function tick() {
   state.slashTimer -= delta;
   if (state.slashTimer <= 0) {
     performSlash();
-    state.slashTimer = 0.65;
+    state.slashTimer = 1.0;
   }
 
   // ── Bullet wave (unlocks at weapon tier 2+) ───────────────────────────────
