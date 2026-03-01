@@ -214,3 +214,9 @@ export function updateOrbitBullets(worldDelta) {
     }
   }
 }
+
+
+export function performSlash(){ /* no-op */ }
+
+
+export function updateSlashEffects(){ /* no-op */ }
