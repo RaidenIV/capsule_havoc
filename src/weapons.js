@@ -216,7 +216,187 @@ export function updateOrbitBullets(worldDelta) {
 }
 
 
-export function performSlash(){ /* no-op */ }
+// ── Vampire Survivors–style slash (Whip lane cleave) ──────────────────────────
+// Visual: bright core + warm glow streak (straight lane), very short lifetime.
+// Behavior: alternates left/right each cast; damage applied once on spawn.
+const VS_SLASH_RANGE     = 8.5;   // world units
+const VS_SLASH_THICKNESS = 0.14;  // mesh thickness (visual)
+const VS_SLASH_LANE_W    = 1.25;  // hit lane half-width*2 (gameplay)
+const VS_SLASH_LIFE      = 0.18;  // seconds
 
+const _vsVert = /* glsl */`
+  varying vec2 vUv;
+  void main() {
+    vUv = uv;
+    gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+  }
+`;
 
-export function updateSlashEffects(){ /* no-op */ }
+const _vsFrag = /* glsl */`
+  uniform float uFade;
+  uniform float uTime;
+  uniform vec3  uTint;
+  varying vec2 vUv;
+
+  float hash21(vec2 p){
+    p = fract(p * vec2(123.34, 456.21));
+    p += dot(p, p + 34.345);
+    return fract(p.x * p.y);
+  }
+
+  void main() {
+    float x  = clamp(vUv.x, 0.0, 1.0);          // along slash
+    float cy = abs(vUv.y - 0.5) * 2.0;          // across slash
+
+    // VS whip read: bright interior with soft warm halo
+    float core = exp(-cy * cy * 260.0);         // white core
+    float glow = exp(-cy * cy * 28.0);          // warm halo
+    float taper = 1.0 - smoothstep(0.88, 1.0, x) * 0.92;
+    float base  = smoothstep(0.0, 0.06, x);
+
+    float n = hash21(vec2(x * 26.0, uTime * 0.75));
+    float flicker = 0.92 + 0.16 * n;
+
+    vec3 col = core * vec3(1.0) + glow * uTint * 1.35;
+    float alpha = (core * 2.8 + glow * 1.05) * taper * base * uFade * flicker;
+
+    if (alpha < 0.002) discard;
+    gl_FragColor = vec4(col, clamp(alpha, 0.0, 1.0));
+  }
+`;
+
+function _makeVSMat() {
+  return new THREE.ShaderMaterial({
+    vertexShader: _vsVert,
+    fragmentShader: _vsFrag,
+    uniforms: {
+      uFade: { value: 1.0 },
+      uTime: { value: 0.0 },
+      // Warm pale gold like VS whip on dark background
+      uTint: { value: new THREE.Vector3(1.0, 0.92, 0.70) },
+    },
+    transparent: true,
+    depthWrite: false,
+    blending: THREE.AdditiveBlending,
+    side: THREE.DoubleSide,
+  });
+}
+
+function _ensureSlashState() {
+  if (!state.slashEffects) state.slashEffects = [];
+  if (!Number.isFinite(state._vsSlashFlip)) state._vsSlashFlip = 0;
+}
+
+function _applyVSLaneDamage(origin, ux, uz, range, laneW, dmg) {
+  const ox = origin.x, oz = origin.z;
+  const halfW = laneW * 0.5;
+  for (let j = state.enemies.length - 1; j >= 0; j--) {
+    const e = state.enemies[j];
+    if (!e || e.dead) continue;
+
+    const ex = e.grp.position.x;
+    const ez = e.grp.position.z;
+
+    const dx = ex - ox;
+    const dz = ez - oz;
+
+    // Along-lane distance
+    const t = dx * ux + dz * uz;
+    if (t < 0 || t > range) continue;
+
+    // Perpendicular distance to lane center
+    const px = dx - t * ux;
+    const pz = dz - t * uz;
+    const perp = Math.sqrt(px*px + pz*pz);
+    if (perp > halfW) continue;
+
+    // Hit
+    e.hp -= dmg;
+    spawnEnemyDamageNum(dmg, e);
+    e.staggerTimer = 0.12;
+    updateEliteBar(e);
+
+    if (e.hp <= 0) {
+      playSound(e.eliteType ? 'explodeElite' : 'explode', 0.7, 0.9 + Math.random() * 0.2);
+      killEnemy(j);
+    } else {
+      playSound(e.eliteType ? 'elite_hit' : 'standard_hit', 0.35, 0.95 + Math.random() * 0.1);
+    }
+  }
+}
+
+export function performSlash() {
+  _ensureSlashState();
+
+  // Direction aligned to camera "screen horizontal" (roughly right-left in iso):
+  // right vector approx ( +1, 0, -1 ). Alternate right/left each cast.
+  state._vsSlashFlip ^= 1;
+  const flip = state._vsSlashFlip ? 1 : -1;
+
+  const ux = (1 / Math.sqrt(2)) * flip;
+  const uz = (-1 / Math.sqrt(2)) * flip;
+
+  const range = VS_SLASH_RANGE;
+  const thickness = VS_SLASH_THICKNESS;
+
+  // Visual mesh: long thin plane
+  const geo = new THREE.PlaneGeometry(range, thickness);
+  const mat = _makeVSMat();
+  const mesh = new THREE.Mesh(geo, mat);
+
+  // Default PlaneGeometry is XY; rotate to ground (XZ)
+  mesh.rotation.x = -Math.PI / 2;
+
+  // Place centered in front of player along lane direction
+  const cx = playerGroup.position.x + ux * (range * 0.5);
+  const cz = playerGroup.position.z + uz * (range * 0.5);
+  const y  = floorY(bulletGeoParams) + 0.06;
+  mesh.position.set(cx, y, cz);
+
+  // Rotate around Y so the plane's local +X aligns with lane direction
+  mesh.rotation.y = Math.atan2(uz, ux);
+
+  // Keep on base layer and bloom layer (if used)
+  mesh.layers.enable(1);
+  mesh.layers.enable(2);
+
+  scene.add(mesh);
+
+  // Damage (instantaneous feel)
+  const dmg = Math.max(1, Math.round(getBulletDamage() * 1.15));
+  _applyVSLaneDamage(playerGroup.position, ux, uz, range, VS_SLASH_LANE_W, dmg);
+
+  // Cap to avoid runaway if something goes wrong
+  if (state.slashEffects.length > 20) {
+    const old = state.slashEffects.shift();
+    if (old) { scene.remove(old.mesh); old.geo.dispose(); old.mat.dispose(); }
+  }
+
+  state.slashEffects.push({ mesh, geo, mat, t: 0, life: VS_SLASH_LIFE });
+}
+
+export function updateSlashEffects(worldDelta) {
+  if (!state.slashEffects || state.slashEffects.length === 0) return;
+
+  for (let i = state.slashEffects.length - 1; i >= 0; i--) {
+    const s = state.slashEffects[i];
+    s.t += worldDelta;
+
+    // Very quick fade like VS whip
+    const fade = Math.max(0.0, 1.0 - (s.t / s.life));
+    s.mat.uniforms.uFade.value = fade;
+    s.mat.uniforms.uTime.value = (state.elapsed || 0) + s.t;
+
+    // Keep anchored to player (so slowmo/pauses don't desync visually)
+    // Compute current lane direction from flip stored in state at spawn time is not tracked;
+    // but for this VFX, keeping world-space is fine. Do not re-anchor.
+
+    if (s.t >= s.life) {
+      scene.remove(s.mesh);
+      s.geo.dispose();
+      s.mat.dispose();
+      state.slashEffects.splice(i, 1);
+    }
+  }
+}
+
