@@ -57,7 +57,7 @@ scene.environmentIntensity = 1.8;
 pmrem.dispose();
 
 // ── Isometric Orthographic Camera ─────────────────────────────────────────────
-export const CAM_D = 18;
+export const CAM_D = 9;
 export let aspect = window.innerWidth / window.innerHeight;
 export const camera = new THREE.OrthographicCamera(
   -CAM_D * aspect, CAM_D * aspect, CAM_D, -CAM_D, -100, 500
