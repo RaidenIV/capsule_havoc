@@ -261,7 +261,8 @@ const _arcFrag = /* glsl */`
       clamp(white * 0.78 + outer * 0.48 + flash, 0.0, 1.0)
     );
 
-    float alpha = (body + white*0.50 + outer*0.44 + flash) * sh * base * wipe * uFade;
+    float radialFade = vUv.y;  // 0=inner(near player)=transparent, 1=outer=full brightness
+    float alpha = (body + white*0.50 + outer*0.44 + flash) * sh * base * wipe * radialFade * uFade;
     if (alpha < 0.002) discard;
     gl_FragColor = vec4(col, clamp(alpha, 0.0, 1.0));
   }
