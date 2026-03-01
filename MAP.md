@@ -3,25 +3,50 @@
 ## Folder Structure
 
 ```
-capsule-havoc/
-├── index.html                 ← HTML shell + menu/game screens
+capsule_havoc/
+├── index.html                  # HTML shell + DOM overlays (HUD, menus, banners, shop)
+├── MAP.md                      # Notes / map doc
 ├── styles/
-│   └── main.css               ← All styling (menu + HUD + panel)
+│   └── main.css                # All styling (menu, HUD, pause, shop, panel, banners)
+├── assets/
+│   ├── images/                 # Logo / images
+│   ├── music/                  # Music tracks (theme.wav)
+│   └── sfx/                    # SFX (.wav)
 └── src/
-    ├── main.js                ← App bootstrap; starts in menu, starts game on Start
-    ├── state.js               ← Shared runtime state (incl. uiMode)
-    ├── loop.js                ← Main game loop (update + render)
-    ├── gameFlow.js            ← Countdown, game over/victory, restart, score finalization
-    ├── audio.js               ← Music/SFX + volume/mute controls
-    ├── ui/                    ← Menu system (modular)
-    │   ├── menu.js            ← Navigation + Start button logic
-    │   ├── scores.js          ← High Scores screen UI
-    │   ├── highScores.js      ← High score storage (localStorage)
-    │   ├── settings.js        ← Audio settings screen UI
-    │   └── storage.js         ← localStorage helpers
-    ├── panel/                 ← In-game dev/tuning panel
-    │   └── index.js
-    └── (game modules…)        ← renderer, terrain, player, enemies, weapons, etc.
+    ├── main.js                 # App bootstrap (menu → game, wiring, restarts)
+    ├── loop.js                 # Main game loop (update/render, wave flow, pause/shop gating)
+    ├── state.js                # Shared runtime state (paused, uiMode, wave state, coins, etc.)
+    ├── input.js                # Keyboard/mouse bindings (ESC pause, etc.)
+    ├── gameFlow.js             # Game lifecycle (countdown, game over/victory, restart)
+    ├── constants.js            # Tunables + configs (waves, weapons, etc.)
+    │
+    ├── renderer.js             # Three.js renderer/scene/camera setup
+    ├── bloom.js                # Post FX bloom pipeline
+    ├── lighting.js             # Lighting updates
+    ├── materials.js            # Shared materials/geometries helpers
+    ├── terrain.js              # Terrain + prop collision data
+    ├── particles.js            # Particle FX
+    ├── damageNumbers.js        # Damage number popups
+    │
+    ├── player.js               # Player movement + HP + visuals
+    ├── enemies.js              # Enemies (spawn/update/boss params)
+    ├── weapons.js              # Weapons + slash logic/VFX, bullet/orbit behavior
+    ├── pickups.js              # Coins/XP pickups + collection
+    ├── xp.js                   # Upgrade-derived stats (fire interval, dmg, bullet count, etc.)
+    ├── hudCoin.js              # HUD coin display logic (coin widget/animation)
+    ├── audio.js                # Music/SFX + volume routing (master/music/sfx + mixer)
+    │
+    ├── upgrades.js             # Upgrade/shop logic (overlay + purchases)  ⚠️
+    ├── panel/
+    │   └── index.js            # Dev/tuning control panel
+    │
+    └── ui/                     # Menu screens (modular UI)
+        ├── menu.js
+        ├── scores.js
+        ├── highScores.js
+        ├── settings.js
+        ├── storage.js
+        └── upgrades.js         # Upgrade Shop UI (overlay)
 ```
 
 ---
