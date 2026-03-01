@@ -247,8 +247,8 @@ const S_INNER   = 0.60;             // gap between player body and blade start
 const S_RX      = 1.00;             // ellipse X scale (world X axis)
 const S_RZ      = 1.00;             // circular (equal axes = blade stays radially aligned)
 const S_SWEEP   = Math.PI * 1.94;   // ~349° sweep — nearly full circle
-const S_SWING_T = 0.44;             // time to complete the full spin
-const S_FADE_T  = 0.36;             // fade-out duration
+const S_SWING_T = 0.22;             // time to complete the full spin
+const S_FADE_T  = 0.18;             // fade-out duration
 const S_Y       = 1.0;              // player y offset (half capsule height)
 const S_AFTERS  = 3;                // number of afterimage echoes
 
