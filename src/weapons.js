@@ -216,20 +216,15 @@ export function updateOrbitBullets(worldDelta) {
 }
 
 
-export function performSlash(){ /* no-op */ }
-
-
-export function updateSlashEffects(){ /* no-op */ }
-
-
 // ── Vampire Survivors–style slash (Whip lane cleave) ──────────────────────────
-// Goal: guaranteed-visible lane streak + single-hit lane damage. No shaders needed.
-const VS_SLASH_RANGE     = 9.0;   // world units
-const VS_SLASH_THICKNESS = 0.18;  // visual thickness
-const VS_SLASH_LANE_W    = 1.35;  // gameplay lane width
-const VS_SLASH_LIFE      = 0.20;  // seconds
+// Guaranteed-visible version: MeshBasicMaterial + additive, no custom shaders.
+// Alternates left/right; short flash; lane damage once on spawn.
+const VS_SLASH_RANGE     = 8.5;
+const VS_SLASH_THICKNESS = 0.16;
+const VS_SLASH_LANE_W    = 1.25;
+const VS_SLASH_LIFE      = 0.18;
 
-function _ensureSlashState() {
+function _ensureVSSlashState() {
   if (!state.slashEffects) state.slashEffects = [];
   if (!Number.isFinite(state._vsSlashFlip)) state._vsSlashFlip = 0;
 }
@@ -237,14 +232,12 @@ function _ensureSlashState() {
 function _applyVSLaneDamage(origin, ux, uz, range, laneW, dmg) {
   const ox = origin.x, oz = origin.z;
   const halfW = laneW * 0.5;
-
   for (let j = state.enemies.length - 1; j >= 0; j--) {
     const e = state.enemies[j];
     if (!e || e.dead) continue;
 
-    const ex = e.grp?.position?.x ?? e.mesh?.position?.x;
-    const ez = e.grp?.position?.z ?? e.mesh?.position?.z;
-    if (!Number.isFinite(ex) || !Number.isFinite(ez)) continue;
+    const ex = e.grp.position.x;
+    const ez = e.grp.position.z;
 
     const dx = ex - ox;
     const dz = ez - oz;
@@ -254,7 +247,7 @@ function _applyVSLaneDamage(origin, ux, uz, range, laneW, dmg) {
 
     const px = dx - t * ux;
     const pz = dz - t * uz;
-    const perp = Math.hypot(px, pz);
+    const perp = Math.sqrt(px*px + pz*pz);
     if (perp > halfW) continue;
 
     e.hp -= dmg;
@@ -272,55 +265,56 @@ function _applyVSLaneDamage(origin, ux, uz, range, laneW, dmg) {
 }
 
 export function performSlash() {
-  _ensureSlashState();
+  _ensureVSSlashState();
 
-  // Alternate right/left (screen horizontal in iso): approx (+1,-1) and (-1,+1)
+  // Screen-horizontal-ish lane for iso cam: (+1,0,-1). Alternate direction.
   state._vsSlashFlip ^= 1;
   const flip = state._vsSlashFlip ? 1 : -1;
 
-  const inv = 1 / Math.sqrt(2);
-  const ux = inv * flip;
-  const uz = -inv * flip;
+  const ux = (1 / Math.sqrt(2)) * flip;
+  const uz = (-1 / Math.sqrt(2)) * flip;
 
   const range = VS_SLASH_RANGE;
 
-  // Visual plane (XY by default) → rotate onto ground (XZ)
   const geo = new THREE.PlaneGeometry(range, VS_SLASH_THICKNESS);
   const mat = new THREE.MeshBasicMaterial({
-    color: 0xfff1c9,            // warm whip streak
+    color: 0xffffff,
     transparent: true,
-    opacity: 0.95,
+    opacity: 1.0,
     blending: THREE.AdditiveBlending,
     depthWrite: false,
-    depthTest: true,
     side: THREE.DoubleSide,
   });
 
   const mesh = new THREE.Mesh(geo, mat);
   mesh.frustumCulled = false;
-  mesh.rotation.x = -Math.PI / 2;
 
-  // center the plane along the lane
+  // Rotate plane to ground (XZ), then align along lane direction.
+  mesh.rotation.x = -Math.PI / 2;
+  mesh.rotation.z = 0;
+  mesh.rotation.y = Math.atan2(uz, ux);
+
   const cx = playerGroup.position.x + ux * (range * 0.5);
   const cz = playerGroup.position.z + uz * (range * 0.5);
 
-  // Put it slightly above ground. Use floorY if available; otherwise default 0.
-  let y = 0.08;
-  try {
-    const fy = floorY?.(bulletGeoParams);
-    if (Number.isFinite(fy)) y = fy + 0.08;
-  } catch (e) {}
+  // Safe Y
+  const py = (playerGroup.position.y ?? 0);
+  mesh.position.set(cx, py + 0.08, cz);
 
-  mesh.position.set(cx, y, cz);
-  mesh.rotation.y = Math.atan2(uz, ux);
-
-  // Render in base pass (layer 0) AND bloom layer 2 if your pipeline uses it
+  // Bloom layer if used, but keep base layer too
+  mesh.layers.enable(0);
   mesh.layers.enable(2);
 
   scene.add(mesh);
 
   const dmg = Math.max(1, Math.round(getBulletDamage() * 1.15));
   _applyVSLaneDamage(playerGroup.position, ux, uz, range, VS_SLASH_LANE_W, dmg);
+
+  // Cap
+  if (state.slashEffects.length > 20) {
+    const old = state.slashEffects.shift();
+    if (old) { scene.remove(old.mesh); old.geo.dispose(); old.mat.dispose(); }
+  }
 
   state.slashEffects.push({ mesh, geo, mat, t: 0, life: VS_SLASH_LIFE });
 }
@@ -331,9 +325,10 @@ export function updateSlashEffects(worldDelta) {
   for (let i = state.slashEffects.length - 1; i >= 0; i--) {
     const s = state.slashEffects[i];
     s.t += worldDelta;
+    const fade = Math.max(0.0, 1.0 - (s.t / s.life));
 
-    const fade = Math.max(0, 1 - (s.t / s.life));
-    s.mat.opacity = 0.95 * fade;
+    // Fade opacity directly
+    s.mat.opacity = fade;
 
     if (s.t >= s.life) {
       scene.remove(s.mesh);
