@@ -52,13 +52,16 @@ export function spawnHealthPickup(pos) {
 }
 
 // ── Drop helper used by killEnemy (in enemies.js) ──────────────────────────────
+const COIN_DROP_CHANCE = 0.50;  // 50% chance to drop coins on kill
+
 export function dropLoot(pos, coinValue, coinMult) {
   if (Math.random() < HEALTH_PICKUP_CHANCE) {
     spawnHealthPickup(pos);
-  } else {
+  } else if (Math.random() < COIN_DROP_CHANCE) {
     const count = 1 + Math.floor(Math.random() * 3);
     spawnCoins(pos, count, Math.round(coinValue * (coinMult || 1)));
   }
+  // else: no drop
 }
 
 // ── Update ────────────────────────────────────────────────────────────────────
