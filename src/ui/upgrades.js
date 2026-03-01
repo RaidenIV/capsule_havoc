@@ -27,6 +27,63 @@ function renderList(){
 
   list.innerHTML = '';
 
+  // ── Dash upgrade ──────────────────────────────────────────────────────────
+  {
+    const dashOwned = !!state.hasDash;
+    const dashCost  = 1;
+    const affordable = (state.coins || 0) >= dashCost;
+
+    const row  = document.createElement('div');
+    row.className = 'upgrade-row';
+
+    const left = document.createElement('div');
+    const name = document.createElement('div');
+    name.className = 'upg-name';
+    name.textContent = 'DASH';
+    const meta = document.createElement('div');
+    meta.className = 'upg-meta';
+    meta.textContent = dashOwned ? 'OWNED' : 'SHIFT to dash in movement direction · invincibility frames';
+    left.appendChild(name);
+    left.appendChild(meta);
+
+    const btn  = document.createElement('button');
+    btn.className = 'upg-buy';
+    btn.disabled  = dashOwned || !affordable;
+
+    const label = document.createElement('span');
+    label.textContent = dashOwned ? 'OWNED' : (affordable ? 'BUY' : 'NEED');
+
+    const pill  = document.createElement('span');
+    pill.className = 'upgrade-coins';
+    pill.style.padding = '6px 10px';
+    const coin  = document.createElement('span');
+    coin.className = 'coin-icon';
+    coin.style.animation = 'none';
+    const count = document.createElement('span');
+    count.className = 'coin-count';
+    count.textContent = String(dashCost);
+    pill.appendChild(coin);
+    pill.appendChild(count);
+
+    btn.appendChild(label);
+    btn.appendChild(pill);
+
+    btn.addEventListener('click', () => {
+      if (btn.disabled) return;
+      const coins = state.coins || 0;
+      if (coins < dashCost) return;
+      state.coins   = coins - dashCost;
+      state.hasDash = true;
+      playSound?.('purchase', 0.8);
+      updateCoinsUI();
+      renderList();
+    });
+
+    row.appendChild(left);
+    row.appendChild(btn);
+    list.appendChild(row);
+  }
+
   const currentTier = Math.max(1, state.weaponTier || 1);
   const maxTier = WEAPON_TIER_COSTS.length + 1; // tier 1 is base (free), costs start at tier 2
 
