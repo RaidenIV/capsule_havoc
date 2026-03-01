@@ -96,6 +96,15 @@ export function startCountdown(onDone) {
         state.orbitRings.forEach(r => r.meshes.forEach(m => { m.visible = true; }));
         // Restore enemies
         state.enemies.forEach(e => { e.grp.visible = true; });
+
+        // Ensure gameplay actually begins after countdown (some builds defer spawning until unpaused).
+        // If no enemies exist yet, seed a small initial pack so the player sees action immediately.
+        if (!state.gameOver && state.enemies.length === 0) {
+          for (let k = 0; k < 4; k++) spawnEnemyAtEdge();
+        }
+        // Reset spawn tick so the spawn system (wave-based or level-based) can begin immediately.
+        state.spawnTickTimer = 0;
+
         startMusic();
         if (onDone) onDone();
       }, delay);
@@ -171,7 +180,7 @@ export function restartGame(opts = {}) {
   state.contactDmgAccum = 0; state.contactDmgTimer = 0;
   state.spawnTickTimer  = 0;
   state.playerXP    = 0;
-  state.playerLevel = 0;
+  state.playerLevel = 1;
   state.coins       = 0;
   state.weaponTier  = 0;
   state.pickupRangeLvl = 0;
