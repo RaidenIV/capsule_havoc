@@ -334,9 +334,8 @@ export function performSlash() {
   const arcMesh = new THREE.Mesh(arcGeo, arcMat);
   arcMesh.position.set(px, y - 0.02, pz);
   arcMesh.frustumCulled = false;
-  arcMesh.layers.set(1);
-  arcMesh.layers.enable(2);
-  scene.add(arcMesh);
+  arcMesh.layers.enable(1); arcMesh.layers.enable(2);
+scene.add(arcMesh);
 
     // Slash damage should not collapse when weaponTier=0 (no gun).
   // Use Tier-1 weapon damage baseline if gun is not yet purchased.
