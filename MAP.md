@@ -36,7 +36,7 @@ capsule_havoc/
     ├── hudCoin.js              # HUD coin display logic (coin widget/animation)
     ├── audio.js                # Music/SFX + volume routing (master/music/sfx + mixer)
     │
-    ├── upgrades.js             # Upgrade/shop logic (overlay + purchases)  ⚠️
+    ├── upgrades.js             # Upgrade/shop logic (overlay + purchases) 
     ├── panel/
     │   └── index.js            # Dev/tuning control panel
     │
