@@ -94,6 +94,21 @@ export function shootBulletWave() {
 // ── Update player bullets ─────────────────────────────────────────────────────
 import { propColliders } from './terrain.js';
 
+
+function applyEnemyDamage(e, amount) {
+  // Shield absorbs damage first (shielded enemies are effectively immune until broken).
+  if (e.shieldHp && e.shieldHp > 0) {
+    e.shieldHp -= amount;
+    if (e.shieldHp < 0) {
+      // carry overflow into HP
+      e.hp += e.shieldHp;
+      e.shieldHp = 0;
+    }
+  } else {
+    e.hp -= amount;
+  }
+}
+
 export function updateBullets(worldDelta) {
   for (let i = state.bullets.length - 1; i >= 0; i--) {
     const b = state.bullets[i];
@@ -119,7 +134,7 @@ export function updateBullets(worldDelta) {
       const dx = b.mesh.position.x - e.grp.position.x;
       const dz = b.mesh.position.z - e.grp.position.z;
       if (dx*dx + dz*dz < 0.75*0.75) {
-        e.hp -= b.dmg;
+        applyEnemyDamage(e, b.dmg);
         spawnEnemyDamageNum(b.dmg, e);
         e.staggerTimer = 0.12;
         updateEliteBar(e);
@@ -198,7 +213,7 @@ export function updateOrbitBullets(worldDelta) {
         const was = state.orbitHitActive.has(key);
         if (inContact && !was) {
           state.orbitHitActive.add(key);
-          e.hp -= dmg;
+          applyEnemyDamage(e, dmg);
           spawnEnemyDamageNum(dmg, e);
           e.staggerTimer = 0.12;
           updateEliteBar(e);
@@ -304,7 +319,7 @@ function _spinDamage(px, pz, range, dmg) {
     if (!e || e.dead) continue;
     const dx = e.grp.position.x - px, dz = e.grp.position.z - pz;
     if (dx*dx + dz*dz > range*range) continue;
-    e.hp -= dmg;
+    applyEnemyDamage(e, dmg);
     spawnEnemyDamageNum(dmg, e);
     e.staggerTimer = 0.12;
     updateEliteBar(e);

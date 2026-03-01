@@ -167,8 +167,20 @@ export function spawnLevelElites(eliteType) {
 
 export function updateEliteBar(e) {
   if (!e.eliteBarFill) return;
-  e.eliteBarFill.style.width = Math.max(0, (e.hp / e.maxHp) * 100) + '%';
+
+  if (e.shieldMax && e.shieldHp > 0) {
+    const pct = Math.max(0, (e.shieldHp / e.shieldMax) * 100);
+    e.eliteBarFill.style.width = pct + '%';
+    e.eliteBarFill.style.background = 'linear-gradient(to right,#00aaff,#00e5ff)';
+    e.eliteBarFill.style.boxShadow = '0 0 10px rgba(0,229,255,0.35)';
+  } else {
+    const pct = Math.max(0, (e.hp / e.maxHp) * 100);
+    e.eliteBarFill.style.width = pct + '%';
+    e.eliteBarFill.style.background = 'linear-gradient(to right,#880000,#ff2222)';
+    e.eliteBarFill.style.boxShadow = 'none';
+  }
 }
+
 
 // ── Kill (imported by weapons.js too — no circular dep since it's a function call) ──
 export function removeCSS2DFromGroup(grp) {
