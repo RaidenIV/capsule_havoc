@@ -3,10 +3,11 @@ import { state } from './state.js';
 import { XP_THRESHOLDS, XP_PER_KILL_BY_LEVEL, COIN_VALUE_BY_LEVEL, LEVEL_ENEMY_CONFIG, WEAPON_CONFIG } from './constants.js';
 
 // DOM refs (populated in ui.js but needed here for updates)
-const xpLevelEl   = document.getElementById('xp-level');
-const xpCurEl     = document.getElementById('xp-cur');
-const xpNextEl    = document.getElementById('xp-next');
-const xpBarFillEl = document.getElementById('xp-bar-fill');
+const xpLevelLabelEl = document.getElementById('xp-level-label');
+const xpFillEl       = document.getElementById('xp-fill') || document.getElementById('xp-bar-fill');
+const xpLevelElLegacy= document.getElementById('xp-level');
+const xpCurElLegacy  = document.getElementById('xp-cur');
+const xpNextElLegacy = document.getElementById('xp-next');
 
 export function getXPPerKill()  { return XP_PER_KILL_BY_LEVEL[Math.min(state.playerLevel, XP_PER_KILL_BY_LEVEL.length - 1)]; }
 export function getCoinValue()  { return LEVEL_ENEMY_CONFIG[Math.min(state.playerLevel, LEVEL_ENEMY_CONFIG.length - 1)][1]; }
@@ -34,8 +35,9 @@ export function updateXP(amount) {
   const range     = next - cur;
   const pct       = isMax ? 100 : Math.min(100, (progress / range) * 100);
 
-  if (xpLevelEl)   xpLevelEl.textContent   = state.playerLevel;
-  if (xpCurEl)     xpCurEl.textContent     = isMax ? state.playerXP : progress;
-  if (xpNextEl)    xpNextEl.textContent    = isMax ? 'MAX' : range;
-  if (xpBarFillEl) { xpBarFillEl.style.width = pct + '%'; xpBarFillEl.classList.toggle('max', isMax); }
+  if (xpLevelLabelEl) xpLevelLabelEl.textContent = `LV ${state.playerLevel}`;
+  if (xpLevelElLegacy) xpLevelElLegacy.textContent = state.playerLevel;
+  if (xpCurElLegacy) xpCurElLegacy.textContent = isMax ? state.playerXP : progress;
+  if (xpNextElLegacy) xpNextElLegacy.textContent = isMax ? 'MAX' : range;
+  if (xpFillEl) { xpFillEl.style.width = pct + '%'; xpFillEl.classList.toggle('max', isMax); }
 }

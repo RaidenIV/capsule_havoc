@@ -11,8 +11,12 @@ let showGrid   = true;
 
 // ── Shared geometries ─────────────────────────────────────────────────────────
 const chunkPlaneGeo = new THREE.PlaneGeometry(CHUNK_SIZE, CHUNK_SIZE);
-const propGeoBox    = new THREE.BoxGeometry(1, 1, 1);
-const propGeoCyl    = new THREE.CylinderGeometry(0.5, 0.65, 1, 6);
+const propGeoBox     = new THREE.BoxGeometry(1, 1, 1);
+const propGeoCyl     = new THREE.CylinderGeometry(0.5, 0.65, 1, 6);
+const propGeoCone    = new THREE.ConeGeometry(0.6, 1.2, 7);
+const propGeoSphere  = new THREE.SphereGeometry(0.55, 10, 8);
+const propGeoTetra   = new THREE.TetrahedronGeometry(0.7, 0);
+const propGeoOcta    = new THREE.OctahedronGeometry(0.7, 0);
 
 // ── Flat collider list for per-frame checks: { wx, wz, radius } ───────────────
 export const propColliders = [];
@@ -39,8 +43,7 @@ function makePropMaterial(cx, cz, idx) {
   const ei = v < 0.15 ? 0.25 : 0;
   const col = v < 0.5 ? new THREE.Color(0x0d0e1f) : new THREE.Color(0x12131f);
   return new THREE.MeshStandardMaterial({
-    // Landscape props should read as matte (no metallic look)
-    color: col, metalness: 0.0, roughness: 0.95,
+    color: col, metalness: 0.0, roughness: 0.92,
     emissive: new THREE.Color(0x000820), emissiveIntensity: ei,
   });
 }
@@ -72,11 +75,12 @@ function createChunk(cx, cz) {
   const halfC     = CHUNK_SIZE * 0.5 - 2.5;
 
   for (let p = 0; p < propCount; p++) {
-    // 50% less likely to generate props
-    if (cRand(cx, cz, p * 11 + 99) < 0.5) continue;
     const lx   = (cRand(cx, cz, p*7+2) * 2 - 1) * halfC;
     const lz   = (cRand(cx, cz, p*7+3) * 2 - 1) * halfC;
-    const useBox   = cRand(cx, cz, p*7+4) > 0.45;
+    const rShape  = cRand(cx, cz, p*7+4);
+    const rSpawn  = cRand(cx, cz, p*7+40);
+    if (rSpawn < 0.50) continue; // 50% less likely overall
+
     const sizeClass = cRand(cx, cz, p*7+5);
 
     let scaleXZ, scaleY;
@@ -84,7 +88,14 @@ function createChunk(cx, cz) {
     else if (sizeClass < 0.70) { scaleXZ = 1.0 + cRand(cx,cz,p*7+6)*1.5; scaleY = 0.8 + cRand(cx,cz,p*7+7)*1.5; }
     else                       { scaleXZ = 1.5 + cRand(cx,cz,p*7+6)*2.0; scaleY = 2.5 + cRand(cx,cz,p*7+7)*5.0; }
 
-    const mesh = new THREE.Mesh(useBox ? propGeoBox : propGeoCyl, makePropMaterial(cx, cz, p));
+    let geo = propGeoBox;
+    if (rShape < 0.20) geo = propGeoCyl;
+    else if (rShape < 0.40) geo = propGeoCone;
+    else if (rShape < 0.60) geo = propGeoSphere;
+    else if (rShape < 0.80) geo = propGeoTetra;
+    else geo = propGeoOcta;
+
+    const mesh = new THREE.Mesh(geo, makePropMaterial(cx, cz, p));
     mesh.scale.set(scaleXZ, scaleY, scaleXZ);
     mesh.position.set(lx, scaleY * 0.5, lz);
     mesh.castShadow = mesh.receiveShadow = true;

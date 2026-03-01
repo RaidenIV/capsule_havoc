@@ -58,7 +58,7 @@ export function syncOrbitBullets() {
     const meshes = [];
     for (let i = 0; i < def.count; i++) {
       const mesh = new THREE.Mesh(bulletGeo, makeOrbitMat(def.color));
-      mesh.layers.enable(1);
+      mesh.layers.set(1);
       scene.add(mesh);
       meshes.push(mesh);
     }
@@ -80,7 +80,7 @@ export function shootBulletWave() {
     const vx = Math.cos(angle) * BULLET_SPEED;
     const vz = Math.sin(angle) * BULLET_SPEED;
     const mesh = new THREE.Mesh(bulletGeo, bulletMat);
-    mesh.layers.enable(1);
+    mesh.layers.set(1);
     _bulletDir.set(vx, 0, vz).normalize();
     _bulletQ.setFromUnitVectors(_bulletUp, _bulletDir);
     mesh.quaternion.copy(_bulletQ);
@@ -334,7 +334,8 @@ export function performSlash() {
   const arcMesh = new THREE.Mesh(arcGeo, arcMat);
   arcMesh.position.set(px, y - 0.02, pz);
   arcMesh.frustumCulled = false;
-  arcMesh.layers.enable(1); arcMesh.layers.enable(2);
+  arcMesh.layers.set(1);
+  arcMesh.layers.enable(2);
   scene.add(arcMesh);
 
     // Slash damage should not collapse when weaponTier=0 (no gun).
