@@ -26,19 +26,18 @@ export function initHudCoin() {
   // Exact same geometry + material as pickups.js
   const geo = new THREE.CylinderGeometry(0.22, 0.22, 0.08, 12);
   const mat = new THREE.MeshStandardMaterial({
-    color:            0xffe566,
-    emissive:         0xf0a800,
+    color:             0xffe566,
+    emissive:          0xf0a800,
     emissiveIntensity: 0.6,
-    metalness:        0.9,
-    roughness:        0.2,
+    metalness:         0.9,
+    roughness:         0.2,
   });
   const coin = new THREE.Mesh(geo, mat);
-  // Stand the coin upright (same as spawned coins before they start spinning)
   coin.rotation.x = Math.PI / 2;
   scene.add(coin);
 
   // Lighting that matches the in-game sunLight + fillLight feel
-  const sun  = new THREE.DirectionalLight(0xffffff, 8);
+  const sun = new THREE.DirectionalLight(0xffffff, 8);
   sun.position.set(1, 2, 2);
   scene.add(sun);
 
@@ -53,7 +52,7 @@ export function initHudCoin() {
   function animate() {
     requestAnimationFrame(animate);
     angle += 0.04;
-    coin.rotation.z = angle; // spin same axis as attracted coins in game
+    coin.rotation.z = angle;
     renderer.render(scene, camera);
   }
   animate();
