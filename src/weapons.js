@@ -215,81 +215,45 @@ export function updateOrbitBullets(worldDelta) {
   }
 }
 
-
-// ── Cinematic lightsaber swing slash (procedural, no sprites) ──────────────────
-// Requirements:
-// - White-hot core + electric-blue halo blade
-// - Overexposed triangular motion-smear wedge
-// - Additive blending, transparent, depthWrite off, bloom-friendly
-// Tweaks per user:
-
 // ═══════════════════════════════════════════════════════════════════════════════
-//  360° OVOID SPIN-SLASH
-//
-//  The blade sweeps a full ~350° circle around the player in an OVOID path
-//  (wider on X, narrower on Z) so it hits enemies on all sides.
-//
-//  Layers:
-//    1. arc   – ring-sector BufferGeometry, elliptical (RX ≠ RZ), world-baked
-//    2. bloom – wide gaussian plane, rotates + stretches with ellipse each frame
-//    3. blade – solid white rod, same rotation/scale as bloom
-//    4. after – 3 lagged bloom echoes trailing behind the blade
-//
-//  THREE.JS ROTATION NOTE:
-//    PlaneGeometry(len, w) after rotation.x=-PI/2:  local X = blade long axis
-//    rotation.y = -angle  →  local +X points toward world (cos angle, 0, sin angle)
-//    We also set mesh.scale.x each frame to match the ellipse stretch at that angle.
+//  360° SPIN-SLASH
 // ═══════════════════════════════════════════════════════════════════════════════
 
-// Tune these
-const S_RANGE   = 5.0;            // outer radius (-25%)
-const S_INNER   = 0.75;             // gap between player body and blade start
-const S_RX      = 1.00;             // ellipse X scale (world X axis)
-const S_RZ      = 1.00;             // circular (equal axes = blade stays radially aligned)
-const S_SWEEP   = Math.PI * 1.94;   // ~349° sweep — nearly full circle
-const S_SWING_T = 0.16;             // time to complete the full spin
-const S_FADE_T  = 0.14;             // fade-out duration
-const S_Y       = 1.0;              // player y offset (half capsule height)
-const S_AFTERS  = 3;                // number of afterimage echoes
+const S_RANGE   = 5.0;
+const S_INNER   = 0.75;
+const S_RX      = 1.00;
+const S_RZ      = 1.00;
+const S_SWEEP   = Math.PI * 1.94;
+const S_SWING_T = 0.16;
+const S_FADE_T  = 0.14;
+const S_Y       = 1.0;
 
-// ── Shared vertex shader ──────────────────────────────────────────────────────
 const _sv = /* glsl */`
   varying vec2 vUv;
   void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.); }
 `;
 
-// ── 1. Arc trail shader ───────────────────────────────────────────────────────
-//  UV.x = 0(swing start / tail) → 1(leading edge / current blade pos)
-//  UV.y = 0(inner radius)       → 1(outer radius / cutting edge)
-//  Filled solid glow — the whole swept area is bright, not edge-only.
 const _arcFrag = /* glsl */`
-  uniform float uProgress; // 0→1: leading-edge reveal
-  uniform float uWipe;     // 0→1 during fade: tail-to-tip dissolve front
+  uniform float uProgress;
+  uniform float uWipe;
   uniform float uFade;
   uniform float uTime;
   uniform vec3  uColor;
   varying vec2  vUv;
 
   void main(){
-    // Reveal: only show the portion the blade has already swept
     if (vUv.x > uProgress + 0.012) discard;
 
-    // Directional wipe on fade: uWipe=0 → nothing erased; uWipe=1 → all gone
     float wipe = smoothstep(uWipe - 0.18, uWipe + 0.025, vUv.x);
     if (wipe < 0.001) discard;
 
-    float base = smoothstep(0.0, 0.035, vUv.x);
-
-    // Solid filled wedge interior
-    float white = smoothstep(0.52, 1.0, vUv.y);           // white-hot outer zone
-    float body  = vUv.y * 0.58 + 0.14;                    // uniform body fill
-    float outer = exp(-(1.0 - vUv.y)*(1.0 - vUv.y)*44.0); // bright cutting edge
-
-    // Flash just behind the current leading edge
+    float base  = smoothstep(0.0, 0.035, vUv.x);
+    float white = smoothstep(0.52, 1.0, vUv.y);
+    float body  = vUv.y * 0.58 + 0.14;
+    float outer = exp(-(1.0 - vUv.y)*(1.0 - vUv.y)*44.0);
     float flash = smoothstep(uProgress - 0.10, uProgress, vUv.x) * pow(vUv.y, 0.55) * 0.42;
-
-    float sh = 0.97 + sin(vUv.x * 26.0 + uTime * 11.0) * 0.02
-                    + sin(vUv.x *  9.0 - uTime *  7.0) * 0.015;
+    float sh    = 0.97 + sin(vUv.x * 26.0 + uTime * 11.0) * 0.02
+                       + sin(vUv.x *  9.0 - uTime *  7.0) * 0.015;
 
     vec3 col = mix(
       mix(uColor * 0.88, vec3(0.82, 0.94, 1.0), white * 0.5),
@@ -303,38 +267,14 @@ const _arcFrag = /* glsl */`
   }
 `;
 
-
-
-// ── 4. Afterimage shader ──────────────────────────────────────────────────────
-const _afterFrag = /* glsl */`
-  uniform float uFade;
-  uniform vec3  uColor;
-  varying vec2  vUv;
-  void main(){
-    float cy    = abs(vUv.y - 0.5) * 2.0;
-    float bloom = exp(-cy * cy * 3.5);
-    float tip   = 1.0 - smoothstep(0.84, 1.0, vUv.x) * 0.62;
-    float bas   = smoothstep(0.0, 0.05, vUv.x);
-    float alpha = bloom * 0.36 * tip * bas * uFade;
-    if (alpha < 0.002) discard;
-    gl_FragColor = vec4(uColor * 1.5, alpha);
-  }
-`;
-
-// ── Material factories ────────────────────────────────────────────────────────
 const _SBLUE = new THREE.Vector3(0.25, 0.65, 1.0);
 const _SADD  = { transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide };
-const _mkArc   = () => new THREE.ShaderMaterial({ vertexShader: _sv, fragmentShader: _arcFrag,
-  uniforms: { uProgress:{value:0}, uWipe:{value:0}, uFade:{value:1}, uTime:{value:0}, uColor:{value:_SBLUE.clone()} }, ..._SADD });
+const _mkArc = () => new THREE.ShaderMaterial({
+  vertexShader: _sv, fragmentShader: _arcFrag,
+  uniforms: { uProgress:{value:0}, uWipe:{value:0}, uFade:{value:1}, uTime:{value:0}, uColor:{value:_SBLUE.clone()} },
+  ..._SADD,
+});
 
-
-const _mkAfter = () => new THREE.ShaderMaterial({ vertexShader: _sv, fragmentShader: _afterFrag,
-  uniforms: { uFade:{value:1}, uColor:{value:_SBLUE.clone()} }, ..._SADD });
-
-// ── Elliptical ring-sector geometry ──────────────────────────────────────────
-// All vertex positions baked in world XZ (no mesh rotation needed for arc).
-// innerR/outerR are the base radii, scaled by rx/rz per axis.
-// UV.x=0(tail)→1(tip), UV.y=0(inner)→1(outer)
 function _buildEllipseArc(innerR, outerR, rx, rz, startA, sweepA, segs = 120) {
   const pos = [], uvs = [], idx = [];
   for (let i = 0; i <= segs; i++) {
@@ -355,28 +295,7 @@ function _buildEllipseArc(innerR, outerR, rx, rz, startA, sweepA, segs = 120) {
   return g;
 }
 
-// Place a blade/bloom plane correctly on the ellipse at angle `a`.
-// The inner/outer ellipse points at angle a:
-//   inner = (cos(a)*innerR*rx,  sin(a)*innerR*rz)
-//   outer = (cos(a)*outerR*rx,  sin(a)*outerR*rz)
-// The blade must point from inner to outer → worldDir = atan2(Δz, Δx).
-// We scale mesh.scale.x so the geometry length matches the actual ellipse chord.
-function _placeEllipseBlade(mesh, px, py, pz, a, innerR, outerR, rx, rz) {
-  const ix = Math.cos(a) * innerR * rx,  iz = Math.sin(a) * innerR * rz;
-  const ox = Math.cos(a) * outerR * rx,  oz = Math.sin(a) * outerR * rz;
-  const dx = ox - ix, dz = oz - iz;
-  const actualLen  = Math.sqrt(dx*dx + dz*dz);
-  const worldDir   = Math.atan2(dz, dx); // true pointing angle in world XZ
-
-  mesh.rotation.x = -Math.PI / 2;
-  mesh.rotation.y = -worldDir;               // ← correct sign for Three.js
-  mesh.scale.x    = actualLen / mesh.userData.baseLen;
-  mesh.position.set(px + (ix+ox)*0.5, py, pz + (iz+oz)*0.5);
-}
-
-// ── Damage helper ─────────────────────────────────────────────────────────────
 function _spinDamage(px, pz, range, dmg) {
-  // Full 360° → hits every enemy within range
   for (let j = state.enemies.length - 1; j >= 0; j--) {
     const e = state.enemies[j];
     if (!e || e.dead) continue;
@@ -395,25 +314,19 @@ function _spinDamage(px, pz, range, dmg) {
   }
 }
 
-// ── performSlash ──────────────────────────────────────────────────────────────
 export function performSlash() {
   if (!state.slashEffects) state.slashEffects = [];
   if (state.slashEffects.length > 8) return;
 
-  // Start angle: player facing direction. Sweep CW or CCW alternating.
-  // Fixed start at world -X (left side of screen) so the ellipse major axis
-  // always stays aligned to world X — gives perfect left/right symmetry.
   state._sf    = ((state._sf | 0) + 1) & 1;
-  const startA = Math.PI;                                  // always start from left (-X)
-  const sweepA = state._sf ? S_SWEEP : -S_SWEEP;          // alternate CW/CCW
+  const startA = Math.PI;
+  const sweepA = state._sf ? S_SWEEP : -S_SWEEP;
 
   const range = S_RANGE, inner = S_INNER;
-  const baseLen = range - inner;                           // reference blade length (at rx=1)
   const px = playerGroup.position.x;
   const pz = playerGroup.position.z;
   const y  = playerGroup.position.y + S_Y;
 
-  // ── Arc trail ────────────────────────────────────────────────────────────
   const arcGeo  = _buildEllipseArc(inner, range, S_RX, S_RZ, startA, sweepA);
   const arcMat  = _mkArc();
   const arcMesh = new THREE.Mesh(arcGeo, arcMat);
@@ -422,36 +335,13 @@ export function performSlash() {
   arcMesh.layers.enable(1); arcMesh.layers.enable(2);
   scene.add(arcMesh);
 
-
-
-  // ── Afterimage echoes ─────────────────────────────────────────────────────
-  const after = [];
-  for (let i = 0; i < S_AFTERS; i++) {
-    const geo = new THREE.PlaneGeometry(baseLen, 1.35);
-    const mat = _mkAfter();
-    const m   = new THREE.Mesh(geo, mat);
-    m.userData.baseLen = baseLen;
-    _placeEllipseBlade(m, px, y, pz, startA, inner, range, S_RX, S_RZ);
-    m.frustumCulled = false;
-    m.layers.enable(1); m.layers.enable(2);
-    scene.add(m);
-    after.push({ mesh: m, geo, mat });
-  }
-
-  // Damage at mid-swing (hits all enemies in range — 360° spin)
   const dmg = Math.max(1, Math.round(getBulletDamage() * 1.2));
   _spinDamage(px, pz, range, dmg);
   playSound('laser_sword', 0.72, 0.93 + Math.random() * 0.14);
 
-  state.slashEffects.push({
-    arcMesh, arcGeo, arcMat,
-    after,
-    t: 0,
-    startA, sweepA,
-  });
+  state.slashEffects.push({ arcMesh, arcGeo, arcMat, t: 0, startA, sweepA });
 }
 
-// ── updateSlashEffects ────────────────────────────────────────────────────────
 export function updateSlashEffects(worldDelta) {
   if (!state.slashEffects || state.slashEffects.length === 0) return;
 
@@ -459,45 +349,27 @@ export function updateSlashEffects(worldDelta) {
     const s = state.slashEffects[i];
     s.t += worldDelta;
 
-    // ── Cleanup ───────────────────────────────────────────────────────────────
     if (s.t >= S_SWING_T + S_FADE_T) {
-      scene.remove(s.arcMesh);   s.arcGeo.dispose();   s.arcMat.dispose();
-      for (const a of s.after) { scene.remove(a.mesh); a.geo.dispose(); a.mat.dispose(); }
+      scene.remove(s.arcMesh); s.arcGeo.dispose(); s.arcMat.dispose();
       state.slashEffects.splice(i, 1);
       continue;
     }
 
-    // ── Swing progress 0→1 over S_SWING_T, ease-out ──────────────────────────
     const swing = 1.0 - Math.pow(1.0 - Math.min(1.0, s.t / S_SWING_T), 2.0);
 
-    // ── Fade 1→0 over S_FADE_T after peak ────────────────────────────────────
     const inFade    = s.t > S_SWING_T;
     const fadePhase = inFade ? (s.t - S_SWING_T) / S_FADE_T : 0.0;
     const fade      = inFade ? Math.pow(1.0 - fadePhase, 0.68) : 1.0;
-    const wipe      = inFade ? fadePhase : 0.0;  // tail→tip dissolve during fade
+    const wipe      = inFade ? fadePhase : 0.0;
 
-    // ── Player tracking ───────────────────────────────────────────────────────
-    const px  = playerGroup.position.x;
-    const pz  = playerGroup.position.z;
-    const y   = playerGroup.position.y + S_Y;
+    const px = playerGroup.position.x;
+    const pz = playerGroup.position.z;
+    const y  = playerGroup.position.y + S_Y;
 
-    // Arc just translates with player
     s.arcMesh.position.set(px, y - 0.02, pz);
     s.arcMat.uniforms.uProgress.value = swing;
     s.arcMat.uniforms.uWipe.value     = wipe;
     s.arcMat.uniforms.uFade.value     = fade;
     s.arcMat.uniforms.uTime.value     = (state.elapsed || 0) + s.t;
-
-    // ── Current blade angle on the ellipse ────────────────────────────────────
-    const currentA = s.startA + swing * s.sweepA;
-
-
-    // ── Afterimages lag behind the leading blade ──────────────────────────────
-    for (let k = 0; k < s.after.length; k++) {
-      const lag    = (k + 1) / (S_AFTERS + 1) * 0.28 * (1.0 - swing * 0.65);
-      const aAngle = s.startA + Math.max(0, swing - lag) * s.sweepA;
-      _placeEllipseBlade(s.after[k].mesh, px, y, pz, aAngle, S_INNER, S_RANGE, S_RX, S_RZ);
-      s.after[k].mat.uniforms.uFade.value = fade * (0.38 - k * 0.10);
-    }
   }
 }
