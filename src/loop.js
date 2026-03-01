@@ -173,7 +173,15 @@ export function tick() {
     }
   }
 
-// ── Update world entities with worldDelta ─────────────────────────────────
+  // ── Slash attack ──────────────────────────────────────────────────────────
+  if (!state.slashTimer) state.slashTimer = 0;
+  state.slashTimer -= delta;
+  if (state.slashTimer <= 0) {
+    performSlash();
+    state.slashTimer = 1.0;
+  }
+
+  // ── Update world entities with worldDelta ─────────────────────────────────
   updateBullets(worldDelta);
   updateEnemyBullets(worldDelta);
   if (state.orbitRings.length > 0) updateOrbitBullets(worldDelta);
