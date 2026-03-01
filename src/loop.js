@@ -13,7 +13,7 @@ import { updatePickups } from './pickups.js';
 import { updateParticles } from './particles.js';
 import { updateDamageNums } from './damageNumbers.js';
 import { getFireInterval } from './xp.js';
-import { triggerGameOver, triggerVictory, formatTime } from './gameFlow.js';
+import { triggerGameOver, formatTime } from './gameFlow.js';
 import { openUpgradeShop, closeUpgradeShopIfOpen } from './ui/upgrades.js';
 import { playerGroup } from './player.js';
 
@@ -26,18 +26,36 @@ export const clock = new THREE.Clock();
 let fpsEMA = 60;
 
 
-const waveBannerEl     = document.getElementById('waveBanner');
-const waveBannerTextEl = document.getElementById('waveBannerText');
-let _waveBannerTimeout = null;
-function showWaveBanner(text, ms = 1800) {
-  if (!waveBannerEl || !waveBannerTextEl) return;
-  waveBannerTextEl.textContent = text;
-  waveBannerEl.classList.add('show');
-  if (_waveBannerTimeout) clearTimeout(_waveBannerTimeout);
-  _waveBannerTimeout = setTimeout(() => {
-    waveBannerEl.classList.remove('show');
-    _waveBannerTimeout = null;
-  }, ms);
+let _bannerTimer = 0;
+function _getBannerEls(){
+  const a = document.getElementById('waveBanner');
+  const at = document.getElementById('waveBannerText');
+  // Back-compat if you ever used wave-banner id
+  const b = document.getElementById('wave-banner');
+  return { a, at, b };
+}
+function showWaveBanner(text){
+  const { a, at, b } = _getBannerEls();
+  if (a) {
+    if (at) at.textContent = text;
+    else a.textContent = text;
+    a.classList.add('show');
+    _bannerTimer = 1.35;
+  } else if (b) {
+    b.textContent = text;
+    b.classList.add('show');
+    _bannerTimer = 1.35;
+  }
+}
+function hideWaveBannerIfDone(delta){
+  if (_bannerTimer > 0) {
+    _bannerTimer -= delta;
+    if (_bannerTimer <= 0) {
+      const { a, b } = _getBannerEls();
+      if (a) a.classList.remove('show');
+      if (b) b.classList.remove('show');
+    }
+  }
 }
 function startWave(waveNum){
   const cfg = WAVE_CONFIG[Math.max(0, Math.min(waveNum - 1, WAVE_CONFIG.length - 1))];
@@ -67,7 +85,9 @@ export function tick() {
     startWave(state.wave);
   }
 
+  hideWaveBannerIfDone(delta);
 
+  // FPS display
   fpsEMA = fpsEMA * 0.9 + (1 / Math.max(delta, 1e-6)) * 0.1;
   if (fpsTogEl?.checked && fpsValEl) fpsValEl.textContent = fpsEMA.toFixed(0);
 
@@ -141,21 +161,20 @@ export function tick() {
       state.wavePendingStart = true;
     });
   }
-  // ── Slash attack (always active, tier-independent) ────────────────────────
+  // Auto-shoot (runs on real delta so fire rate is unaffected by slowmo)
+  state.shootTimer -= delta;
+  if ((state.weaponTier ?? state.playerLevel) >= 2) state.bulletWaveAngle += 1.2 * delta;
+  if (state.shootTimer <= 0) {
+    shootBulletWave();
+    state.shootTimer = getFireInterval();
+  }
+
+  // ── Slash attack ──────────────────────────────────────────────────────────
+  if (!state.slashTimer) state.slashTimer = 0;
   state.slashTimer -= delta;
   if (state.slashTimer <= 0) {
     performSlash();
     state.slashTimer = 1.0;
-  }
-
-  // ── Bullet wave (unlocks at weapon tier 2+) ───────────────────────────────
-  if ((state.weaponTier ?? 1) >= 2) {
-    state.shootTimer -= delta;
-    state.bulletWaveAngle += 1.2 * delta;
-    if (state.shootTimer <= 0) {
-      shootBulletWave();
-      state.shootTimer = getFireInterval();
-    }
   }
 
   // ── Update world entities with worldDelta ─────────────────────────────────
@@ -168,9 +187,9 @@ export function tick() {
 
   updatePickups(worldDelta, state.playerLevel, state.elapsed);
   updateParticles(worldDelta);
-  updateSlashEffects(worldDelta);
   updateDamageNums(worldDelta);
   updateDashStreaks(delta);
+  updateSlashEffects(worldDelta);
 
   consumeExplBloomDirty();
   renderBloom();
