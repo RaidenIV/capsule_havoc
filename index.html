@@ -33,11 +33,7 @@
       <div class="menu-eyebrow">▶ BULLET HEAVEN</div>
       <h1 class="menu-title">CAPSULE<br>HAVOC</h1>
       <div class="menu-tagline">Survive. Level up. Dominate.</div>
-      <div class="menu-controls-hint">
-        <span>WASD</span> Move &nbsp;·&nbsp;
-        <span>SHIFT</span> Dash &nbsp;·&nbsp;
-        <span>TAB</span> Settings
-      </div>
+
     </div>
 
     <!-- RIGHT — pages -->
@@ -113,7 +109,7 @@
 
 <!-- ── Coin counter ── -->
 <div id="coin-hud">
-  <canvas id="coin-canvas" width="28" height="28"></canvas>
+  <div id="coin-icon"></div>
   <span id="coin-count">0</span>
 </div>
 
@@ -148,7 +144,6 @@
       <!-- ── Page: Main ── -->
       <div class="pause-page active" id="pause-page-main">
         <button class="pause-action-btn resume"   id="pause-resume-btn">RESUME</button>
-        <button class="pause-action-btn restart"  id="pause-restart-btn">RESTART</button>
         <button class="pause-action-btn settings" id="pause-settings-btn">SETTINGS</button>
         <button class="pause-action-btn quit"     id="pause-quit-btn">QUIT TO MENU</button>
       </div>
@@ -514,8 +509,10 @@
 
 
   <!-- Wave/Boss banner (glassmorphic) -->
-  <div id="waveBanner" class="wave-banner" aria-hidden="true">
-    <span id="waveBannerText" class="wave-banner__text">WAVE 1</span>
+  <div id="waveBanner" aria-hidden="true">
+    <div id="waveBannerInner">
+      <span id="waveBannerText">WAVE 1</span>
+    </div>
   </div>
 
 
