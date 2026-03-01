@@ -337,7 +337,11 @@ export function performSlash() {
   arcMesh.layers.enable(1); arcMesh.layers.enable(2);
   scene.add(arcMesh);
 
-  const dmg = Math.max(1, Math.round(getBulletDamage() * 1.2));
+    // Slash damage should not collapse when weaponTier=0 (no gun).
+  // Use Tier-1 weapon damage baseline if gun is not yet purchased.
+  const baseCfg = (state.weaponTier ?? 0) <= 0 ? WEAPON_CONFIG[0] : getWeaponConfig();
+  const baseDmg = Math.round(10 * (baseCfg?.[2] ?? 1));
+  const dmg = Math.max(1, Math.round(baseDmg * 1.8));
   _spinDamage(px, pz, range, dmg);
   playSound('laser_sword', 0.72, 0.93 + Math.random() * 0.14);
 

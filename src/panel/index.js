@@ -360,8 +360,9 @@ g('pause-resume-btn')?.addEventListener('click', () => {
 // Pause-menu restart
 g('pause-restart-btn')?.addEventListener('click', () => {
   restartGame({ skipInitialSpawn: true });
+  // Ensure we exit the pause overlay after restarting
+  if (state.paused) { showPausePage('main'); togglePause(); }
 });
-
 
 // Settings page
 g('pause-settings-btn')?.addEventListener('click', () => showPausePage('settings'));
