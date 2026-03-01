@@ -10,7 +10,7 @@ export const _particleMeshPool = [];
 
 // Explosion visual config (mutated by control panel)
 export const explConfig = {
-  std:   { count: 40,  size: 0.25, speed: 1.0,  glow: 12.0 },
+  std:   { count: 10,  size: 0.25, speed: 1.0,  glow: 0.0  },
   elite: { count: 100, size: 0.5,  speed: 1.75, glow: 12.0 },
 };
 
@@ -31,7 +31,7 @@ export function spawnExplosion(pos, eliteType = null) {
   const cfg     = isElite ? explConfig.elite : explConfig.std;
   const colors  = isElite && eliteType
     ? [eliteType.color, eliteType.color, eliteType.color, 0xffffff, 0xffee88]
-    : [0xff4400, 0xff8800, 0xffcc00, 0xff2200, 0xffffff, 0xff6600];
+    : [0xcc0000, 0xaa0000, 0xdd0000, 0x880000, 0xff1111, 0xbb0000];
 
   // Signal bloom which settings to use for this frame
   setExplBloom(
@@ -59,6 +59,7 @@ export function spawnExplosion(pos, eliteType = null) {
       vy: Math.sin(phi) * spd + 2 * cfg.speed,
       vz: Math.sin(theta) * Math.cos(phi) * spd,
       life: 1, maxLife: 0.5 + Math.random() * 0.6,
+      glowCap: cfg.glow,
     });
   }
 }
@@ -79,7 +80,7 @@ export function updateParticles(worldDelta) {
     p.vy -= 9 * worldDelta;
     const t = p.life / p.maxLife;
     p.mesh.scale.setScalar(t * 1.2 * p.baseRadius);
-    p.mesh.material.emissiveIntensity = t * 5;
+    p.mesh.material.emissiveIntensity = Math.min(t * 5, p.glowCap);
     p.mesh.material.opacity = t;
   }
 }
