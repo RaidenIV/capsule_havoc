@@ -357,12 +357,9 @@ document.querySelectorAll('.pause-action-btn, .pause-export-btn').forEach(btn =>
 g('pause-resume-btn')?.addEventListener('click', () => {
   if (state.paused) togglePause();
 });
-
-// Restart
+// Pause-menu restart
 g('pause-restart-btn')?.addEventListener('click', () => {
-  pauseEl?.classList.remove('show');
-  state.paused = false;
-  restartGame();
+  restartGame({ skipInitialSpawn: true });
 });
 
 
