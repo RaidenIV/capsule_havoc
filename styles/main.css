@@ -43,7 +43,7 @@ canvas { display: block; }
 
 /* ── HUD ── */
 #ui {
-  position: fixed; top: 0; left: 0; right: 0;
+  position: fixed; top: 40px; left: 0; right: 0;
   display: flex; justify-content: center; gap: 80px;
   padding: 8px 24px;
   pointer-events: none; z-index: 10;
@@ -1053,4 +1053,3 @@ position: fixed;
   z-index: 120;
   pointer-events: none;
 }
-
