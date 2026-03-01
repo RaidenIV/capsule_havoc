@@ -243,8 +243,8 @@ export function updateOrbitBullets(worldDelta) {
 
 // Tune these
 const S_RANGE   = 5.0;            // outer radius (-25%)
-const S_INNER   = 0.75;             // gap between player body and blade start
-const S_RX      = 1.00;             // ellipse X scale (world X axis)
+const S_INNER   = 1.0;             // gap between player body and blade start
+const S_RX      = 2.00;             // ellipse X scale (world X axis)
 const S_RZ      = 1.00;             // circular (equal axes = blade stays radially aligned)
 const S_SWEEP   = Math.PI * 1.94;   // ~349° sweep — nearly full circle
 const S_SWING_T = 0.22;             // time to complete the full spin
