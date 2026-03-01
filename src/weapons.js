@@ -242,9 +242,9 @@ export function updateOrbitBullets(worldDelta) {
 // ═══════════════════════════════════════════════════════════════════════════════
 
 // Tune these
-const S_RANGE   = 5.0;            // outer radius (-25%)
-const S_INNER   = 1.0;             // gap between player body and blade start
-const S_RX      = 2.00;             // ellipse X scale (world X axis)
+const S_RANGE   = 6.375;            // outer radius (-25%)
+const S_INNER   = 0.60;             // gap between player body and blade start
+const S_RX      = 1.00;             // ellipse X scale (world X axis)
 const S_RZ      = 1.00;             // circular (equal axes = blade stays radially aligned)
 const S_SWEEP   = Math.PI * 1.94;   // ~349° sweep — nearly full circle
 const S_SWING_T = 0.22;             // time to complete the full spin
@@ -303,36 +303,7 @@ const _arcFrag = /* glsl */`
   }
 `;
 
-// ── 2. Bloom corona shader ────────────────────────────────────────────────────
-const _bloomFrag = /* glsl */`
-  uniform float uFade;
-  uniform vec3  uColor;
-  varying vec2  vUv;
-  void main(){
-    float cy    = abs(vUv.y - 0.5) * 2.0;
-    float bloom = exp(-cy * cy * 4.6);
-    float tip   = 1.0 - smoothstep(0.90, 1.0, vUv.x) * 0.75;
-    float bas   = smoothstep(0.0, 0.04, vUv.x);
-    float alpha = bloom * 0.62 * tip * bas * uFade;
-    if (alpha < 0.002) discard;
-    gl_FragColor = vec4(uColor * 2.1, alpha);
-  }
-`;
 
-// ── 3. Blade rod shader ───────────────────────────────────────────────────────
-const _bladeFrag = /* glsl */`
-  uniform float uFade;
-  varying vec2  vUv;
-  void main(){
-    float cy  = abs(vUv.y - 0.5) * 2.0;
-    float rod = 1.0 - smoothstep(0.56, 1.0, cy);  // solid flat-top white fill
-    float tip = 1.0 - smoothstep(0.89, 1.0, vUv.x) * 0.84;
-    float bas = smoothstep(0.0, 0.03, vUv.x);
-    float a   = rod * tip * bas * uFade;
-    if (a < 0.002) discard;
-    gl_FragColor = vec4(1.0, 1.0, 1.0, a);
-  }
-`;
 
 // ── 4. Afterimage shader ──────────────────────────────────────────────────────
 const _afterFrag = /* glsl */`
@@ -355,10 +326,8 @@ const _SBLUE = new THREE.Vector3(0.25, 0.65, 1.0);
 const _SADD  = { transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide };
 const _mkArc   = () => new THREE.ShaderMaterial({ vertexShader: _sv, fragmentShader: _arcFrag,
   uniforms: { uProgress:{value:0}, uWipe:{value:0}, uFade:{value:1}, uTime:{value:0}, uColor:{value:_SBLUE.clone()} }, ..._SADD });
-const _mkBloom = () => new THREE.ShaderMaterial({ vertexShader: _sv, fragmentShader: _bloomFrag,
-  uniforms: { uFade:{value:1}, uColor:{value:_SBLUE.clone()} }, ..._SADD });
-const _mkBlade = () => new THREE.ShaderMaterial({ vertexShader: _sv, fragmentShader: _bladeFrag,
-  uniforms: { uFade:{value:1} }, ..._SADD });
+
+
 const _mkAfter = () => new THREE.ShaderMaterial({ vertexShader: _sv, fragmentShader: _afterFrag,
   uniforms: { uFade:{value:1}, uColor:{value:_SBLUE.clone()} }, ..._SADD });
 
@@ -453,26 +422,7 @@ export function performSlash() {
   arcMesh.layers.enable(1); arcMesh.layers.enable(2);
   scene.add(arcMesh);
 
-  // ── Bloom corona ──────────────────────────────────────────────────────────
-  const bloomGeo  = new THREE.PlaneGeometry(baseLen, 1.35);
-  bloomGeo.userData = { baseLen };
-  const bloomMat  = _mkBloom();
-  const bloomMesh = new THREE.Mesh(bloomGeo, bloomMat);
-  bloomMesh.userData.baseLen = baseLen;
-  _placeEllipseBlade(bloomMesh, px, y, pz, startA, inner, range, S_RX, S_RZ);
-  bloomMesh.frustumCulled = false;
-  bloomMesh.layers.enable(1); bloomMesh.layers.enable(2);
-  scene.add(bloomMesh);
 
-  // ── White rod ─────────────────────────────────────────────────────────────
-  const bladeGeo  = new THREE.PlaneGeometry(baseLen, 0.21);
-  const bladeMat  = _mkBlade();
-  const bladeMesh = new THREE.Mesh(bladeGeo, bladeMat);
-  bladeMesh.userData.baseLen = baseLen;
-  _placeEllipseBlade(bladeMesh, px, y + 0.01, pz, startA, inner, range, S_RX, S_RZ);
-  bladeMesh.frustumCulled = false;
-  bladeMesh.layers.enable(1); bladeMesh.layers.enable(2);
-  scene.add(bladeMesh);
 
   // ── Afterimage echoes ─────────────────────────────────────────────────────
   const after = [];
@@ -495,8 +445,6 @@ export function performSlash() {
 
   state.slashEffects.push({
     arcMesh, arcGeo, arcMat,
-    bloomMesh, bloomGeo, bloomMat,
-    bladeMesh, bladeGeo, bladeMat,
     after,
     t: 0,
     startA, sweepA,
@@ -514,8 +462,6 @@ export function updateSlashEffects(worldDelta) {
     // ── Cleanup ───────────────────────────────────────────────────────────────
     if (s.t >= S_SWING_T + S_FADE_T) {
       scene.remove(s.arcMesh);   s.arcGeo.dispose();   s.arcMat.dispose();
-      scene.remove(s.bloomMesh); s.bloomGeo.dispose(); s.bloomMat.dispose();
-      scene.remove(s.bladeMesh); s.bladeGeo.dispose(); s.bladeMat.dispose();
       for (const a of s.after) { scene.remove(a.mesh); a.geo.dispose(); a.mat.dispose(); }
       state.slashEffects.splice(i, 1);
       continue;
@@ -545,10 +491,6 @@ export function updateSlashEffects(worldDelta) {
     // ── Current blade angle on the ellipse ────────────────────────────────────
     const currentA = s.startA + swing * s.sweepA;
 
-    _placeEllipseBlade(s.bladeMesh, px, y + 0.01, pz, currentA, S_INNER, S_RANGE, S_RX, S_RZ);
-    _placeEllipseBlade(s.bloomMesh, px, y,         pz, currentA, S_INNER, S_RANGE, S_RX, S_RZ);
-    s.bladeMat.uniforms.uFade.value = fade;
-    s.bloomMat.uniforms.uFade.value = fade * 0.95;
 
     // ── Afterimages lag behind the leading blade ──────────────────────────────
     for (let k = 0; k < s.after.length; k++) {
