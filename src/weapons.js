@@ -215,18 +215,19 @@ export function updateOrbitBullets(worldDelta) {
   }
 }
 
+
 // ═══════════════════════════════════════════════════════════════════════════════
 //  360° SPIN-SLASH
 // ═══════════════════════════════════════════════════════════════════════════════
 
-const S_RANGE   = 5.0; // outer radius
-const S_INNER   = 1.0; // gap between player body and blade
-const S_RX      = 1.00; // ellipse X scale (world X axis)
-const S_RZ      = 1.00; // circular (equal axes = blade stays radially aligned)
-const S_SWEEP   = Math.PI * 2.0; // ~349° sweep — nearly full circle
-const S_SWING_T = 0.16; // time to complete the full spin
-const S_FADE_T  = 0.14; // fade-out duration
-const S_Y       = 1.0; // player y offset (half capsule height)
+const S_RANGE   = 5.0;
+const S_INNER   = 1.0;
+const S_RX      = 1.00;
+const S_RZ      = 1.00;
+const S_SWEEP   = Math.PI * 2.0;
+const S_SWING_T = 0.16;
+const S_FADE_T  = 0.14;
+const S_Y       = 1.0;
 
 const _sv = /* glsl */`
   varying vec2 vUv;
@@ -261,7 +262,7 @@ const _arcFrag = /* glsl */`
       clamp(white * 0.78 + outer * 0.48 + flash, 0.0, 1.0)
     );
 
-    float radialFade = vUv.y;  // 0=inner(near player)=transparent, 1=outer=full brightness
+    float radialFade = vUv.y;
     float alpha = (body + white*0.50 + outer*0.44 + flash) * sh * base * wipe * radialFade * uFade;
     if (alpha < 0.002) discard;
     gl_FragColor = vec4(col, clamp(alpha, 0.0, 1.0));
