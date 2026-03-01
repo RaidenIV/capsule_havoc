@@ -18,6 +18,7 @@ import { spawnExplosion } from './particles.js';
 import { dropLoot } from './pickups.js';
 import { updateXP, getXPPerKill, getCoinValue, getEnemyHP } from './xp.js';
 import { playSound } from './audio.js';
+import { STANDARD_ENEMY_SIZE_MULT } from './constants.js';
 
 // Reused quaternion helpers for enemy laser orientation
 const _eBulletUp  = new THREE.Vector3(0, 1, 0);
@@ -46,7 +47,7 @@ export function spawnEnemy(x, z, eliteTypeOrCfg = null) {
   const cfg       = isCfg ? eliteTypeOrCfg : null;
 
   const color     = cfg ? (cfg.color ?? 0x888888) : (eliteType ? eliteType.color : 0x888888);
-  const scaleMult = cfg ? (cfg.sizeMult ?? 1)     : (eliteType ? eliteType.sizeMult : 1);
+  const scaleMult = cfg ? (cfg.sizeMult ?? 1)     : (eliteType ? eliteType.sizeMult : STANDARD_ENEMY_SIZE_MULT);
   const hpMult    = cfg ? 1                       : (eliteType ? eliteType.hpMult   : 1);
   const expMult   = cfg ? (cfg.expMult ?? 1)      : (eliteType ? eliteType.expMult  : 1);
   const coinMult  = cfg ? (cfg.coinMult ?? 1)     : (eliteType ? eliteType.coinMult : 1);
@@ -301,7 +302,7 @@ export function updateEnemies(delta, worldDelta, elapsed) {
     for (let j = i + 1; j < state.enemies.length; j++) {
       const b = state.enemies[j]; if (b.dead) continue;
       const rb   = enemyGeoParams.radius * (b.scaleMult || 1) * 1.05;
-      const minD = ra + rb + 0.5;   // maintain 0.5-unit gap between enemies
+      const minD = ra + rb + 1.0;   // maintain 1.0-unit gap between enemies
       const dx = b.grp.position.x - a.grp.position.x;
       const dz = b.grp.position.z - a.grp.position.z;
       const d2 = dx*dx + dz*dz;
