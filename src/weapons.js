@@ -217,11 +217,13 @@ export function updateOrbitBullets(worldDelta) {
 
 
 // ── Vampire Survivors–style "Whip Slash" (lane cleave) ────────────────────────
-// Visual: fast horizontal lash (straight lane) with bright core + soft glow.
-// Behavior: short-lived, instantaneous-feeling cleave. Alternates left/right.
-//
-// NOTE: loop.js is expected to call performSlash() to trigger and
-// updateSlashEffects(worldDelta) every tick.
+// Visual: fast horizontal lash (straight lane) with bright core + warm glow.
+// Behavior: brief, instantaneous-feeling cleave in a lane. Alternates direction.
+
+const VS_SLASH_LIFE      = 0.18;          // seconds
+const VS_SLASH_RANGE     = 7.5;           // world units (reach)
+const VS_SLASH_THICKNESS = 0.14;          // world units (visual thickness)
+const VS_SLASH_ARC       = Math.PI / 3;   // 60° lane width (hit arc)
 
 const _vsSlashVert = /* glsl */`
   varying vec2 vUv;
@@ -244,23 +246,20 @@ const _vsSlashFrag = /* glsl */`
   }
 
   void main(){
-    // Along slash: 0 = start near player, 1 = tip
     float x  = clamp(vUv.x, 0.0, 1.0);
-    float cy = abs(vUv.y - 0.5) * 2.0; // 0 center, 1 edge
+    float cy = abs(vUv.y - 0.5) * 2.0;
 
-    // White-hot core + warm glow
-    float core = exp(-cy * cy * 220.0);
-    float glow = exp(-cy * cy * 24.0);
+    float core = exp(-cy * cy * 260.0);    // white-hot core
+    float glow = exp(-cy * cy * 28.0);     // soft halo
 
-    // Tip taper + slight flicker
-    float taper = 1.0 - smoothstep(0.88, 1.0, x) * 0.9;
-    float base  = smoothstep(0.0, 0.06, x);
+    float taper = 1.0 - smoothstep(0.86, 1.0, x) * 0.9;
+    float base  = smoothstep(0.0, 0.05, x);
 
-    float n = hash21(vec2(x * 28.0, uTime * 0.6));
-    float flicker = 0.92 + 0.16 * n;
+    float n = hash21(vec2(x * 26.0, uTime * 0.7));
+    float flicker = 0.93 + 0.14 * n;
 
-    vec3 col = core * vec3(1.0) + glow * uTint * 1.4;
-    float alpha = (core * 2.2 + glow * 0.85) * taper * base * uFade * flicker;
+    vec3 col = core * vec3(1.0) + glow * uTint * 1.35;
+    float alpha = (core * 2.4 + glow * 0.95) * taper * base * uFade * flicker;
 
     if (alpha < 0.002) discard;
     gl_FragColor = vec4(col, clamp(alpha, 0.0, 1.0));
@@ -284,21 +283,27 @@ function _makeVSSlashMat() {
   });
 }
 
-// Private: apply cleave once (simple sector test)
+function _wrapPi(a){
+  while (a > Math.PI) a -= Math.PI * 2.0;
+  while (a < -Math.PI) a += Math.PI * 2.0;
+  return a;
+}
+
+// Apply cleave once (sector test)
 function _applyVSSlashDamage(center, dirAngle, range, arc, dmg) {
   const half = arc * 0.5;
   const cx = center.x, cz = center.z;
   for (let i = state.enemies.length - 1; i >= 0; i--) {
     const e = state.enemies[i];
-    const dx = e.mesh.position.x - cx;
-    const dz = e.mesh.position.z - cz;
+    const ex = e.mesh.position.x;
+    const ez = e.mesh.position.z;
+    const dx = ex - cx;
+    const dz = ez - cz;
     const d2 = dx*dx + dz*dz;
     if (d2 > range*range) continue;
 
     const a = Math.atan2(dz, dx);
-    let da = a - dirAngle;
-    while (da > Math.PI) da -= Math.PI * 2.0;
-    while (da < -Math.PI) da += Math.PI * 2.0;
+    const da = _wrapPi(a - dirAngle);
     if (Math.abs(da) > half) continue;
 
     // Hit
@@ -308,53 +313,54 @@ function _applyVSSlashDamage(center, dirAngle, range, arc, dmg) {
   }
 }
 
+// Exported: triggered by input (loop.js expects this export)
 export function performSlash() {
-  // Create container if older state doesn't have it
   if (!state.slashEffects) state.slashEffects = [];
-  if (state.slashEffects.length > 12) return; // sanity cap
+  if (state.slashEffects.length > 12) return;
 
-  // Alternate direction left/right like VS whip
+  // Alternate direction like VS whip (left/right)
   state._vsSlashFlip = (state._vsSlashFlip || 0) ^ 1;
   const flip = state._vsSlashFlip ? 1 : -1;
 
-  // In this game bullets orbit around player; use a "forward" slash along camera diagonal-ish
-  // We pick a lane relative to player: 45° / -135° alternating feels good in iso view.
-  const baseAngle = Math.PI * 0.25; // 45°
+  // For isometric-ish camera, a diagonal lane reads best.
+  // We alternate 45° and 225° (opposite).
+  const baseAngle = Math.PI * 0.25;
   const dirAngle = baseAngle + (flip < 0 ? Math.PI : 0.0);
 
-  const len = SLASH_RADIUS;              // reuse existing constant as reach
-  const thickness = 0.10;                // thin lane
-  const geo = new THREE.PlaneGeometry(len, thickness);
+  const len = VS_SLASH_RANGE;
+  const thickness = VS_SLASH_THICKNESS;
 
+  const geo = new THREE.PlaneGeometry(len, thickness);
   const mat = _makeVSSlashMat();
   const mesh = new THREE.Mesh(geo, mat);
-  mesh.layers.enable(2); // bloom layer if present
+  mesh.layers.enable(2);
 
-  // Anchor at player; offset forward so it reads as "in front" lash
+  // Place the plane so its center sits half-range away from player in dirAngle
   const ox = Math.cos(dirAngle) * (len * 0.5);
   const oz = Math.sin(dirAngle) * (len * 0.5);
-  mesh.position.set(playerGroup.position.x + ox, floorY({ size: thickness }) + 0.06, playerGroup.position.z + oz);
-  mesh.rotation.y = -dirAngle; // plane's +X points right; rotate so it faces lane
+  const y  = floorY({ size: thickness }) + 0.06;
+
+  mesh.position.set(playerGroup.position.x + ox, y, playerGroup.position.z + oz);
+  // Plane local +X goes right; rotate so +X aligns with lane direction
+  mesh.rotation.y = -dirAngle;
 
   scene.add(mesh);
 
-  // Apply damage once at start (instantaneous feel)
-  _applyVSSlashDamage(playerGroup.position, dirAngle, len, SLASH_HIT_ARC || (Math.PI/3), SLASH_DAMAGE);
+  // Damage once (instantaneous snap feel)
+  const dmg = Math.max(1, Math.round(getBulletDamage() * 1.25));
+  _applyVSSlashDamage(playerGroup.position, dirAngle, len, VS_SLASH_ARC, dmg);
 
-  state.slashEffects.push({
-    mesh, geo, mat,
-    t: 0,
-    life: Math.max(0.14, Math.min(SLASH_DURATION || 0.20, 0.30)),
-  });
+  state.slashEffects.push({ mesh, geo, mat, t: 0, life: VS_SLASH_LIFE });
 }
 
+// Exported: called each tick (loop.js expects this export)
 export function updateSlashEffects(worldDelta) {
   if (!state.slashEffects || state.slashEffects.length === 0) return;
+
   for (let i = state.slashEffects.length - 1; i >= 0; i--) {
     const s = state.slashEffects[i];
     s.t += worldDelta;
 
-    // Quick fade; VS slash is very brief
     const fade = 1.0 - (s.t / s.life);
     s.mat.uniforms.uFade.value = Math.max(0.0, fade);
     s.mat.uniforms.uTime.value = (state.elapsed || 0) + s.t;
@@ -367,3 +373,4 @@ export function updateSlashEffects(worldDelta) {
     }
   }
 }
+
