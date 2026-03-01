@@ -36,6 +36,9 @@ initInput({
   onFirstKey: resumeAudioContext, // satisfies browser autoplay policy
 });
 
+// Also unlock audio on the first pointer/touch gesture (many players never press a key on the menu).
+window.addEventListener('pointerdown', resumeAudioContext, { once: true, passive: true });
+
 // ── Expose restart globally for the HTML restart button onclick ───────────────
 window.restartGame = restartGame;
 
