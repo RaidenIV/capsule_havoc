@@ -51,7 +51,7 @@ window.addEventListener('keydown', e => {
   if (k === 'a' || k === 'arrowleft')  state.keys.a = true;
   if (k === 'd' || k === 'arrowright') state.keys.d = true;
 
-  if (e.key === 'Shift' && !state.gameOver) {
+  if (e.key === 'Shift' && !state.gameOver && state.hasDash) {
     e.preventDefault();
     if (state.dashCooldown <= 0 && state.dashTimer <= 0) {
       _dv.set(0, 0, 0);
