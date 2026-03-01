@@ -1,7 +1,7 @@
 // ─── enemies.js ───────────────────────────────────────────────────────────────
 import * as THREE from 'three';
 import { CSS2DObject } from 'three/addons/renderers/CSS2DRenderer.js';
-import { scene } from './renderer.js';
+import { scene, CAM_D } from './renderer.js';
 import { state } from './state.js';
 import {
   ENEMY_SPEED, ENEMY_CONTACT_DPS, ENEMY_BULLET_SPEED, ENEMY_BULLET_LIFETIME,
@@ -109,7 +109,8 @@ export function spawnEnemyAtEdge(eliteTypeOrCfg = null) {
   // Only enforce cap if maxEnemies is a positive finite number.
   if (Number.isFinite(state.maxEnemies) && state.maxEnemies > 0 && state.enemies.length >= state.maxEnemies) return;
   const angle = Math.random() * Math.PI * 2;
-  const r     = 28 + Math.random() * 5;
+  const baseR = (Number.isFinite(CAM_D) ? CAM_D : 18) * 1.55;
+  const r     = baseR + Math.random() * 4.0;
   spawnEnemy(
     playerGroup.position.x + Math.cos(angle) * r,
     playerGroup.position.z + Math.sin(angle) * r,

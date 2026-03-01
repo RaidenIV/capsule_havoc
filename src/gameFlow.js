@@ -37,7 +37,16 @@ export function startCountdown(onDone) {
   playerMesh.visible = false; hbObj.visible = false; dashBarObj.visible = false;
 
   // Hide HUD during countdown
-  const hudEls = ['ui', 'coin-hud', 'xp-hud'].map(id => document.getElementById(id));
+  const hudEls = [
+    'ui',
+    'hud-top-left',
+    'coin-hud',
+    'xp-hud',
+    'fpsOverlay',
+    'livesHud',
+    'instructions',
+    'tab-hint',
+  ].map(id => document.getElementById(id));
   hudEls.forEach(el => { if (el) el.style.visibility = 'hidden'; });
 
   // Hide any bullets already in scene

@@ -14,15 +14,10 @@ const chunkPlaneGeo = new THREE.PlaneGeometry(CHUNK_SIZE, CHUNK_SIZE);
 const propGeoBox     = new THREE.BoxGeometry(1, 1, 1);
 const propGeoCyl     = new THREE.CylinderGeometry(0.5, 0.65, 1, 6);
 const propGeoCone    = new THREE.ConeGeometry(0.6, 1.2, 7);
-const propGeoSphere  = new THREE.SphereGeometry(0.55, 10, 8);
-const propGeoTetra   = new THREE.TetrahedronGeometry(0.7, 0);
-const propGeoOcta    = new THREE.OctahedronGeometry(0.7, 0);
-
-// Ensure props sit on the ground (some geometries are not centered symmetrically)
-function getPropBaseOffsetY(geo) {
-  if (!geo.boundingBox) geo.computeBoundingBox();
-  return -geo.boundingBox.min.y;
-}
+const propGeoCyl6     = new THREE.CylinderGeometry(0.55, 0.55, 1, 6);
+const propGeoCyl8     = new THREE.CylinderGeometry(0.55, 0.55, 1, 8);
+const propGeoTriPrism = new THREE.CylinderGeometry(0.55, 0.55, 1, 3);
+const propGeoPyr      = new THREE.ConeGeometry(0.7, 1.2, 4);
 
 // ── Flat collider list for per-frame checks: { wx, wz, radius } ───────────────
 export const propColliders = [];
@@ -95,16 +90,21 @@ function createChunk(cx, cz) {
     else                       { scaleXZ = 1.5 + cRand(cx,cz,p*7+6)*2.0; scaleY = 2.5 + cRand(cx,cz,p*7+7)*5.0; }
 
     let geo = propGeoBox;
-    if (rShape < 0.20) geo = propGeoCyl;
-    else if (rShape < 0.40) geo = propGeoCone;
-    else if (rShape < 0.60) geo = propGeoSphere;
-    else if (rShape < 0.80) geo = propGeoTetra;
-    else geo = propGeoOcta;
+// Only flat-base props (no spheres / point-bases)
+if      (rShape < 0.18) geo = propGeoCyl;
+else if (rShape < 0.34) geo = propGeoCone;
+else if (rShape < 0.50) geo = propGeoCyl6;
+else if (rShape < 0.66) geo = propGeoCyl8;
+else if (rShape < 0.82) geo = propGeoTriPrism;
+else                    geo = propGeoPyr;
 
     const mesh = new THREE.Mesh(geo, makePropMaterial(cx, cz, p));
     mesh.scale.set(scaleXZ, scaleY, scaleXZ);
-        const baseY = getPropBaseOffsetY(geo) * scaleY;
-    mesh.position.set(lx, baseY, lz);
+
+    // Place prop so its lowest point sits on the floor (prevents "floating")
+    if (!geo.boundingBox) geo.computeBoundingBox();
+    const baseOffsetY = -geo.boundingBox.min.y * scaleY;
+    mesh.position.set(lx, baseOffsetY, lz);
     mesh.castShadow = mesh.receiveShadow = true;
     grp.add(mesh);
 
