@@ -808,7 +808,7 @@ body.mode-playing #menu-screen { display: none !important; }
 /* ─────────────────────────────────────────────────────────────
    Wave transition banner
    ───────────────────────────────────────────────────────────── */
-.wave-banner{
+.wave-banner, #waveBanner{
   position: fixed;
   left: 50%;
   top: 18%;
@@ -818,11 +818,11 @@ body.mode-playing #menu-screen { display: none !important; }
   z-index: 2000;
   transition: opacity 220ms ease, transform 220ms ease;
 }
-.wave-banner.show{
+.wave-banner.show, #waveBanner.show{
   opacity: 1;
   transform: translateX(-50%) translateY(0) scale(1);
 }
-.wave-banner__text{
+.wave-banner__text, #waveBannerText{
   font-family: 'Inter', system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
   letter-spacing: 0.12em;
   text-transform: uppercase;
@@ -838,7 +838,7 @@ body.mode-playing #menu-screen { display: none !important; }
   border: 1px solid rgba(255,255,255,0.12);
 }
 @media (prefers-reduced-motion: reduce){
-  .wave-banner{ transition: none; }
+  .wave-banner, #waveBanner{ transition: none; }
 }
 /* ── Upgrade Shop Overlay ───────────────────────────────────────────────── */
 .upgrade-overlay{
