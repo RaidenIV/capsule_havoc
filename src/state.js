@@ -28,8 +28,6 @@ export const state = {
   // ── Shoot timing ────────────────────────────────────────────────────────────
   shootTimer:      0,
   bulletWaveAngle: 0,
-  slashTimer:      0,
-  slashEffects:    [],
   spawnTickTimer:  0,
   maxEnemies:      50,
 
@@ -45,6 +43,7 @@ export const state = {
   upgradeOpen: false,
   weaponTier: 1,
   // ── Dash / Slow-motion ───────────────────────────────────────────────────────
+  hasDash:       false,  // unlocked via upgrade shop
   dashTimer:     0,
   dashCooldown:  0,
   dashVX:        0,
