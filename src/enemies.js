@@ -6,6 +6,7 @@ import { state } from './state.js';
 import {
   ENEMY_SPEED, ENEMY_CONTACT_DPS, ENEMY_BULLET_SPEED, ENEMY_BULLET_LIFETIME,
   STAGGER_DURATION, SPAWN_FLASH_DURATION, ELITE_FIRE_RATE, ELITE_TYPES, PLAYER_MAX_HP,
+  ENEMY_DEFS, ENEMY_TYPE,
 } from './constants.js';
 import {
   enemyGeo, enemyMat, enemyGeoParams, bulletGeoParams,
@@ -32,7 +33,27 @@ export function spawnEnemy(x, z, eliteTypeOrCfg = null) {
 
   // eliteTypeOrCfg can be either:
   //  - an eliteType object from ELITE_TYPES, or
+  //  - a string ENEMY_TYPE (RUSHER/TANKER/...) from the level-driven system, or
   //  - a config object for bosses/wave spawns (isBoss/color/sizeMult/health/expMult/coinMult/fireRate)
+
+  // If we were passed an ENEMY_TYPE string, convert it to a config object using ENEMY_DEFS.
+  // (Previously this was treated like an eliteType object, which produced undefined color/scale,
+  // NaN geometry, and "invisible" enemies that could still shoot.)
+  let enemyType = null;
+  if (typeof eliteTypeOrCfg === 'string' && ENEMY_DEFS[eliteTypeOrCfg]) {
+    enemyType = eliteTypeOrCfg;
+    const def = ENEMY_DEFS[enemyType];
+    eliteTypeOrCfg = {
+      isBoss: enemyType === ENEMY_TYPE.BOSS,
+      color: def.color,
+      sizeMult: def.sizeMult,
+      health: Math.round((state.playerMaxHP ?? PLAYER_MAX_HP) * (def.hpPct ?? 1)),
+      expMult: 1,
+      coinMult: 1,
+      fireRate: def.shoot ? def.fireRate : undefined,
+      bulletSpeedMult: def.bulletSpeedMult ?? 1,
+    };
+  }
   const isCfg = !!(eliteTypeOrCfg && (
     eliteTypeOrCfg.isBoss ||
     eliteTypeOrCfg.color !== undefined ||
@@ -96,6 +117,8 @@ export function spawnEnemy(x, z, eliteTypeOrCfg = null) {
     fireRate, shootTimer: fireRate ? Math.random() * fireRate : 0,
     staggerTimer: 0, baseColor: new THREE.Color(color),
     spawnFlashTimer: SPAWN_FLASH_DURATION, matDirty: true,
+    enemyType,
+    bulletSpeedMult: (cfg && Number.isFinite(cfg.bulletSpeedMult)) ? cfg.bulletSpeedMult : 1,
   });
 
   // Spawn fade-in
@@ -231,9 +254,10 @@ export function updateEnemies(delta, worldDelta, elapsed) {
         if (dist > 0.5 && dist < RANGE &&
             hasLineOfSight(e.grp.position.x, e.grp.position.z,
                            playerGroup.position.x, playerGroup.position.z)) {
-          const dvx = (dx/dist) * ENEMY_BULLET_SPEED;
-          const dvz = (dz/dist) * ENEMY_BULLET_SPEED;
-          const col  = e.eliteType ? e.eliteType.color : 0xff4400;
+          const spd = ENEMY_BULLET_SPEED * (e.bulletSpeedMult || 1);
+          const dvx = (dx/dist) * spd;
+          const dvz = (dz/dist) * spd;
+          const col  = e.eliteType ? e.eliteType.color : (e.baseColor?.getHex?.() ?? 0xff4400);
           const bMat = getEnemyBulletMat(col);
           const bMesh = new THREE.Mesh(enemyBulletGeo, bMat);
           _eBulletDir.set(dvx, 0, dvz).normalize();
