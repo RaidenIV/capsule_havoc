@@ -184,16 +184,24 @@ export function updateEnemies(delta, worldDelta, elapsed) {
     const dz   = playerGroup.position.z - e.grp.position.z;
     const dist = Math.sqrt(dx*dx + dz*dz);
 
-    // Spawn fade-in: always tick regardless of stagger state so that
-    // continuous hits (orbit bullets) cannot freeze an enemy at opacity 0.
+    // Spawn fade-in — tick unconditionally so stagger hits can't freeze the timer.
+    // Enemies move throughout (no continue) so they can't get stuck inside terrain.
     if (e.spawnFlashTimer > 0) {
       e.spawnFlashTimer = Math.max(0, e.spawnFlashTimer - worldDelta);
+      const progress = 1 - e.spawnFlashTimer / SPAWN_FLASH_DURATION;
+      e.mat.opacity = progress;
       if (e.spawnFlashTimer <= 0) {
-        e.mat.transparent = false; e.mat.opacity = 1; e.mesh.castShadow = true;
+        e.mat.transparent = false;
+        e.mat.opacity = 1;
+        e.mat.needsUpdate = true;
+        e.mesh.castShadow = true;
       }
     }
 
-    // Stagger flash / material state
+    // Gate shooting: enemies can't fire while still fading in (prevents invisible projectiles).
+    const fullySpawned = e.spawnFlashTimer <= 0;
+
+    // Stagger flash
     if (e.staggerTimer > 0) {
       e.staggerTimer = Math.max(0, e.staggerTimer - worldDelta);
       const t = e.staggerTimer / STAGGER_DURATION;
@@ -204,17 +212,7 @@ export function updateEnemies(delta, worldDelta, elapsed) {
       );
       e.mat.emissive.setRGB(1, 1, 1);
       e.mat.emissiveIntensity = t > 0 ? t * 4 : enemyMat.emissiveIntensity;
-      // Keep opacity in sync with spawn fade-in even while staggered
-      if (e.mat.transparent) e.mat.opacity = 1 - e.spawnFlashTimer / SPAWN_FLASH_DURATION;
       e.matDirty = true;
-    } else if (e.spawnFlashTimer > 0) {
-      const progress = 1 - e.spawnFlashTimer / SPAWN_FLASH_DURATION;
-      e.mat.opacity = progress;
-      e.mat.color.copy(e.baseColor);
-      e.mat.emissive.setRGB(0, 0, 0);
-      e.mat.emissiveIntensity = enemyMat.emissiveIntensity;
-      e.matDirty = true;
-      continue; // no movement during fade-in
     } else {
       if (e.matDirty) {
         e.mat.color.copy(e.baseColor);
@@ -223,8 +221,9 @@ export function updateEnemies(delta, worldDelta, elapsed) {
         e.matDirty = false;
       }
     }
+
     // Elite shooting
-    if (e.fireRate && !e.dead) {
+    if (fullySpawned && e.fireRate && !e.dead) {
       e.shootTimer -= worldDelta;
       if (e.shootTimer <= 0) {
         e.shootTimer = e.fireRate * (0.8 + Math.random() * 0.4);
