@@ -222,6 +222,23 @@ export function tick() {
 
   // (Wave-based spawner removed; using spawner.js)
 
+  // ── Enemies ───────────────────────────────────────────────────────────────
+  updateEnemies(delta, worldDelta, state.elapsed);
+
+  // ── Weapons / bullets ─────────────────────────────────────────────────────
+  // Auto-shoot: only fires when weapon tier is active
+  if ((state.weaponTier || 0) >= 1) {
+    state.shootTimer = (state.shootTimer || 0) - worldDelta;
+    if (state.shootTimer <= 0) {
+      shootBulletWave();
+      state.shootTimer = getFireInterval();
+    }
+  }
+  updateBullets(worldDelta);
+  updateEnemyBullets(worldDelta);
+  updateOrbitBullets(worldDelta);
+  performSlash(worldDelta);
+
   updatePickups(worldDelta, state.playerLevel, state.elapsed);
   updateParticles(worldDelta);
   updateDamageNums(worldDelta);
