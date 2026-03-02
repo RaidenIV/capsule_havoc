@@ -134,7 +134,18 @@ function rebuildGeo() {
     state.enemies.forEach(e => { e.mesh.geometry = enemyGeo; e.mesh.position.y = floorY(gp); });
   } else {
     setBulletGeo(new THREE.CapsuleGeometry(gp.radius, gp.length, gp.capSegs, gp.radial));
-    state.bullets.forEach(b => { b.mesh.geometry = bulletGeo; b.mesh.position.y = floorY(gp); });
+    // Player bullets are a Group (white core + glow). Update both child meshes.
+    state.bullets.forEach(b => {
+      const obj = b.obj ?? b.mesh;
+      if (!obj) return;
+      if (obj.isGroup) {
+        obj.children.forEach(ch => { if (ch.isMesh) ch.geometry = bulletGeo; });
+        obj.position.y = floorY(gp);
+      } else if (obj.isMesh) {
+        obj.geometry = bulletGeo;
+        obj.position.y = floorY(gp);
+      }
+    });
   }
 }
 

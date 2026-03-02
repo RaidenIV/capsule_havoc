@@ -71,6 +71,45 @@ const _bulletUp  = new THREE.Vector3(0, 1, 0);
 const _bulletDir = new THREE.Vector3();
 const _bulletQ   = new THREE.Quaternion();
 
+// Player laser look: white core (layer 0) + additive colored glow (layer 1)
+// This restores the "white center" while keeping bullet bloom punchy.
+const _playerLaserCoreMat = new THREE.MeshStandardMaterial({
+  color: 0xffffff,
+  emissive: 0xffffff,
+  emissiveIntensity: 0.35,
+  metalness: 0.0,
+  roughness: 0.25,
+});
+
+const _playerLaserGlowMat = new THREE.MeshStandardMaterial({
+  color: 0xff1100,
+  emissive: 0xff1100,
+  emissiveIntensity: 6.0,
+  metalness: 0.0,
+  roughness: 0.2,
+  transparent: true,
+  opacity: 0.55,
+  depthWrite: false,
+  blending: THREE.AdditiveBlending,
+});
+
+function _makePlayerLaserVisual() {
+  const g = new THREE.Group();
+
+  // Core: visible in main scene
+  const core = new THREE.Mesh(bulletGeo, _playerLaserCoreMat);
+  core.layers.set(0);
+  g.add(core);
+
+  // Glow: rendered in bullet bloom layer
+  const glow = new THREE.Mesh(bulletGeo, _playerLaserGlowMat);
+  glow.layers.set(1);
+  glow.scale.setScalar(1.25);
+  g.add(glow);
+
+  return g;
+}
+
 export function shootBulletWave() {
   const dirs = getWaveBullets();
   const dmg  = getBulletDamage();
@@ -79,15 +118,15 @@ export function shootBulletWave() {
     const angle = state.bulletWaveAngle + (i / dirs) * Math.PI * 2;
     const vx = Math.cos(angle) * BULLET_SPEED;
     const vz = Math.sin(angle) * BULLET_SPEED;
-    const mesh = new THREE.Mesh(bulletGeo, bulletMat);
-    mesh.layers.set(1);
+    // White core + glow (bloom)
+    const obj = _makePlayerLaserVisual();
     _bulletDir.set(vx, 0, vz).normalize();
     _bulletQ.setFromUnitVectors(_bulletUp, _bulletDir);
-    mesh.quaternion.copy(_bulletQ);
-    mesh.position.copy(playerGroup.position);
-    mesh.position.y = floorY(bulletGeoParams);
-    scene.add(mesh);
-    state.bullets.push({ mesh, vx, vz, life: BULLET_LIFETIME, dmg });
+    obj.quaternion.copy(_bulletQ);
+    obj.position.copy(playerGroup.position);
+    obj.position.y = floorY(bulletGeoParams);
+    scene.add(obj);
+    state.bullets.push({ obj, vx, vz, life: BULLET_LIFETIME, dmg });
   }
 }
 
@@ -113,16 +152,22 @@ export function updateBullets(worldDelta) {
   for (let i = state.bullets.length - 1; i >= 0; i--) {
     const b = state.bullets[i];
     b.life -= worldDelta;
-    b.mesh.position.x += b.vx * worldDelta;
-    b.mesh.position.z += b.vz * worldDelta;
-    if (b.life <= 0) { scene.remove(b.mesh); b.mesh.geometry.dispose(); state.bullets.splice(i, 1); continue; }
+    b.obj.position.x += b.vx * worldDelta;
+    b.obj.position.z += b.vz * worldDelta;
+
+    // NOTE: bulletGeo is shared; do NOT dispose shared geometry here.
+    if (b.life <= 0) {
+      scene.remove(b.obj);
+      state.bullets.splice(i, 1);
+      continue;
+    }
 
     // Prop collision
     let dead = false;
     for (const c of propColliders) {
-      const dx = b.mesh.position.x - c.wx, dz = b.mesh.position.z - c.wz;
+      const dx = b.obj.position.x - c.wx, dz = b.obj.position.z - c.wz;
       if (dx*dx + dz*dz < (c.radius + 0.045) * (c.radius + 0.045)) {
-        scene.remove(b.mesh); state.bullets.splice(i, 1); dead = true; break;
+        scene.remove(b.obj); state.bullets.splice(i, 1); dead = true; break;
       }
     }
     if (dead) continue;
@@ -131,14 +176,14 @@ export function updateBullets(worldDelta) {
     let hit = false;
     for (let j = state.enemies.length - 1; j >= 0; j--) {
       const e = state.enemies[j]; if (e.dead) continue;
-      const dx = b.mesh.position.x - e.grp.position.x;
-      const dz = b.mesh.position.z - e.grp.position.z;
+      const dx = b.obj.position.x - e.grp.position.x;
+      const dz = b.obj.position.z - e.grp.position.z;
       if (dx*dx + dz*dz < 0.75*0.75) {
         applyEnemyDamage(e, b.dmg);
         spawnEnemyDamageNum(b.dmg, e);
         e.staggerTimer = 0.12;
         updateEliteBar(e);
-        scene.remove(b.mesh); state.bullets.splice(i, 1); hit = true;
+        scene.remove(b.obj); state.bullets.splice(i, 1); hit = true;
         if (e.hp <= 0) {
           playSound(e.eliteType ? 'explodeElite' : 'explode', 0.7, 0.9 + Math.random() * 0.2);
           killEnemy(j);
