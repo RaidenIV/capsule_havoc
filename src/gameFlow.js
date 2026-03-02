@@ -167,6 +167,11 @@ export function restartGame(opts = {}) {
   state.healthPickups.forEach(hp => { scene.remove(hp.mesh); hp.mat.dispose(); });
   state.healthPickups.length = 0;
 
+  if (state.chests) {
+    state.chests.forEach(c => { try { scene.remove(c.mesh); c.mesh.material?.dispose?.(); } catch {} });
+    state.chests.length = 0;
+  }
+
   state.dashStreaks.forEach(ds => { scene.remove(ds.mesh); ds.mat.dispose(); });
   state.dashStreaks.length = 0;
 
@@ -187,8 +192,23 @@ export function restartGame(opts = {}) {
   state.playerLevel = 1;
   initSpawner();
   state.coins       = 0;
-  state.weaponTier  = 0;
+  state.weaponTier  = 1; // baseline weapon enabled
   state.pickupRangeLvl = 0;
+  state.upg = {
+    dmg:0, fireRate:0, projSpeed:0, piercing:0, multishot:0,
+    moveSpeed:0, dash:0, magnet:0,
+    shield:0, burst:0, timeSlow:0,
+    maxHealth:0, regen:0, xpGrowth:0, coinBonus:0, curse:0, luck:0,
+  };
+  state.luck = 0;
+  state.bossLuck = 0;
+  state.curseTier = 0;
+  state.shieldCharges = 0;
+  state.shieldRecharge = 0;
+  state.shieldHitCD = 0;
+  state.burstCooldown = 0;
+  state.slowCooldown = 0;
+  state.slowTimer = 0;
   state.extraLives  = 0;
   state.pendingShop = false;
   state.bossAlive   = false;

@@ -88,9 +88,11 @@ export function spawnEnemy(x, z, eliteTypeOrCfg = null) {
   grp.add(mesh);
   scene.add(grp);
 
+  const curseTier = Math.max(0, state.upg?.curse || 0);
+  const curseMult = 1 + 0.20 * curseTier;
   const hp = (cfg && Number.isFinite(cfg.health))
-    ? Math.round(cfg.health)
-    : Math.round(getEnemyHP() * hpMult);
+    ? Math.round(cfg.health * curseMult)
+    : Math.round(getEnemyHP() * hpMult * curseMult);
 
   const fireRate = (cfg && Number.isFinite(cfg.fireRate))
     ? cfg.fireRate
@@ -143,7 +145,7 @@ export function spawnEnemyAtPosition(x, z, enemyTypeOrCfg = null) {
 
 export function spawnEnemyAtEdge(eliteTypeOrCfg = null) {
   // Only enforce cap if maxEnemies is a positive finite number.
-  const isBoss = (enemyTypeOrCfg === ENEMY_TYPE.BOSS) || (typeof enemyTypeOrCfg === 'object' && enemyTypeOrCfg && enemyTypeOrCfg.isBoss);
+  const isBoss = (eliteTypeOrCfg === ENEMY_TYPE.BOSS) || (typeof eliteTypeOrCfg === 'object' && eliteTypeOrCfg && eliteTypeOrCfg.isBoss);
   if (!isBoss) {
     const regularCount = state.enemies.filter(x => x && !x.dead && !x.isBoss).length;
     if (Number.isFinite(state.maxEnemies) && state.maxEnemies > 0 && regularCount >= state.maxEnemies) return;
@@ -208,6 +210,18 @@ export function killEnemy(j) {
       state.bossRespawnTimer = 10.0;
     }
 
+    // Boss chest drop (design doc Section 10)
+    // Tier by level: 1-10 standard, 11-20 rare, 21+ epic.
+    const tier = (state.playerLevel <= 10) ? 'standard' : (state.playerLevel <= 20 ? 'rare' : 'epic');
+    // Lazy import to avoid circular deps
+    import('./pickups.js').then(m => m.spawnChest?.(e.grp.position, tier)).catch(()=>{});
+
+    // Boss wave luck bonus: +5 at levels 10/20/30
+    if (state.playerLevel === 10 || state.playerLevel === 20 || state.playerLevel === 30) {
+      state.bossLuck = (state.bossLuck || 0) + 5;
+    }
+  }
+
   // Ultra Elite split (doc Section 2)
   if (e && e.enemyType === ENEMY_TYPE.SPLITTER) {
     const min = (ENEMY_DEFS[ENEMY_TYPE.SPLITTER]?.splitCountMin ?? 2);
@@ -218,7 +232,6 @@ export function killEnemy(j) {
       const r = 0.9 + Math.random() * 1.4;
       spawnEnemyAtPosition(e.grp.position.x + Math.cos(a)*r, e.grp.position.z + Math.sin(a)*r, ENEMY_TYPE.RUSHER);
     }
-  }
   }
 
   state.kills++;
@@ -309,7 +322,9 @@ export function updateEnemies(delta, worldDelta, elapsed) {
           bMesh.position.copy(e.grp.position);
           bMesh.position.y = floorY(bulletGeoParams);
           scene.add(bMesh);
-          state.enemyBullets.push({ mesh: bMesh, mat: bMat, vx: dvx, vz: dvz, life: ENEMY_BULLET_LIFETIME });
+          const curseTier = Math.max(0, state.upg?.curse || 0);
+          const dmg = ENEMY_BULLET_DMG * (1 + 0.20 * curseTier);
+          state.enemyBullets.push({ mesh: bMesh, mat: bMat, vx: dvx, vz: dvz, life: ENEMY_BULLET_LIFETIME, dmg });
           playSound('elite_shoot', 0.5, 0.9 + Math.random() * 0.2);
         }
       }
@@ -402,18 +417,32 @@ export function updateEnemies(delta, worldDelta, elapsed) {
       playerGroup.position.x += nx * push; playerGroup.position.z += nz * push;
       // Play hit sound on contact (throttled via contactDmgTimer, invincible or not)
       if (state.contactDmgTimer <= 0) playSound('player_hit', 0.6, 0.95 + Math.random() * 0.1);
-      if (!state.invincible) {
-        const dmg = ENEMY_CONTACT_DPS * worldDelta;
-        state.playerHP -= dmg;
-        state.contactDmgAccum += dmg;
-        state.contactDmgTimer -= worldDelta;
-        if (state.contactDmgTimer <= 0) {
-          spawnPlayerDamageNum(Math.round(state.contactDmgAccum));
-          state.contactDmgAccum = 0;
-          state.contactDmgTimer = 0.35;
+      if (!(state.invincible || state.dashInvincible)) {
+        // Shield treats contact as a discrete "hit" with an internal cooldown.
+        if ((state.shieldCharges || 0) > 0 && (state.shieldHitCD || 0) <= 0) {
+          state.shieldCharges -= 1;
+          state.shieldHitCD = 0.6;
+          if (state.shieldCharges <= 0) {
+            const tier = Math.max(0, state.upg?.shield || 0);
+            const base = 12.0;
+            const rt = (tier >= 2) ? base * 0.65 : base;
+            state.shieldRecharge = rt;
+          }
+          playSound('shield_break', 0.65, 1.0);
+        } else {
+          const curseTier = Math.max(0, state.upg?.curse || 0);
+          const dmg = ENEMY_CONTACT_DPS * (1 + 0.20 * curseTier) * worldDelta;
+          state.playerHP -= dmg;
+          state.contactDmgAccum += dmg;
+          state.contactDmgTimer -= worldDelta;
+          if (state.contactDmgTimer <= 0) {
+            spawnPlayerDamageNum(Math.round(state.contactDmgAccum));
+            state.contactDmgAccum = 0;
+            state.contactDmgTimer = 0.35;
+          }
+          updateHealthBar();
+          if (state.playerHP <= 0) return 'DEAD';
         }
-        updateHealthBar();
-        if (state.playerHP <= 0) return 'DEAD';
       } else {
         // Still tick the timer when invincible so sound stays throttled
         state.contactDmgTimer -= worldDelta;

@@ -113,20 +113,29 @@ function _makePlayerLaserVisual() {
 export function shootBulletWave() {
   const dirs = getWaveBullets();
   const dmg  = getBulletDamage();
+  const psTier = Math.max(0, state.upg?.projSpeed || 0);
+  const speed  = BULLET_SPEED * (1 + 0.20 * psTier);
+  const pierce = Math.max(0, state.upg?.piercing || 0);
+  const msTier = Math.max(0, state.upg?.multishot || 0); // adds pellets per direction
+  const pellets = 1 + msTier;
   playSound('shoot', 0.45, 0.92 + Math.random() * 0.16); // slight pitch variation
   for (let i = 0; i < dirs; i++) {
-    const angle = state.bulletWaveAngle + (i / dirs) * Math.PI * 2;
-    const vx = Math.cos(angle) * BULLET_SPEED;
-    const vz = Math.sin(angle) * BULLET_SPEED;
-    // White core + glow (bloom)
-    const obj = _makePlayerLaserVisual();
-    _bulletDir.set(vx, 0, vz).normalize();
-    _bulletQ.setFromUnitVectors(_bulletUp, _bulletDir);
-    obj.quaternion.copy(_bulletQ);
-    obj.position.copy(playerGroup.position);
-    obj.position.y = floorY(bulletGeoParams);
-    scene.add(obj);
-    state.bullets.push({ obj, vx, vz, life: BULLET_LIFETIME, dmg });
+    const baseAng = state.bulletWaveAngle + (i / Math.max(1, dirs)) * Math.PI * 2;
+    for (let p = 0; p < pellets; p++) {
+      const spread = (pellets === 1) ? 0 : (p - (pellets - 1) / 2) * 0.10; // small arc spread
+      const angle = baseAng + spread;
+      const vx = Math.cos(angle) * speed;
+      const vz = Math.sin(angle) * speed;
+      // White core + glow (bloom)
+      const obj = _makePlayerLaserVisual();
+      _bulletDir.set(vx, 0, vz).normalize();
+      _bulletQ.setFromUnitVectors(_bulletUp, _bulletDir);
+      obj.quaternion.copy(_bulletQ);
+      obj.position.copy(playerGroup.position);
+      obj.position.y = floorY(bulletGeoParams);
+      scene.add(obj);
+      state.bullets.push({ obj, vx, vz, life: BULLET_LIFETIME, dmg, pierceLeft: pierce });
+    }
   }
 }
 
@@ -183,7 +192,12 @@ export function updateBullets(worldDelta) {
         spawnEnemyDamageNum(b.dmg, e);
         e.staggerTimer = 0.12;
         updateEliteBar(e);
-        scene.remove(b.obj); state.bullets.splice(i, 1); hit = true;
+        if ((b.pierceLeft || 0) > 0) {
+          b.pierceLeft--;
+        } else {
+          scene.remove(b.obj); state.bullets.splice(i, 1);
+        }
+        hit = true;
         if (e.hp <= 0) {
           playSound(e.eliteType ? 'explodeElite' : 'explode', 0.7, 0.9 + Math.random() * 0.2);
           killEnemy(j);
@@ -210,12 +224,25 @@ export function updateEnemyBullets(worldDelta) {
     const pdz = b.mesh.position.z - playerGroup.position.z;
     if (pdx*pdx + pdz*pdz < 0.36) {
       playSound('player_hit', 0.7, 0.95 + Math.random() * 0.1);
-      if (!state.invincible) {
+      if (!(state.invincible || state.dashInvincible)) {
         const dmg = (Number.isFinite(b.dmg) ? b.dmg : ENEMY_BULLET_DMG);
-        state.playerHP -= dmg;
-        spawnPlayerDamageNum(Math.round(dmg));
-        updateHealthBar();
-        if (state.playerHP <= 0) return 'DEAD';
+        // Shield absorbs hits first (abilities tab)
+        if ((state.shieldCharges || 0) > 0) {
+          state.shieldCharges -= 1;
+          // Start recharge timer
+          if (state.shieldCharges <= 0) {
+            const tier = Math.max(0, state.upg?.shield || 0);
+            const base = 12.0;
+            const rt = (tier >= 2) ? base * 0.65 : base;
+            state.shieldRecharge = rt;
+          }
+          playSound('shield_break', 0.7, 1.0);
+        } else {
+          state.playerHP -= dmg;
+          spawnPlayerDamageNum(Math.round(dmg));
+          updateHealthBar();
+          if (state.playerHP <= 0) return 'DEAD';
+        }
       }
       scene.remove(b.mesh); state.enemyBullets.splice(i, 1);
       continue;

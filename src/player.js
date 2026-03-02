@@ -52,8 +52,9 @@ export function updateDashBar() {
     return;
   }
   dashBarObj.visible = true;
+  const denom = Math.max(0.01, state.dashCooldownMax || DASH_COOLDOWN);
   const pct = state.dashCooldown > 0
-    ? Math.max(0, 1 - state.dashCooldown / DASH_COOLDOWN) : 1;
+    ? Math.max(0, 1 - state.dashCooldown / denom) : 1;
   dashFill.style.width = (pct * 100) + '%';
 }
 export function updateHealthBar() {
@@ -88,7 +89,8 @@ export function stampDashGhost() {
 const _v  = new THREE.Vector3();
 
 export function updatePlayer(delta, worldScale) {
-  const wsTarget = state.dashTimer > 0 ? DASH_SLOW_SCALE : 1.0;
+  const slowTarget = state.slowTimer > 0 ? (state.slowScale || 0.5) : 1.0;
+  const wsTarget = state.dashTimer > 0 ? Math.min(DASH_SLOW_SCALE, slowTarget) : slowTarget;
   const wsRate   = wsTarget < worldScale ? SLOW_SNAP_RATE : SLOW_RECOVER_RATE;
   state.worldScale += (wsTarget - state.worldScale) * Math.min(1, wsRate * delta);
 
@@ -103,7 +105,9 @@ export function updatePlayer(delta, worldScale) {
     state.lastMoveX = _v.x; state.lastMoveZ = _v.z;
     const dirX = _v.x;
     const dirZ = _v.z;
-    _v.multiplyScalar(PLAYER_SPEED * delta);
+    const msTier = Math.max(0, state.upg?.moveSpeed || 0);
+    const speed = PLAYER_SPEED * (1 + 0.08 * msTier);
+    _v.multiplyScalar(speed * delta);
     playerGroup.position.add(_v);
     state.playerVel = { x: dirX, z: dirZ };
   } else {

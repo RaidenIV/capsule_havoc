@@ -12,6 +12,7 @@ export const state = {
   bossRespawnTimer: 0,
   bossAlive: false,
   invincible:  false,
+  dashInvincible: false,
   gameSession: 0,
 
   // ── UI mode ─────────────────────────────────────────────────────────────────
@@ -24,11 +25,18 @@ export const state = {
   elapsed: 0,
   coins:   0,
 
+  // ── Meta stats (design doc) ───────────────────────────────────────────────
+  luck: 0,
+  curseTier: 0,
+
   // ── Player ───────────────────────────────────────────────────────────────────
   playerMaxHP: 100,
   playerHP: 100,
   playerXP:    0,
   playerLevel: 0,
+
+  // Cached base damage from level (Section 6)
+  playerBaseDMG: 10,
 
   // ── Shoot timing ────────────────────────────────────────────────────────────
   shootTimer:      0,
@@ -48,6 +56,45 @@ export const state = {
   upgradeOpen: false,
   weaponTier: 0,
 
+  // ── Design-doc shop upgrades (tiers) ─────────────────────────────────────
+  upg: {
+    // Weapons
+    dmg: 0,           // 0..5
+    fireRate: 0,      // 0..5
+    projSpeed: 0,     // 0..4
+    piercing: 0,      // 0..3
+    multishot: 0,     // 0..3
+
+    // Movement
+    moveSpeed: 0,     // 0..5
+    dash: 0,          // 0..3
+    magnet: 0,        // 0..4
+
+    // Abilities
+    shield: 0,        // 0..3
+    burst: 0,         // 0..4
+    timeSlow: 0,      // 0..3
+
+    // Power Ups
+    maxHealth: 0,     // 0..5
+    regen: 0,         // 0..4
+    xpGrowth: 0,      // 0..4
+    coinBonus: 0,     // 0..3
+    curse: 0,         // 0..3
+    luck: 0,          // 0..3
+  },
+
+  // ── Ability timers ───────────────────────────────────────────────────────
+  shieldCharges: 0,
+  shieldRecharge: 0,
+  shieldHitCD: 0,
+  burstCooldown: 0,
+  burstRequested: false,
+  slowCooldown: 0,
+  slowTimer: 0,
+  slowScale: 0.5,
+  slowRequested: false,
+
   // ── Shop upgrades ─────────────────────────────────────────────────────────
   pickupRangeLvl: 0,   // increases coin attraction distance
   extraLives:     0,   // consumed on death
@@ -58,6 +105,7 @@ export const state = {
   hasDash:       false,  // unlocked via upgrade shop
   dashTimer:     0,
   dashCooldown:  0,
+  dashCooldownMax: 0,
   dashVX:        0,
   dashVZ:        0,
   lastMoveX:     0,
@@ -80,6 +128,7 @@ export const state = {
   damageNums:   [],
   coinPickups:  [],
   healthPickups:[],
+  chests:       [],
   dashStreaks:  [],
   orbitRings:   [],
   orbitHitActive: new Set(),

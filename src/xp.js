@@ -16,9 +16,23 @@ export function getWeaponConfig() {
   const idx = Math.min(Math.max(t - 1, 0), WEAPON_CONFIG.length - 1);
   return WEAPON_CONFIG[idx];
 }
-export function getBulletDamage() { return Math.round(10 * getWeaponConfig()[2]); }
-export function getFireInterval() { return getWeaponConfig()[0]; }
-export function getWaveBullets()  { return getWeaponConfig()[1]; }
+export function getBulletDamage() {
+  const base = state.playerBaseDMG || 10;
+  const dmgTier = Math.max(0, state.upg?.dmg || 0);
+  const mult = 1 + 0.15 * dmgTier;
+  const tierMult = getWeaponConfig()[2] || 1;
+  return Math.round(base * mult * tierMult);
+}
+export function getFireInterval() {
+  const base = getWeaponConfig()[0] || 0.85;
+  const frTier = Math.max(0, state.upg?.fireRate || 0);
+  const mult = Math.pow(0.90, frTier); // -10% per tier
+  return Math.max(0.06, base * mult);
+}
+export function getWaveBullets()  {
+  // Base wave count comes from weapon tier config; multishot handled in weapons.js as additional pellets.
+  return getWeaponConfig()[1] || 0;
+}
 
 function syncXPUI() {
   const L = Math.max(1, Math.floor(state.playerLevel || 1));
@@ -36,7 +50,11 @@ function syncXPUI() {
 }
 
 export function updateXP(amount) {
-  const add = Math.max(0, Math.floor(amount || 0));
+  // XP Growth (+15% per tier) + Curse (+10% per tier)
+  const growthTier = Math.max(0, state.upg?.xpGrowth || 0);
+  const curseTier = Math.max(0, state.upg?.curse || 0);
+  const mult = (1 + 0.15 * growthTier) * (1 + 0.10 * curseTier);
+  const add = Math.max(0, Math.floor((amount || 0) * mult));
   if (!Number.isFinite(add) || add <= 0) { syncXPUI(); return; }
 
   if (!state.playerLevel || state.playerLevel < 1) state.playerLevel = 1;
@@ -53,12 +71,17 @@ export function updateXP(amount) {
     const prevLevel = state.playerLevel;
     state.playerLevel++;
 
-    // Player HP scaling (design doc)
+    // Player HP scaling (design doc) + Max Health upgrade
     const prevMax = state.playerMaxHP || getPlayerMaxHPForLevel(prevLevel);
-    const newMax  = getPlayerMaxHPForLevel(state.playerLevel);
+    const newBase  = getPlayerMaxHPForLevel(state.playerLevel);
+    const hpTier = Math.max(0, state.upg?.maxHealth || 0);
+    const newMax  = Math.round(newBase * (1 + 0.10 * hpTier));
     const pct = prevMax > 0 ? (state.playerHP / prevMax) : 1;
     state.playerMaxHP = newMax;
     state.playerHP = Math.max(1, pct * newMax);
+
+    // Base damage scaling (Section 6: +5 damage per level)
+    state.playerBaseDMG = 10 + 5 * Math.max(0, (state.playerLevel || 1) - 1);
 
     // Shop after every level up (but avoid interrupting boss waves)
     if (!isBossLevel(state.playerLevel)) state.pendingShop = true;

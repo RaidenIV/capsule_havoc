@@ -40,16 +40,20 @@ function getQuota(type, level) {
   const base = BASE[type];
   if (!base) return 0;
   const { q } = scaleMultipliers(level);
+  const curseTier = Math.max(0, state.upg?.curse || 0);
+  const curseQ = 1 + 0.20 * curseTier; // design doc: +20% spawn quota / tier
   const min = Math.max(1, Math.round(base.quotaMin * q));
   const max = Math.max(min, Math.round(base.quotaMax * q));
-  return randInt(min, max);
+  return randInt(Math.round(min * curseQ), Math.round(max * curseQ));
 }
 
 function getInterval(type, level) {
   const base = BASE[type];
   if (!base) return 9999;
   const { i } = scaleMultipliers(level);
-  return Math.max(0.35, base.interval * i);
+  const curseTier = Math.max(0, state.upg?.curse || 0);
+  const curseI = 1 / (1 + 0.10 * curseTier); // +10% spawn rate / tier
+  return Math.max(0.35, base.interval * i * curseI);
 }
 
 

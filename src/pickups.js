@@ -6,6 +6,7 @@ import { PLAYER_MAX_HP, HEALTH_PICKUP_CHANCE, HEALTH_RESTORE } from './constants
 import { playerGroup, updateHealthBar } from './player.js';
 import { spawnHealNum } from './damageNumbers.js';
 import { playSound } from './audio.js';
+import { openChestReward } from './ui/upgrades.js';
 
 // ── Coin ──────────────────────────────────────────────────────────────────────
 const coinGeo     = new THREE.CylinderGeometry(0.22, 0.22, 0.08, 12);
@@ -65,21 +66,24 @@ export function dropLoot(pos, coinValue, coinMult, coinColorHex = null) {
     spawnHealthPickup(pos);
   }
   // Coins always drop (physical pickup), tiered by enemy type at the call site.
-  const val = Math.max(1, Math.round((coinValue || 1) * (coinMult || 1)));
+  const coinTier = Math.max(0, state.upg?.coinBonus || 0);
+  const curseTier = Math.max(0, state.upg?.curse || 0);
+  const bonus = (1 + 0.20 * coinTier) * (1 + 0.25 * curseTier);
+  const val = Math.max(1, Math.round((coinValue || 1) * (coinMult || 1) * bonus));
   spawnCoins(pos, 1, val, coinColorHex);
 }
 
 // ── Update ────────────────────────────────────────────────────────────────────
 const ATTRACT_DIST_COIN = [5.0,5.5,6.0,6.5,7.0,7.5,8.0,8.5,9.0,9.5,10.0];
 const ATTRACT_SPD_COIN  = 9.0;
-const ATTRACT_DIST_HP   = 4.0;
-const ATTRACT_SPD_HP    = 10.0;
+const ATTRACT_DIST_HP   = 0.0; // design doc: health packs are NOT attracted
+const ATTRACT_SPD_HP    = 0.0;
 const COLLECT_COIN      = 0.7;
 const COLLECT_HP        = 0.8;
 
 export function updatePickups(worldDelta, playerLevel, elapsed) {
   const baseAttract = ATTRACT_DIST_COIN[Math.min(playerLevel, 10)];
-  const bonus = (state.pickupRangeLvl || 0) * 1.25; // shop upgrade
+  const bonus = Math.max(0, (state.upg?.magnet || 0)) * 1.25; // shop upgrade (design doc)
   const attractDist = baseAttract + bonus;
   // Coin merge safety (performance): consolidate if too many coins are on the ground.
   if (state.coinPickups.length > 400) {
@@ -139,8 +143,10 @@ export function updatePickups(worldDelta, playerLevel, elapsed) {
     if (dist < COLLECT_HP) {
       scene.remove(hp.mesh); hp.mat.dispose();
       state.healthPickups.splice(i, 1);
-      const healed = Math.min(HEALTH_RESTORE, PLAYER_MAX_HP - state.playerHP);
-      state.playerHP = Math.min(PLAYER_MAX_HP, state.playerHP + HEALTH_RESTORE);
+      const maxHP = (state.playerMaxHP || PLAYER_MAX_HP);
+      const heal = Math.round(maxHP * 0.30);
+      const healed = Math.min(heal, maxHP - state.playerHP);
+      state.playerHP = Math.min(maxHP, state.playerHP + heal);
       updateHealthBar();
       playSound('heal', 0.6, 1.0);
       if (healed > 0) spawnHealNum(healed);
@@ -155,4 +161,38 @@ export function updatePickups(worldDelta, playerLevel, elapsed) {
     hp.mesh.rotation.y   = elapsed * 1.8 + i;
     hp.mesh.position.y   = 0.55 + Math.sin(elapsed * 3.5 + i) * 0.12;
   }
+
+  // ── Chests (boss drops; do not despawn) ───────────────────────────────────
+  if (!state.chests) state.chests = [];
+  for (let i = state.chests.length - 1; i >= 0; i--) {
+    const c = state.chests[i];
+    c.bob = (c.bob || 0) + worldDelta * 2.0;
+    c.mesh.rotation.y += worldDelta * 0.9;
+    c.mesh.position.y = 0.35 + Math.sin(c.bob) * 0.08;
+    const dx = playerGroup.position.x - c.mesh.position.x;
+    const dz = playerGroup.position.z - c.mesh.position.z;
+    if (dx*dx + dz*dz < 0.8*0.8) {
+      scene.remove(c.mesh);
+      state.chests.splice(i, 1);
+      playSound('chest', 0.75, 1.0);
+      openChestReward(c.tier || 'standard');
+    }
+  }
+}
+
+// ── Chest spawning API ──────────────────────────────────────────────────────
+const chestGeo = new THREE.BoxGeometry(0.85, 0.55, 0.85);
+const CHEST_MAT = {
+  standard: new THREE.MeshStandardMaterial({ color: 0x8a5a2b, emissive: 0xffcc55, emissiveIntensity: 0.7, metalness: 0.4, roughness: 0.55 }),
+  rare:     new THREE.MeshStandardMaterial({ color: 0x1f4a8a, emissive: 0x55ccff, emissiveIntensity: 0.9, metalness: 0.5, roughness: 0.35 }),
+  epic:     new THREE.MeshStandardMaterial({ color: 0x4a1f8a, emissive: 0xcc55ff, emissiveIntensity: 1.1, metalness: 0.55, roughness: 0.25 }),
+};
+
+export function spawnChest(pos, tier='standard') {
+  const mat = (CHEST_MAT[tier] || CHEST_MAT.standard).clone();
+  const mesh = new THREE.Mesh(chestGeo, mat);
+  mesh.position.set(pos.x, 0.35, pos.z);
+  scene.add(mesh);
+  if (!state.chests) state.chests = [];
+  state.chests.push({ mesh, tier, bob: Math.random() * Math.PI * 2 });
 }

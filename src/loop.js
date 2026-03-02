@@ -7,7 +7,7 @@ import {PLAYER_MAX_HP, getEnemyCapForLevel, getActiveEnemyTypesForLevel, isBossL
 import { updateSunPosition, updateOrbitLights } from './lighting.js';
 import { updateChunks } from './terrain.js';
 import { updatePlayer, updateDashStreaks, updateHealthBar } from './player.js';
-import { updateEnemies, removeCSS2DFromGroup } from './enemies.js';
+import { updateEnemies, removeCSS2DFromGroup, killEnemy } from './enemies.js';
 import { updateSpawner, initSpawner } from './spawner.js';
 import { shootBulletWave, updateBullets, updateEnemyBullets, updateOrbitBullets, performSlash, updateSlashEffects } from './weapons.js';
 import { updatePickups } from './pickups.js';
@@ -15,6 +15,7 @@ import { updateParticles } from './particles.js';
 import { updateDamageNums } from './damageNumbers.js';
 import { getFireInterval } from './xp.js';
 import { triggerGameOver, formatTime } from './gameFlow.js';
+import { playSound } from './audio.js';
 import { openUpgradeShop, closeUpgradeShopIfOpen } from './ui/upgrades.js';
 import { playerGroup } from './player.js';
 
@@ -95,6 +96,78 @@ export function tick() {
   // Slow-motion worldDelta is updated inside updatePlayer
   updatePlayer(delta, state.worldScale);
   const worldDelta = delta * state.worldScale;
+
+  // ── Ability timers & passive effects (design doc) ─────────────────────────
+  // Dash i-frames (Tier 3)
+  state.dashInvincible = (state.dashTimer > 0) && ((state.upg?.dash || 0) >= 3);
+
+  // Shield recharge
+  if ((state.shieldHitCD || 0) > 0) state.shieldHitCD = Math.max(0, state.shieldHitCD - worldDelta);
+  const shieldTier = Math.max(0, state.upg?.shield || 0);
+  const shieldMax = shieldTier >= 3 ? 2 : (shieldTier >= 1 ? 1 : 0);
+  if (shieldMax > 0) {
+    if ((state.shieldCharges || 0) <= 0 && (state.shieldRecharge || 0) > 0) {
+      state.shieldRecharge = Math.max(0, state.shieldRecharge - worldDelta);
+      if (state.shieldRecharge <= 0) state.shieldCharges = shieldMax;
+    } else if ((state.shieldCharges || 0) <= 0 && (state.shieldRecharge || 0) <= 0) {
+      // If shield unlocked but never initialized
+      state.shieldCharges = shieldMax;
+    }
+  } else {
+    state.shieldCharges = 0;
+    state.shieldRecharge = 0;
+  }
+
+  // Passive regen
+  const regenTier = Math.max(0, state.upg?.regen || 0);
+  if (regenTier > 0 && state.playerHP < state.playerMaxHP) {
+    state.playerHP = Math.min(state.playerMaxHP, state.playerHP + regenTier * worldDelta);
+  }
+
+  // Cooldowns
+  if ((state.burstCooldown || 0) > 0) state.burstCooldown = Math.max(0, state.burstCooldown - worldDelta);
+  if ((state.slowCooldown || 0) > 0) state.slowCooldown = Math.max(0, state.slowCooldown - worldDelta);
+  if ((state.slowTimer || 0) > 0) state.slowTimer = Math.max(0, state.slowTimer - worldDelta);
+
+  // Time Slow activation (Q)
+  if (state.slowRequested) {
+    state.slowRequested = false;
+    const tier = Math.max(0, state.upg?.timeSlow || 0);
+    if (tier > 0 && state.slowCooldown <= 0 && state.slowTimer <= 0) {
+      const duration = tier >= 3 ? 5.0 : 3.0;
+      const cdBase = 15.0;
+      const cd = (tier >= 2) ? cdBase * 0.70 : cdBase;
+      state.slowTimer = duration;
+      state.slowCooldown = cd;
+      state.slowScale = 0.5;
+      playSound('slowmo', 0.6, 1.0);
+    }
+  }
+
+  // Area Burst activation (E)
+  if (state.burstRequested) {
+    state.burstRequested = false;
+    const tier = Math.max(0, state.upg?.burst || 0);
+    if (tier > 0 && state.burstCooldown <= 0) {
+      const baseRadius = 5.5;
+      const radius = tier >= 4 ? baseRadius * 2.0 : baseRadius;
+      const dmg = (tier >= 4) ? 180 : (70 + tier * 30);
+      // Apply damage to enemies in radius.
+      for (let j = state.enemies.length - 1; j >= 0; j--) {
+        const e = state.enemies[j]; if (e.dead) continue;
+        const dx = e.grp.position.x - playerGroup.position.x;
+        const dz = e.grp.position.z - playerGroup.position.z;
+        if (dx*dx + dz*dz <= radius*radius) {
+          e.hp -= dmg;
+          if (e.hp <= 0) {
+            killEnemy(j);
+          }
+        }
+      }
+      state.burstCooldown = 8.0;
+      playSound('burst', 0.7, 1.0);
+    }
+  }
 
   // ── Level-driven spawn system (Option B) ───────────────────────────────────
   // Cap is driven by player level per design doc.

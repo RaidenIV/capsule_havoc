@@ -45,6 +45,14 @@ window.addEventListener('keydown', e => {
   }
   if (state.paused) return;
 
+  // Abilities (design doc)
+  if (e.key.toLowerCase() === 'e') {
+    if ((state.upg?.burst || 0) > 0) state.burstRequested = true;
+  }
+  if (e.key.toLowerCase() === 'q') {
+    if ((state.upg?.timeSlow || 0) > 0) state.slowRequested = true;
+  }
+
   const k = e.key.toLowerCase();
   if (k === 'w' || k === 'arrowup')    state.keys.w = true;
   if (k === 's' || k === 'arrowdown')  state.keys.s = true;
@@ -63,7 +71,11 @@ window.addEventListener('keydown', e => {
       state.dashVX        = state.lastMoveX;
       state.dashVZ        = state.lastMoveZ;
       state.dashTimer     = DASH_DURATION;
-      state.dashCooldown  = DASH_COOLDOWN;
+      // Dash Tier 2 reduces cooldown by 30%
+      const dashTier = (state.upg?.dash || 0);
+      const cdMult = dashTier >= 2 ? 0.70 : 1.0;
+      state.dashCooldownMax = DASH_COOLDOWN * cdMult;
+      state.dashCooldown  = state.dashCooldownMax;
       state.dashGhostTimer = 0;
       playSound('dash', 0.55, 0.95 + Math.random() * 0.1);
     }
