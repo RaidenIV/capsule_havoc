@@ -50,7 +50,7 @@ export function startCountdown(onDone) {
   hudEls.forEach(el => { if (el) el.style.visibility = 'hidden'; });
 
   // Hide any bullets already in scene
-  state.bullets.forEach(b => { (b.obj ?? b.mesh).visible = false; });
+  state.bullets.forEach(b => { b.mesh.visible = false; });
   state.orbitRings.forEach(r => r.meshes.forEach(m => { m.visible = false; }));
 
   // Hide enemies
@@ -88,11 +88,13 @@ export function startCountdown(onDone) {
         if (renderer?.domElement) renderer.domElement.style.display = '';
         if (labelRenderer?.domElement) labelRenderer.domElement.style.display = '';
 
-        playerMesh.visible = hbObj.visible = dashBarObj.visible = true;
+        playerMesh.visible = true;
+        hbObj.visible = true;
+        dashBarObj.visible = !!state.hasDash;
         // Restore HUD
         hudEls.forEach(el => { if (el) el.style.visibility = ''; });
         // Restore bullets and orbit rings
-        state.bullets.forEach(b => { (b.obj ?? b.mesh).visible = true; });
+        state.bullets.forEach(b => { b.mesh.visible = true; });
         state.orbitRings.forEach(r => r.meshes.forEach(m => { m.visible = true; }));
         // Restore enemies
         state.enemies.forEach(e => { e.grp.visible = true; });
@@ -144,7 +146,7 @@ export function restartGame(opts = {}) {
   state.enemies.forEach(e => { removeCSS2DFromGroup(e.grp); scene.remove(e.grp); });
   state.enemies.length = 0;
 
-  state.bullets.forEach(b => scene.remove(b.obj ?? b.mesh));
+  state.bullets.forEach(b => scene.remove(b.mesh));
   state.bullets.length = 0;
 
   state.enemyBullets.forEach(b => scene.remove(b.mesh));

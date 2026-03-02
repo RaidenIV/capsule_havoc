@@ -33,15 +33,25 @@ playerGroup.add(hbObj);
 
 // ── Dash cooldown bar (CSS2D) ─────────────────────────────────────────────────
 const dashWrap = document.createElement('div');
-dashWrap.style.cssText = 'width:72px;height:5px;background:rgba(0,0,0,0.6);border:1px solid rgba(0,180,255,0.35);border-radius:3px;overflow:hidden;margin-top:3px;';
+// Keep a tight vertical stack with the health bar
+dashWrap.style.cssText = 'width:72px;height:5px;background:rgba(0,0,0,0.6);border:1px solid rgba(0,180,255,0.35);border-radius:3px;overflow:hidden;margin-top:1px;';
 const dashFill = document.createElement('div');
 dashFill.style.cssText = 'height:100%;width:100%;background:linear-gradient(to right,#0088cc,#00ccff);border-radius:3px;transition:width 0.05s linear;';
 dashWrap.appendChild(dashFill);
 export const dashBarObj = new CSS2DObject(dashWrap);
-dashBarObj.position.set(0, 2.25, 0);
+// Position just under the health bar
+dashBarObj.position.set(0, 2.48, 0);
+// Hidden until the dash upgrade is owned
+dashBarObj.visible = false;
 playerGroup.add(dashBarObj);
 
 export function updateDashBar() {
+  // Dash UI should only exist once the dash is unlocked.
+  if (!state.hasDash) {
+    dashBarObj.visible = false;
+    return;
+  }
+  dashBarObj.visible = true;
   const pct = state.dashCooldown > 0
     ? Math.max(0, 1 - state.dashCooldown / DASH_COOLDOWN) : 1;
   dashFill.style.width = (pct * 100) + '%';
