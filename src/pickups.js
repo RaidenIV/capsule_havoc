@@ -15,16 +15,21 @@ const coinMatBase = new THREE.MeshStandardMaterial({
 });
 const coinCountEl = document.getElementById('coin-count');
 
-export function spawnCoins(pos, count, value = 1) {
+export function spawnCoins(pos, count, value = 1, colorHex = null) {
   for (let i = 0; i < count; i++) {
     const mat   = coinMatBase.clone();
+    if (colorHex != null) {
+      mat.color.setHex(colorHex);
+      mat.emissive.setHex(colorHex);
+      mat.emissiveIntensity = 0.55;
+    }
     const mesh  = new THREE.Mesh(coinGeo, mat);
     const angle = Math.random() * Math.PI * 2;
     const r     = 0.3 + Math.random() * 1.2;
     mesh.position.set(pos.x + Math.cos(angle)*r, 0.35, pos.z + Math.sin(angle)*r);
     mesh.rotation.x = Math.PI / 2;
     scene.add(mesh);
-    state.coinPickups.push({ mesh, mat, value, attracting: false, life: 20.0 });
+    state.coinPickups.push({ mesh, mat, value, colorHex: colorHex ?? null, attracting: false, life: 20.0, merged: false });
   }
 }
 
@@ -54,14 +59,14 @@ export function spawnHealthPickup(pos) {
 // ── Drop helper used by killEnemy (in enemies.js) ──────────────────────────────
 const COIN_DROP_CHANCE = 0.50;  // 50% chance to drop coins on kill
 
-export function dropLoot(pos, coinValue, coinMult) {
+export function dropLoot(pos, coinValue, coinMult, coinColorHex = null) {
+  // Health is still a chance-based drop.
   if (Math.random() < HEALTH_PICKUP_CHANCE) {
     spawnHealthPickup(pos);
-  } else if (Math.random() < COIN_DROP_CHANCE) {
-    const count = 1 + Math.floor(Math.random() * 3);
-    spawnCoins(pos, count, Math.round(coinValue * (coinMult || 1)));
   }
-  // else: no drop
+  // Coins always drop (physical pickup), tiered by enemy type at the call site.
+  const val = Math.max(1, Math.round((coinValue || 1) * (coinMult || 1)));
+  spawnCoins(pos, 1, val, coinColorHex);
 }
 
 // ── Update ────────────────────────────────────────────────────────────────────
@@ -76,6 +81,23 @@ export function updatePickups(worldDelta, playerLevel, elapsed) {
   const baseAttract = ATTRACT_DIST_COIN[Math.min(playerLevel, 10)];
   const bonus = (state.pickupRangeLvl || 0) * 1.25; // shop upgrade
   const attractDist = baseAttract + bonus;
+  // Coin merge safety (performance): consolidate if too many coins are on the ground.
+  if (state.coinPickups.length > 400) {
+    let sum = 0;
+    for (const cp of state.coinPickups) { sum += (cp.value || 0); scene.remove(cp.mesh); cp.mat.dispose(); }
+    state.coinPickups.length = 0;
+    // Place merged coin at edge/corner away from player.
+    const px = playerGroup.position.x;
+    const pz = playerGroup.position.z;
+    const dx = (Math.random() < 0.5 ? -1 : 1);
+    const dz = (Math.random() < 0.5 ? -1 : 1);
+    const far = attractDist * 3.25;
+    const pos = { x: px + dx * far, z: pz + dz * far };
+    spawnCoins(pos, 1, sum, 0xffffff);
+    if (state.coinPickups[0]) state.coinPickups[0].merged = true;
+    playSound('coin_merge', 0.7, 0.95 + Math.random() * 0.1);
+  }
+
 
   // ── Coins ───────────────────────────────────────────────────────────────────
   for (let i = state.coinPickups.length - 1; i >= 0; i--) {

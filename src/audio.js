@@ -74,6 +74,8 @@ export async function initAudio() {
     explode:      './assets/sfx/explode.wav',
     explodeElite: './assets/sfx/explode_elite.wav',
     coin:         './assets/sfx/coin.wav',
+    coin_merge:   './assets/sfx/coin.wav',
+    level_up_spike:'./assets/sfx/levelup.wav',
     heal:         './assets/sfx/heal.wav',
     levelup:      './assets/sfx/levelup.wav',
     dash:         './assets/sfx/dash.wav',

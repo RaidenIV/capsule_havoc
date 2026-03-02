@@ -5,6 +5,7 @@ import { scene, renderer, labelRenderer } from './renderer.js';
 import { playerGroup, playerMesh, hbObj, dashBarObj, updateHealthBar, updateDashBar } from './player.js';
 import { updateXP } from './xp.js';
 import { spawnEnemyAtEdge, removeCSS2DFromGroup } from './enemies.js';
+import { initSpawner } from './spawner.js';
 import { destroyOrbitBullets, syncOrbitBullets } from './weapons.js';
 import { _particleMeshPool } from './particles.js';
 import { startMusic, stopMusic, pauseMusic, resumeMusic, playSound } from './audio.js';
@@ -184,6 +185,7 @@ export function restartGame(opts = {}) {
   state.spawnTickTimer  = 0;
   state.playerXP    = 0;
   state.playerLevel = 1;
+  initSpawner();
   state.coins       = 0;
   state.weaponTier  = 0;
   state.pickupRangeLvl = 0;

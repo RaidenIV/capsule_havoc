@@ -1,17 +1,15 @@
 // ─── xp.js ───────────────────────────────────────────────────────────────────
 import { state } from './state.js';
-import { XP_THRESHOLDS, XP_PER_KILL_BY_LEVEL, COIN_VALUE_BY_LEVEL, LEVEL_ENEMY_CONFIG, WEAPON_CONFIG, getPlayerMaxHPForLevel } from './constants.js';
+import { WEAPON_CONFIG, getPlayerMaxHPForLevel, isBossLevel } from './constants.js';
+import { expToNext } from './leveling.js';
 
-// DOM refs (populated in ui.js but needed here for updates)
+// DOM refs
 const xpLevelLabelEl = document.getElementById('xp-level-label');
 const xpFillEl       = document.getElementById('xp-fill') || document.getElementById('xp-bar-fill');
 const xpLevelElLegacy= document.getElementById('xp-level');
 const xpCurElLegacy  = document.getElementById('xp-cur');
 const xpNextElLegacy = document.getElementById('xp-next');
 
-export function getXPPerKill()  { return XP_PER_KILL_BY_LEVEL[Math.min(state.playerLevel, XP_PER_KILL_BY_LEVEL.length - 1)]; }
-export function getCoinValue()  { return LEVEL_ENEMY_CONFIG[Math.min(state.playerLevel, LEVEL_ENEMY_CONFIG.length - 1)][1]; }
-export function getEnemyHP()    { const cfg = LEVEL_ENEMY_CONFIG[Math.min(state.playerLevel, LEVEL_ENEMY_CONFIG.length - 1)]; return Math.round(30 * (1 + cfg[0])); }
 export function getWeaponConfig() {
   const t = (state.weaponTier ?? 0);
   if (t <= 0) return [9999, 0, 0, 0, 0, 0, 0];
@@ -22,31 +20,49 @@ export function getBulletDamage() { return Math.round(10 * getWeaponConfig()[2])
 export function getFireInterval() { return getWeaponConfig()[0]; }
 export function getWaveBullets()  { return getWeaponConfig()[1]; }
 
+function syncXPUI() {
+  const L = Math.max(1, Math.floor(state.playerLevel || 1));
+  const need = expToNext(L);
+  const cur  = Math.max(0, Math.floor(state.playerXP || 0));
+  const isMax = (L >= 100) || (need <= 0);
+
+  const pct = isMax ? 100 : Math.min(100, (cur / need) * 100);
+
+  if (xpLevelLabelEl) xpLevelLabelEl.textContent = `LV ${L}`;
+  if (xpLevelElLegacy) xpLevelElLegacy.textContent = L;
+  if (xpCurElLegacy) xpCurElLegacy.textContent = isMax ? 'MAX' : cur;
+  if (xpNextElLegacy) xpNextElLegacy.textContent = isMax ? 'MAX' : need;
+  if (xpFillEl) { xpFillEl.style.width = pct + '%'; xpFillEl.classList.toggle('max', isMax); }
+}
+
 export function updateXP(amount) {
-  const MAX = XP_THRESHOLDS.length - 1;
-  state.playerXP += amount;
-  while (state.playerLevel < MAX && state.playerXP >= XP_THRESHOLDS[state.playerLevel + 1]) {
+  const add = Math.max(0, Math.floor(amount || 0));
+  if (!Number.isFinite(add) || add <= 0) { syncXPUI(); return; }
+
+  if (!state.playerLevel || state.playerLevel < 1) state.playerLevel = 1;
+  if (!Number.isFinite(state.playerXP) || state.playerXP < 0) state.playerXP = 0;
+
+  state.playerXP += add;
+
+  while (state.playerLevel < 100) {
+    const need = expToNext(state.playerLevel);
+    if (need <= 0) break;
+    if (state.playerXP < need) break;
+
+    state.playerXP -= need;
     const prevLevel = state.playerLevel;
     state.playerLevel++;
-    // update player max HP based on level (design doc)
+
+    // Player HP scaling (design doc)
     const prevMax = state.playerMaxHP || getPlayerMaxHPForLevel(prevLevel);
     const newMax  = getPlayerMaxHPForLevel(state.playerLevel);
     const pct = prevMax > 0 ? (state.playerHP / prevMax) : 1;
     state.playerMaxHP = newMax;
     state.playerHP = Math.max(1, pct * newMax);
-    // open shop every 5 levels (except boss levels)
-    if (state.playerLevel % 5 === 0 && state.playerLevel % 10 !== 0) state.pendingShop = true;
-  }
-  const isMax     = state.playerLevel >= MAX;
-  const cur       = XP_THRESHOLDS[state.playerLevel];
-  const next      = isMax ? XP_THRESHOLDS[MAX] : XP_THRESHOLDS[state.playerLevel + 1];
-  const progress  = state.playerXP - cur;
-  const range     = next - cur;
-  const pct       = isMax ? 100 : Math.min(100, (progress / range) * 100);
 
-  if (xpLevelLabelEl) xpLevelLabelEl.textContent = `LV ${state.playerLevel}`;
-  if (xpLevelElLegacy) xpLevelElLegacy.textContent = state.playerLevel;
-  if (xpCurElLegacy) xpCurElLegacy.textContent = isMax ? state.playerXP : progress;
-  if (xpNextElLegacy) xpNextElLegacy.textContent = isMax ? 'MAX' : range;
-  if (xpFillEl) { xpFillEl.style.width = pct + '%'; xpFillEl.classList.toggle('max', isMax); }
+    // Shop after every level up (but avoid interrupting boss waves)
+    if (!isBossLevel(state.playerLevel)) state.pendingShop = true;
+  }
+
+  syncXPUI();
 }

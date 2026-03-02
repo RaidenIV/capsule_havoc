@@ -101,8 +101,15 @@ export function updatePlayer(delta, worldScale) {
   if (_v.lengthSq() > 0) {
     _v.normalize();
     state.lastMoveX = _v.x; state.lastMoveZ = _v.z;
+    const dirX = _v.x;
+    const dirZ = _v.z;
     _v.multiplyScalar(PLAYER_SPEED * delta);
     playerGroup.position.add(_v);
+    state.playerVel = { x: dirX, z: dirZ };
+  } else {
+    // No movement input
+    state.playerVel = state.playerVel || { x: 0, z: 0 };
+    state.playerVel.x = 0; state.playerVel.z = 0;
   }
 
   // Dash (player stays at full speed — world slows around them)
@@ -110,6 +117,7 @@ export function updatePlayer(delta, worldScale) {
     state.dashTimer -= delta;
     playerGroup.position.x += state.dashVX * DASH_SPEED * delta;
     playerGroup.position.z += state.dashVZ * DASH_SPEED * delta;
+    state.playerVel = { x: state.dashVX, z: state.dashVZ };
     playerMesh.rotation.z = state.dashVX * -0.4;
     state.dashGhostTimer -= delta;
     if (state.dashGhostTimer <= 0) { stampDashGhost(); state.dashGhostTimer = 0.035; }

@@ -17,7 +17,8 @@ import { steerAroundProps, pushOutOfProps, hasLineOfSight } from './terrain.js';
 import { spawnEnemyDamageNum, spawnPlayerDamageNum } from './damageNumbers.js';
 import { spawnExplosion } from './particles.js';
 import { dropLoot } from './pickups.js';
-import { updateXP, getXPPerKill, getCoinValue, getEnemyHP } from './xp.js';
+import { updateXP } from './xp.js';
+import { getXPRewardForEnemy, getCoinTierForEnemy } from './leveling.js';
 import { playSound } from './audio.js';
 import { STANDARD_ENEMY_SIZE_MULT } from './constants.js';
 
@@ -113,6 +114,7 @@ export function spawnEnemy(x, z, eliteTypeOrCfg = null) {
 
   state.enemies.push({
     grp, mesh, mat, hp, maxHp: hp, dead: false,
+    isBoss: !!(cfg && cfg.isBoss),
     scaleMult, expMult, coinMult, eliteType, eliteBarFill,
     fireRate, shootTimer: fireRate ? Math.random() * fireRate : 0,
     staggerTimer: 0, baseColor: new THREE.Color(color),
@@ -128,13 +130,28 @@ export function spawnEnemy(x, z, eliteTypeOrCfg = null) {
 }
 
 
+
+export function spawnEnemyAtPosition(x, z, enemyTypeOrCfg = null) {
+  // Only enforce cap if maxEnemies is a positive finite number.
+  const isBoss = (enemyTypeOrCfg === ENEMY_TYPE.BOSS) || (typeof enemyTypeOrCfg === 'object' && enemyTypeOrCfg && enemyTypeOrCfg.isBoss);
+  if (!isBoss) {
+    const regularCount = state.enemies.filter(x => x && !x.dead && !x.isBoss).length;
+    if (Number.isFinite(state.maxEnemies) && state.maxEnemies > 0 && regularCount >= state.maxEnemies) return;
+  }
+  spawnEnemy(x, z, enemyTypeOrCfg);
+}
+
 export function spawnEnemyAtEdge(eliteTypeOrCfg = null) {
   // Only enforce cap if maxEnemies is a positive finite number.
-  if (Number.isFinite(state.maxEnemies) && state.maxEnemies > 0 && state.enemies.length >= state.maxEnemies) return;
+  const isBoss = (enemyTypeOrCfg === ENEMY_TYPE.BOSS) || (typeof enemyTypeOrCfg === 'object' && enemyTypeOrCfg && enemyTypeOrCfg.isBoss);
+  if (!isBoss) {
+    const regularCount = state.enemies.filter(x => x && !x.dead && !x.isBoss).length;
+    if (Number.isFinite(state.maxEnemies) && state.maxEnemies > 0 && regularCount >= state.maxEnemies) return;
+  }
   const angle = Math.random() * Math.PI * 2;
   const baseR = (Number.isFinite(CAM_D) ? CAM_D : 18) * 1.55;
   const r     = baseR + Math.random() * 4.0;
-  spawnEnemy(
+  spawnEnemyAtPosition(
     playerGroup.position.x + Math.cos(angle) * r,
     playerGroup.position.z + Math.sin(angle) * r,
     eliteTypeOrCfg
@@ -175,19 +192,44 @@ const killsEl = document.getElementById('kills-value');
 
 export function killEnemy(j) {
   const e = state.enemies[j];
+  const wasBoss = !!(e && (e.isBoss || e.enemyType === ENEMY_TYPE.BOSS));
   spawnExplosion(e.grp.position, e.eliteType);
   removeCSS2DFromGroup(e.grp);
   scene.remove(e.grp);
   e.dead = true;
   state.enemies.splice(j, 1);
+
+  // Boss bookkeeping (boss does not count toward cap; respawns after delay)
+  if (wasBoss) {
+    state.bossAlive = false;
+    if (state.spawn && Number.isFinite(state.spawn.bossCooldown)) {
+      state.spawn.bossCooldown = 10.0;
+    } else {
+      state.bossRespawnTimer = 10.0;
+    }
+
+  // Ultra Elite split (doc Section 2)
+  if (e && e.enemyType === ENEMY_TYPE.SPLITTER) {
+    const min = (ENEMY_DEFS[ENEMY_TYPE.SPLITTER]?.splitCountMin ?? 2);
+    const max = (ENEMY_DEFS[ENEMY_TYPE.SPLITTER]?.splitCountMax ?? 3);
+    const n = min + Math.floor(Math.random() * (max - min + 1));
+    for (let k = 0; k < n; k++) {
+      const a = Math.random() * Math.PI * 2;
+      const r = 0.9 + Math.random() * 1.4;
+      spawnEnemyAtPosition(e.grp.position.x + Math.cos(a)*r, e.grp.position.z + Math.sin(a)*r, ENEMY_TYPE.RUSHER);
+    }
+  }
+  }
+
   state.kills++;
   if (killsEl) killsEl.textContent = state.kills;
 
-  dropLoot(e.grp.position, getCoinValue(), e.coinMult);
+  // Coins (tiered)
+  const tier = getCoinTierForEnemy(e.enemyType);
+  dropLoot(e.grp.position, tier.value, (e.coinMult || 1), tier.color);
 
-  // XP tuning: keep baseline conservative so leveling doesn't become too fast
-  // as spawn density ramps up.
-  const xpGained  = Math.max(1, Math.round(getXPPerKill() * (e.expMult || 1) * 0.35));
+  // XP (tiered + Growth bonus handled in getXPRewardForEnemy)
+  const xpGained  = getXPRewardForEnemy(e.enemyType, state.playerLevel);
   const prevLevel = state.playerLevel;
   updateXP(xpGained);
 
@@ -273,16 +315,73 @@ export function updateEnemies(delta, worldDelta, elapsed) {
       }
     }
 
-    // Movement
+    // Movement (per-type behavior)
     if (dist > 0.01 && e.staggerTimer <= 0) {
       const eR = enemyGeoParams.radius * (e.scaleMult || 1);
-      const { sx, sz } = steerAroundProps(
+      const et = e.enemyType;
+
+      // Base steer vector toward player (terrain-aware)
+      let { sx, sz } = steerAroundProps(
         e.grp.position.x, e.grp.position.z,
         playerGroup.position.x, playerGroup.position.z,
         eR, state.enemies, i
       );
-      e.grp.position.x += sx * ENEMY_SPEED * worldDelta;
-      e.grp.position.z += sz * ENEMY_SPEED * worldDelta;
+
+      // Speed multipliers by type (doc Section 13)
+      let spdMult = 1.0;
+      if (et === ENEMY_TYPE.TANKER) spdMult = 0.90;
+      if (et === ENEMY_TYPE.SPLITTER) spdMult = 0.80;
+      if (et === ENEMY_TYPE.BOSS) spdMult = 0.90;
+
+      // Overrides
+      if (et === ENEMY_TYPE.ORBITER) {
+        const orbitR = (ENEMY_DEFS[ENEMY_TYPE.ORBITER]?.orbitR ?? 6.5);
+        // radial direction to player
+        const rx = dx / dist;
+        const rz = dz / dist;
+        // tangential (90°)
+        const tx = -rz;
+        const tz = rx;
+
+        // If outside orbit radius, bias inward; if inside, bias outward slightly.
+        const radialErr = (dist - orbitR);
+        const radialBias = Math.max(-1, Math.min(1, radialErr / 2.5));
+
+        sx = tx * 0.9 + rx * radialBias * 0.6;
+        sz = tz * 0.9 + rz * radialBias * 0.6;
+
+        const len = Math.hypot(sx, sz) || 1;
+        sx /= len; sz /= len;
+        spdMult = 1.05;
+      } else if (et === ENEMY_TYPE.SNIPER) {
+        const desired = 14.0;
+        if (dist < desired) {
+          // retreat directly away
+          sx = -dx / dist;
+          sz = -dz / dist;
+          spdMult = 1.05;
+        } else {
+          // slow approach to keep pressure
+          spdMult = 0.85;
+        }
+      } else if (et === ENEMY_TYPE.TELEPORTER) {
+        const thresh = (ENEMY_DEFS[ENEMY_TYPE.TELEPORTER]?.teleportWhenBelow ?? 0.5);
+        if (!e._tpCD) e._tpCD = 0;
+        e._tpCD = Math.max(0, e._tpCD - worldDelta);
+        if (e._tpCD <= 0 && e.maxHp > 0 && (e.hp / e.maxHp) <= thresh) {
+          // teleport to random off-screen position and re-approach
+          const ang = Math.random() * Math.PI * 2;
+          const rr  = (Number.isFinite(CAM_D) ? CAM_D : 18) * 1.7 + 6;
+          e.grp.position.x = playerGroup.position.x + Math.cos(ang) * rr;
+          e.grp.position.z = playerGroup.position.z + Math.sin(ang) * rr;
+          e._tpCD = 4.0;
+          // reset steer after teleport
+          sx = dx / dist; sz = dz / dist;
+        }
+      }
+
+      e.grp.position.x += sx * ENEMY_SPEED * spdMult * worldDelta;
+      e.grp.position.z += sz * ENEMY_SPEED * spdMult * worldDelta;
     }
     pushOutOfProps(e.grp.position, enemyGeoParams.radius * (e.scaleMult || 1));
 
@@ -347,3 +446,33 @@ export function updateEnemies(delta, worldDelta, elapsed) {
     }
   }
 }
+  // Decollision / push system (doc Section 13)
+  // Keeps enemies from perfectly stacking (simple O(n^2) with small cap).
+  const pushK = 0.08;
+  for (let a = 0; a < state.enemies.length; a++) {
+    const ea = state.enemies[a];
+    if (!ea || ea.dead) continue;
+    for (let b = a + 1; b < state.enemies.length; b++) {
+      const eb = state.enemies[b];
+      if (!eb || eb.dead) continue;
+      const ax = ea.grp.position.x, az = ea.grp.position.z;
+      const bx = eb.grp.position.x, bz = eb.grp.position.z;
+      const dx2 = bx - ax, dz2 = bz - az;
+      const d2 = dx2*dx2 + dz2*dz2;
+      if (d2 < 1e-6) continue;
+      const ra = enemyGeoParams.radius * (ea.scaleMult || 1);
+      const rb = enemyGeoParams.radius * (eb.scaleMult || 1);
+      const minD = (ra + rb) * 0.95;
+      if (d2 >= minD*minD) continue;
+      const d = Math.sqrt(d2);
+      const nx = dx2 / d, nz = dz2 / d;
+      const overlap = (minD - d);
+      const push = overlap * pushK;
+      ea.grp.position.x -= nx * push;
+      ea.grp.position.z -= nz * push;
+      eb.grp.position.x += nx * push;
+      eb.grp.position.z += nz * push;
+    }
+  }
+
+

@@ -248,12 +248,12 @@ export function getActiveEnemyTypesForLevel(level){
 // enemy defs: percent values are fractions of player max HP (e.g. 0.10 = 10%)
 export const ENEMY_DEFS = Object.freeze({
   [ENEMY_TYPE.RUSHER]:     { color: 0x888888, sizeMult: 0.75, hpPct: 0.50, contactPct: 0.10, shoot: false, metallic: false },
-  [ENEMY_TYPE.ORBITER]:    { color: 0x242424, sizeMult: 1.00, hpPct: 0.50, contactPct: 0.10, shoot: false, metallic: true,  orbitR: 6.5 },
-  [ENEMY_TYPE.TANKER]:     { color: 0xffcc00, sizeMult: 1.50, hpPct: 3.00, contactPct: 0.20, shoot: true,  bulletPct: 0.20, fireRate: 2.25, bulletSpeedMult: 0.85, metallic: true },
+    [ENEMY_TYPE.ORBITER]:    { color: 0x242424, sizeMult: 1.00, hpPct: 0.50, contactPct: 0.15, shoot: true,  bulletPct: 0.10, fireRate: 2.00, bulletSpeedMult: 1.00, metallic: true,  orbitR: 6.5 },
+    [ENEMY_TYPE.TANKER]:     { color: 0x888888, sizeMult: 1.50, hpPct: 2.00, contactPct: 0.20, shoot: true,  bulletPct: 0.20, fireRate: 2.25, bulletSpeedMult: 0.85, metallic: true },
   [ENEMY_TYPE.SNIPER]:     { color: 0x9b30ff, sizeMult: 1.00, hpPct: 3.00, contactPct: 0.10, shoot: true,  bulletPct: 0.333, fireRate: 1.85, bulletSpeedMult: 1.35, metallic: false },
   [ENEMY_TYPE.TELEPORTER]: { color: 0x00cccc, sizeMult: 0.75, hpPct: 3.00, contactPct: 0.333, shoot: false, metallic: true,  teleportWhenBelow: 0.50 },
   [ENEMY_TYPE.SHIELDED]:   { color: 0x4aa3ff, sizeMult: 1.25, hpPct: 0.50, shieldPct: 1.50, contactPct: 0.20, shoot: false, metallic: false },
-  [ENEMY_TYPE.SPLITTER]:   { color: 0x00ff66, sizeMult: 1.25, hpPct: 3.00, contactPct: 0.20, shoot: true, bulletPct: 0.20, fireRate: 2.35, bulletSpeedMult: 0.90, metallic: true, splitCountMin: 2, splitCountMax: 3 },
+    [ENEMY_TYPE.SPLITTER]:   { color: 0x00bb44, sizeMult: 2.00, hpPct: 3.00, contactPct: 0.30, shoot: true, bulletPct: 0.25, fireRate: 2.00, bulletSpeedMult: 1.20, metallic: true, splitCountMin: 2, splitCountMax: 3 },
   [ENEMY_TYPE.BOSS]:       { color: 0x111111, sizeMult: 3.00, hpPct: 4.00, contactPct: 0.50, shoot: true,  bulletPct: 0.33, fireRate: 1.75, bulletSpeedMult: 1.10, metallic: true },
 });
 
@@ -263,11 +263,23 @@ export function isBossLevel(level){
 }
 
 export function getBossScaleForLevel(level){
-  // Section 5: for 71+ boss scales +20% HP / +10% DMG per boss wave (10 levels)
+  // Boss scaling per appearance (design doc Section 4)
+  // Wave levels: 10,20,30,40,50,60,70 then +20% HP / +10% DMG per wave from 80+.
   const L = Math.max(1, Math.floor(level||1));
-  if (L < 70) return { hpMult: 1, dmgMult: 1 };
-  const wave = Math.floor((L - 70) / 10); // 70 =>0, 80=>1, 90=>2, 100=>3
-  return { hpMult: 1 + 0.20 * wave, dmgMult: 1 + 0.10 * wave };
+  const bossLvl = Math.floor(L / 10) * 10; // snap down to 10s
+  const table = {
+    10: { hpMult: 1.00, dmgMult: 1.00 },
+    20: { hpMult: 1.20, dmgMult: 1.10 },
+    30: { hpMult: 1.40, dmgMult: 1.20 },
+    40: { hpMult: 1.60, dmgMult: 1.30 },
+    50: { hpMult: 1.80, dmgMult: 1.40 },
+    60: { hpMult: 2.00, dmgMult: 1.50 },
+    70: { hpMult: 2.20, dmgMult: 1.60 },
+  };
+  if (bossLvl <= 70) return table[bossLvl] || { hpMult: 1, dmgMult: 1 };
+
+  const wave = Math.max(0, Math.floor((bossLvl - 70) / 10)); // 80=>1, 90=>2, 100=>3
+  return { hpMult: 2.20 + 0.20 * wave, dmgMult: 1.60 + 0.10 * wave };
 }
 
 // Player scaling (Section 6)
