@@ -27,6 +27,15 @@ const _eBulletUp  = new THREE.Vector3(0, 1, 0);
 const _eBulletDir = new THREE.Vector3();
 const _eBulletQ   = new THREE.Quaternion();
 
+// Back-compat helper:
+// Some spawn paths (especially older "eliteType" spawns) expect a getEnemyHP() function.
+// In the design-doc system, baseline enemies map to RUSHER (50% of player max HP).
+function getEnemyHP() {
+  const playerMax = (state.playerMaxHP ?? PLAYER_MAX_HP);
+  const basePct = (ENEMY_DEFS?.[ENEMY_TYPE.RUSHER]?.hpPct ?? 0.50);
+  return Math.round(playerMax * basePct);
+}
+
 // ── Spawn ─────────────────────────────────────────────────────────────────────
 export function spawnEnemy(x, z, eliteTypeOrCfg = null) {
   const grp = new THREE.Group();
