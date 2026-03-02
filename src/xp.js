@@ -82,8 +82,9 @@ export function updateXP(amount) {
     state.playerMaxHP = newMax;
     state.playerHP = Math.max(1, pct * newMax);
 
-    // Base damage scaling (Section 6: +5 damage per level)
-    state.playerBaseDMG = 10 + 5 * Math.max(0, (state.playerLevel || 1) - 1);
+    // Base damage scaling (Section 6: DMG(L) = 10 + floor((L-1)² / 50))
+    // Quadratic — reaches 204 DMG at level 100 vs 10 at level 1.
+    state.playerBaseDMG = 10 + Math.floor(Math.pow(Math.max(0, state.playerLevel - 1), 2) / 50);
 
     // Shop after every level up (but avoid interrupting boss waves)
     if (!isBossLevel(state.playerLevel)) state.pendingShop = true;
