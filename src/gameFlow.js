@@ -171,6 +171,7 @@ export function restartGame(opts = {}) {
 
   playerGroup.position.set(0, 0, 0);
   state.playerHP    = PLAYER_MAX_HP;
+  state.playerMaxHP = PLAYER_MAX_HP;
   state.kills       = 0;
   state.elapsed     = 0;
   state.shootTimer  = 0;
@@ -185,6 +186,10 @@ export function restartGame(opts = {}) {
   state.weaponTier  = 0;
   state.pickupRangeLvl = 0;
   state.extraLives  = 0;
+  state.pendingShop = false;
+  state.bossAlive   = false;
+  state.bossRespawnTimer = 0;
+  state.spawnTimer  = 0;
   if (state.cosmetic) state.cosmetic.playerColor = 'default';
   state.upgradeOpen = false;
   state.wave        = 1;
