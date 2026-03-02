@@ -195,7 +195,7 @@ function renderList(){
       { key: 'magenta', label: 'PLAYER COLOR — MAGENTA' },
       { key: 'gold',    label: 'PLAYER COLOR — GOLD' },
     ];
-    options.forEach((o, idx) => {
+    options.forEach((o) => {
       const owned = current === o.key;
       const cost = 5;
       const affordable = (state.coins || 0) >= cost;
