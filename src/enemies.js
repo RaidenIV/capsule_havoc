@@ -21,6 +21,7 @@ import { updateXP } from './xp.js';
 import { getXPRewardForEnemy, getCoinTierForEnemy } from './leveling.js';
 import { playSound } from './audio.js';
 import { STANDARD_ENEMY_SIZE_MULT } from './constants.js';
+import { applyPlayerDamage } from './armor.js';
 
 // Reused quaternion helpers for enemy laser orientation
 const _eBulletUp  = new THREE.Vector3(0, 1, 0);
@@ -441,16 +442,17 @@ export function updateEnemies(delta, worldDelta, elapsed) {
         } else {
           const curseTier = Math.max(0, state.upg?.curse || 0);
           const dmg = ENEMY_CONTACT_DPS * (1 + 0.20 * curseTier) * worldDelta;
-          state.playerHP -= dmg;
-          state.contactDmgAccum += dmg;
-          state.contactDmgTimer -= worldDelta;
-          if (state.contactDmgTimer <= 0) {
-            spawnPlayerDamageNum(Math.round(state.contactDmgAccum));
-            state.contactDmgAccum = 0;
-            state.contactDmgTimer = 0.35;
+          const res = applyPlayerDamage(dmg, 'contact');
+          if (res.applied > 0) {
+            state.contactDmgAccum += res.applied;
+            state.contactDmgTimer -= worldDelta;
+            if (state.contactDmgTimer <= 0) {
+              spawnPlayerDamageNum(Math.round(state.contactDmgAccum));
+              state.contactDmgAccum = 0;
+              state.contactDmgTimer = 0.35;
+            }
           }
-          updateHealthBar();
-          if (state.playerHP <= 0) return 'DEAD';
+          if (res.died) return 'DEAD';
         }
       } else {
         // Still tick the timer when invincible so sound stays throttled
@@ -484,33 +486,4 @@ export function updateEnemies(delta, worldDelta, elapsed) {
     }
   }
 }
-  // Decollision / push system (doc Section 13)
-  // Keeps enemies from perfectly stacking (simple O(n^2) with small cap).
-  const pushK = 0.08;
-  for (let a = 0; a < state.enemies.length; a++) {
-    const ea = state.enemies[a];
-    if (!ea || ea.dead) continue;
-    for (let b = a + 1; b < state.enemies.length; b++) {
-      const eb = state.enemies[b];
-      if (!eb || eb.dead) continue;
-      const ax = ea.grp.position.x, az = ea.grp.position.z;
-      const bx = eb.grp.position.x, bz = eb.grp.position.z;
-      const dx2 = bx - ax, dz2 = bz - az;
-      const d2 = dx2*dx2 + dz2*dz2;
-      if (d2 < 1e-6) continue;
-      const ra = enemyGeoParams.radius * (ea.scaleMult || 1);
-      const rb = enemyGeoParams.radius * (eb.scaleMult || 1);
-      const minD = (ra + rb) * 0.95;
-      if (d2 >= minD*minD) continue;
-      const d = Math.sqrt(d2);
-      const nx = dx2 / d, nz = dz2 / d;
-      const overlap = (minD - d);
-      const push = overlap * pushK;
-      ea.grp.position.x -= nx * push;
-      ea.grp.position.z -= nz * push;
-      eb.grp.position.x += nx * push;
-      eb.grp.position.z += nz * push;
-    }
-  }
-
 

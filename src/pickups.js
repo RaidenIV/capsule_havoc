@@ -7,6 +7,7 @@ import { playerGroup, updateHealthBar } from './player.js';
 import { spawnHealNum } from './damageNumbers.js';
 import { playSound } from './audio.js';
 import { openChestReward } from './ui/upgrades.js';
+import { getCoinValueMultiplier } from './activeEffects.js';
 
 // ── Coin ──────────────────────────────────────────────────────────────────────
 const coinGeo     = new THREE.CylinderGeometry(0.22, 0.22, 0.08, 12);
@@ -68,7 +69,7 @@ export function dropLoot(pos, coinValue, coinMult, coinColorHex = null) {
   // Coins always drop (physical pickup), tiered by enemy type at the call site.
   const coinTier = Math.max(0, state.upg?.coinBonus || 0);
   const curseTier = Math.max(0, state.upg?.curse || 0);
-  const bonus = (1 + 0.20 * coinTier) * (1 + 0.25 * curseTier);
+  const bonus = (1 + 0.20 * coinTier) * (1 + 0.25 * curseTier) * getCoinValueMultiplier();
   const val = Math.max(1, Math.round((coinValue || 1) * (coinMult || 1) * bonus));
   spawnCoins(pos, 1, val, coinColorHex);
 }

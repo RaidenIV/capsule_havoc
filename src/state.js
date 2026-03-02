@@ -15,6 +15,22 @@ export const state = {
   dashInvincible: false,
   gameSession: 0,
 
+  // ── Active effects & pickups (design doc) ───────────────────────────────
+  effects: {
+    doubleDamage: 0,
+    invincibility: 0,
+    coinValue2x: 0,
+    xp2x: 0,
+    armor: 0,
+    clock: 0,
+    blackHole: 0,
+  },
+
+  // Armor hits (3-hit pickup) and revive i-frames
+  armorHits: 0,
+  reviveIFrames: 0,
+  bossLuck: 0,
+
   // ── UI mode ─────────────────────────────────────────────────────────────────
   uiMode: 'menu',   // 'menu' | 'playing'
   loopStarted: false,
@@ -94,6 +110,9 @@ export const state = {
   slowTimer: 0,
   slowScale: 0.5,
   slowRequested: false,
+
+  // Arena pickup entities (clock, black hole, etc.)
+  arenaPickups: [],
 
   // ── Shop upgrades ─────────────────────────────────────────────────────────
   pickupRangeLvl: 0,   // increases coin attraction distance

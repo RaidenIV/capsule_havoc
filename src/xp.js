@@ -2,6 +2,7 @@
 import { state } from './state.js';
 import { WEAPON_CONFIG, getPlayerMaxHPForLevel, isBossLevel } from './constants.js';
 import { expToNext } from './leveling.js';
+import { getDamageMultiplier, getXPMultiplier } from './activeEffects.js';
 
 // DOM refs
 const xpLevelLabelEl = document.getElementById('xp-level-label');
@@ -21,7 +22,8 @@ export function getBulletDamage() {
   const dmgTier = Math.max(0, state.upg?.dmg || 0);
   const mult = 1 + 0.15 * dmgTier;
   const tierMult = getWeaponConfig()[2] || 1;
-  return Math.round(base * mult * tierMult);
+  const eff = getDamageMultiplier();
+  return Math.round(base * mult * tierMult * eff);
 }
 export function getFireInterval() {
   const base = getWeaponConfig()[0] || 0.85;
@@ -53,7 +55,7 @@ export function updateXP(amount) {
   // XP Growth (+15% per tier) + Curse (+10% per tier)
   const growthTier = Math.max(0, state.upg?.xpGrowth || 0);
   const curseTier = Math.max(0, state.upg?.curse || 0);
-  const mult = (1 + 0.15 * growthTier) * (1 + 0.10 * curseTier);
+  const mult = (1 + 0.15 * growthTier) * (1 + 0.10 * curseTier) * getXPMultiplier();
   const add = Math.max(0, Math.floor((amount || 0) * mult));
   if (!Number.isFinite(add) || add <= 0) { syncXPUI(); return; }
 

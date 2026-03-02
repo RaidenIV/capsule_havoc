@@ -11,6 +11,11 @@ import { updateEnemies, removeCSS2DFromGroup, killEnemy } from './enemies.js';
 import { updateSpawner, initSpawner } from './spawner.js';
 import { shootBulletWave, updateBullets, updateEnemyBullets, updateOrbitBullets, performSlash, updateSlashEffects } from './weapons.js';
 import { updatePickups } from './pickups.js';
+import { updateActiveEffects } from './activeEffects.js';
+import { updateArmorTimers } from './armor.js';
+import { initArenaPickups, updateArenaPickups } from './arenaPickups.js';
+import { updateHudEffects } from './hudEffects.js';
+import { updateHudLevel } from './hudLevel.js';
 import { updateParticles } from './particles.js';
 import { updateDamageNums } from './damageNumbers.js';
 import { getFireInterval } from './xp.js';
@@ -68,6 +73,12 @@ function hideWaveBannerIfDone(delta){
 export function tick() {
   requestAnimationFrame(tick);
 
+  // One-time init for systems introduced by the design doc.
+  if (!state._designDocInitDone) {
+    state._designDocInitDone = true;
+    try { initArenaPickups(); } catch {}
+  }
+
   if (state.paused || state.gameOver || state.upgradeOpen) {
     renderBloom();
     labelRenderer.render(scene, camera);
@@ -96,6 +107,10 @@ export function tick() {
   // Slow-motion worldDelta is updated inside updatePlayer
   updatePlayer(delta, state.worldScale);
   const worldDelta = delta * state.worldScale;
+
+  // Timed effects (arena pickups)
+  updateArmorTimers(worldDelta);
+  updateActiveEffects(worldDelta);
 
   // ── Ability timers & passive effects (design doc) ─────────────────────────
   // Dash i-frames (Tier 3)
@@ -182,6 +197,9 @@ export function tick() {
   // Spawning (design doc)
   updateSpawner(worldDelta);
 
+  // Timed arena pickups
+  updateArenaPickups(worldDelta);
+
   // ── World ──────────────────────────────────────────────────────────────────
   updateChunks(playerGroup.position);
   updateSunPosition(playerGroup.position);
@@ -207,6 +225,8 @@ export function tick() {
   updatePickups(worldDelta, state.playerLevel, state.elapsed);
   updateParticles(worldDelta);
   updateDamageNums(worldDelta);
+  updateHudEffects();
+  updateHudLevel();
   updateDashStreaks(delta);
   updateSlashEffects(worldDelta);
 

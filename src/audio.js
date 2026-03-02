@@ -82,6 +82,22 @@ export async function initAudio() {
     gameover:     './assets/sfx/gameover.wav',
     victory:      './assets/sfx/victory.wav',
     laser_sword:  './assets/sfx/laser_sword.wav',
+
+    // Design-doc pickup/chest/armor SFX (safe fallbacks if dedicated files aren't present)
+    pickup_double_damage: './assets/sfx/coin.wav',
+    pickup_invincibility: './assets/sfx/heal.wav',
+    pickup_coin_value:    './assets/sfx/coin.wav',
+    pickup_extra_life:    './assets/sfx/levelup.wav',
+    pickup_xp:            './assets/sfx/levelup.wav',
+    pickup_armor:         './assets/sfx/heal.wav',
+    pickup_clock:         './assets/sfx/levelup.wav',
+    pickup_black_hole:    './assets/sfx/levelup.wav',
+    pickup_expire:        './assets/sfx/menu_select.wav',
+    chest_open:           './assets/sfx/levelup.wav',
+    chest_item_select:    './assets/sfx/menu_select.wav',
+    armor_hit:            './assets/sfx/player_hit.wav',
+    armor_break:          './assets/sfx/explode_elite.wav',
+    extra_life_revive:    './assets/sfx/victory.wav',
   };
 
   await Promise.allSettled(

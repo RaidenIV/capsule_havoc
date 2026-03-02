@@ -10,6 +10,7 @@ import { playerGroup, updateHealthBar } from './player.js';
 import { pushOutOfProps } from './terrain.js';
 import { spawnPlayerDamageNum, spawnEnemyDamageNum } from './damageNumbers.js';
 import { killEnemy, updateEliteBar } from './enemies.js';
+import { applyPlayerDamage } from './armor.js';
 import {
   getFireInterval, getWaveBullets, getBulletDamage, getWeaponConfig,
 } from './xp.js';
@@ -223,10 +224,9 @@ export function updateEnemyBullets(worldDelta) {
     const pdx = b.mesh.position.x - playerGroup.position.x;
     const pdz = b.mesh.position.z - playerGroup.position.z;
     if (pdx*pdx + pdz*pdz < 0.36) {
-      playSound('player_hit', 0.7, 0.95 + Math.random() * 0.1);
-      if (!(state.invincible || state.dashInvincible)) {
-        const dmg = (Number.isFinite(b.dmg) ? b.dmg : ENEMY_BULLET_DMG);
-        // Shield absorbs hits first (abilities tab)
+      const dmg = (Number.isFinite(b.dmg) ? b.dmg : ENEMY_BULLET_DMG);
+      // Shield absorbs hits first (abilities tab)
+      if (!(state.invincible || state.dashInvincible) && (state.effects?.invincibility || 0) <= 0 && (state.reviveIFrames || 0) <= 0) {
         if ((state.shieldCharges || 0) > 0) {
           state.shieldCharges -= 1;
           // Start recharge timer
@@ -238,10 +238,9 @@ export function updateEnemyBullets(worldDelta) {
           }
           playSound('shield_break', 0.7, 1.0);
         } else {
-          state.playerHP -= dmg;
-          spawnPlayerDamageNum(Math.round(dmg));
-          updateHealthBar();
-          if (state.playerHP <= 0) return 'DEAD';
+          const res = applyPlayerDamage(dmg, 'enemyBullet');
+          if (res.applied > 0) spawnPlayerDamageNum(Math.round(res.applied));
+          if (res.died) return 'DEAD';
         }
       }
       scene.remove(b.mesh); state.enemyBullets.splice(i, 1);

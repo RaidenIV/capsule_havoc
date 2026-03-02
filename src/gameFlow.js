@@ -167,6 +167,11 @@ export function restartGame(opts = {}) {
   state.healthPickups.forEach(hp => { scene.remove(hp.mesh); hp.mat.dispose(); });
   state.healthPickups.length = 0;
 
+  if (Array.isArray(state.arenaPickups)) {
+    state.arenaPickups.forEach(p => { try { scene.remove(p.mesh); p.mat?.dispose?.(); } catch {} });
+    state.arenaPickups.length = 0;
+  }
+
   if (state.chests) {
     state.chests.forEach(c => { try { scene.remove(c.mesh); c.mesh.material?.dispose?.(); } catch {} });
     state.chests.length = 0;
@@ -210,6 +215,19 @@ export function restartGame(opts = {}) {
   state.slowCooldown = 0;
   state.slowTimer = 0;
   state.extraLives  = 0;
+  state.armorHits   = 0;
+  state.reviveIFrames = 0;
+  state.effects = {
+    doubleDamage: 0,
+    invincibility: 0,
+    coinValue2x: 0,
+    xp2x: 0,
+    armor: 0,
+    clock: 0,
+    blackHole: 0,
+  };
+  state.bossLuck = 0;
+  state.arenaPickups = [];
   state.pendingShop = false;
   state.bossAlive   = false;
   state.bossRespawnTimer = 0;
