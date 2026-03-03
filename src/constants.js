@@ -216,8 +216,45 @@ export const ENEMY_TYPE = Object.freeze({
 });
 
 export function getEnemyCapForLevel(level){
-  return 50; // flat cap — always 50 enemies on screen
+  // Design doc Section 12 — on-screen enemy cap progression (boss excluded)
+  const L = Math.max(1, Math.floor(level||1));
+  if (L <= 5) return 20;
+  if (L <= 10) return 25;
+  if (L <= 20) return 30;
+  if (L <= 39) return 35;
+  if (L <= 50) return 40;
+  if (L <= 60) return 45;
+  return 50;
 }
+
+// ── Spawner tables (design doc Section 12) ─────────────────────────────────
+// Base per-type quotas and intervals (seconds)
+export const SPAWN_BASE = Object.freeze({
+  [ENEMY_TYPE.RUSHER]:     { quotaMin: 8,  quotaMax: 12, intervalSec: 3,  groupSpawn: true },
+  [ENEMY_TYPE.ORBITER]:    { quotaMin: 3,  quotaMax: 5,  intervalSec: 5,  groupSpawn: false },
+  [ENEMY_TYPE.TANKER]:     { quotaMin: 2,  quotaMax: 3,  intervalSec: 8,  groupSpawn: false },
+  [ENEMY_TYPE.SNIPER]:     { quotaMin: 2,  quotaMax: 3,  intervalSec: 8,  groupSpawn: false },
+  [ENEMY_TYPE.TELEPORTER]: { quotaMin: 2,  quotaMax: 2,  intervalSec: 10, groupSpawn: false },
+  [ENEMY_TYPE.SHIELDED]:   { quotaMin: 2,  quotaMax: 3,  intervalSec: 9,  groupSpawn: false },
+  [ENEMY_TYPE.SPLITTER]:   { quotaMin: 1,  quotaMax: 1,  intervalSec: 15, groupSpawn: false },
+  // Boss uses dedicated logic; included for completeness.
+  [ENEMY_TYPE.BOSS]:       { quotaMin: 1,  quotaMax: 1,  intervalSec: 10, groupSpawn: false },
+});
+
+export const SPAWN_LEVEL_SCALING = Object.freeze([
+  { min: 1,  max: 19,  quotaMul: 1.0,  intervalMul: 1.0  },
+  { min: 20, max: 39,  quotaMul: 1.2,  intervalMul: 0.85 },
+  { min: 40, max: 59,  quotaMul: 1.5,  intervalMul: 0.70 },
+  { min: 60, max: 69,  quotaMul: 1.75, intervalMul: 0.60 },
+  { min: 70, max: 999, quotaMul: 2.0,  intervalMul: 0.50 },
+]);
+
+export const CURSE_SPAWN = Object.freeze({
+  0: { quotaMul: 1.00, intervalMul: 1.00 },
+  1: { quotaMul: 1.10, intervalMul: 0.95 },
+  2: { quotaMul: 1.20, intervalMul: 0.90 },
+  3: { quotaMul: 1.35, intervalMul: 0.80 },
+});
 
 export function getActiveEnemyTypesForLevel(level){
   const L = Math.max(1, Math.floor(level||1));

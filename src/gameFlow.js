@@ -232,12 +232,12 @@ export function restartGame(opts = {}) {
   state.effects = {
     doubleDamage: 0,
     invincibility: 0,
-    coinValue2x: 0,
-    xp2x: 0,
-    armor: 0,
-    clock: 0,
+    coinValue: 0,
+    xpBoost: 0,
+    clockSlow: 0,
     blackHole: 0,
   };
+  state.effectsDur = {};
   state.bossLuck = 0;
   state.arenaPickups = [];
   state.pendingShop = false;

@@ -6,8 +6,17 @@ import { PLAYER_MAX_HP } from './constants.js';
 import { playSound } from './audio.js';
 import { updateHealthBar } from './player.js';
 
+export const ARMOR_MAX_PIPS = 3;
+
 export function grantArmor(hits = 3){
   state.armorHits = Math.max(state.armorHits || 0, hits);
+  playSound('pickup_armor', 0.7, 1.0);
+}
+
+export function addArmorPip(){
+  const cur = state.armorHits || 0;
+  const next = Math.min(ARMOR_MAX_PIPS, cur + 1);
+  state.armorHits = next;
   playSound('pickup_armor', 0.7, 1.0);
 }
 

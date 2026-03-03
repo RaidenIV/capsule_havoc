@@ -5,7 +5,28 @@
 // implement decollision + despawn checks here. enemies.js can optionally
 // call these helpers.
 
-import { CAM_D } from './renderer.js';
+import { CAM_D, aspect } from './renderer.js';
+import { ENEMY_TYPE } from './constants.js';
+
+function viewportWidthWorld(){
+  return (Number.isFinite(CAM_D) ? CAM_D : 18) * 2 * (aspect || 1);
+}
+
+function despawnDistanceForEnemy(e){
+  // Design doc Section 13.1
+  // Never despawn: Boss, Teleporter, Ultra Elite
+  if (e?.isBoss || e?.enemyType === ENEMY_TYPE.BOSS) return Infinity;
+  if (e?.enemyType === ENEMY_TYPE.TELEPORTER) return Infinity;
+  if (e?.enemyType === ENEMY_TYPE.SPLITTER) return Infinity;
+
+  const vw = viewportWidthWorld();
+  if (e?.enemyType === ENEMY_TYPE.ORBITER) return vw * 2.5;
+  if (e?.enemyType === ENEMY_TYPE.SHIELDED) return vw * 3.0;
+  if (e?.enemyType === ENEMY_TYPE.TANKER) return vw * 3.0;
+  if (e?.enemyType === ENEMY_TYPE.SNIPER) return vw * 2.0;
+  // Standard
+  return vw * 2.0;
+}
 
 export function applyDecollision(enemies){
   // Simple pairwise push (O(n^2), but capped at 50 enemies so OK)
@@ -36,15 +57,14 @@ export function applyDecollision(enemies){
 }
 
 export function checkDespawn(enemies, playerPos){
-  // Remove enemies far beyond camera distance without awarding XP/coins.
-  const base = (Number.isFinite(CAM_D) ? CAM_D : 18);
-  const maxR = base * 4.5;
+  // Remove enemies far beyond per-type threshold without awarding XP/coins.
   for (let i = enemies.length - 1; i >= 0; i--) {
     const e = enemies[i];
     if (!e || e.dead) continue;
     const dx = e.grp.position.x - playerPos.x;
     const dz = e.grp.position.z - playerPos.z;
-    if (dx*dx + dz*dz > maxR*maxR) {
+    const maxR = despawnDistanceForEnemy(e);
+    if (maxR !== Infinity && dx*dx + dz*dz > maxR*maxR) {
       e.dead = true;
       try { e.grp.parent?.remove?.(e.grp); } catch {}
       enemies.splice(i, 1);

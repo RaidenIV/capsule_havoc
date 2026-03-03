@@ -8,10 +8,9 @@ function tkey(name){
   switch (name) {
     case 'doubleDamage': return 'doubleDamage';
     case 'invincibility': return 'invincibility';
-    case 'coinValue2x': return 'coinValue2x';
-    case 'xp2x': return 'xp2x';
-    case 'armor': return 'armor';
-    case 'clock': return 'clock';
+    case 'coinValue': return 'coinValue';
+    case 'xpBoost': return 'xpBoost';
+    case 'clockSlow': return 'clockSlow';
     case 'blackHole': return 'blackHole';
     default: return null;
   }
@@ -22,13 +21,13 @@ export function initActiveEffects(){
     state.effects = {
       doubleDamage: 0,
       invincibility: 0,
-      coinValue2x: 0,
-      xp2x: 0,
-      armor: 0,
-      clock: 0,
+      coinValue: 0,
+      xpBoost: 0,
+      clockSlow: 0,
       blackHole: 0,
     };
   }
+  if (!state.effectsDur) state.effectsDur = {};
 }
 
 export function applyEffect(name, durationSec = 10){
@@ -36,13 +35,13 @@ export function applyEffect(name, durationSec = 10){
   const k = tkey(name);
   if (!k) return;
   state.effects[k] = Math.max(state.effects[k] || 0, durationSec);
+  state.effectsDur[k] = Math.max(state.effectsDur[k] || 0, durationSec);
   // lightweight audio cues (mapped in audio.js; missing files are non-fatal)
   if (k === 'doubleDamage') playSound('pickup_double_damage', 0.7, 1.0);
   if (k === 'invincibility') playSound('pickup_invincibility', 0.7, 1.0);
-  if (k === 'coinValue2x') playSound('pickup_coin_value', 0.7, 1.0);
-  if (k === 'xp2x') playSound('pickup_xp', 0.7, 1.0);
-  if (k === 'armor') playSound('pickup_armor', 0.7, 1.0);
-  if (k === 'clock') playSound('pickup_clock', 0.7, 1.0);
+  if (k === 'coinValue') playSound('pickup_coin_value', 0.7, 1.0);
+  if (k === 'xpBoost') playSound('pickup_xp', 0.7, 1.0);
+  if (k === 'clockSlow') playSound('pickup_clock', 0.7, 1.0);
   if (k === 'blackHole') playSound('pickup_black_hole', 0.7, 1.0);
 }
 
@@ -60,7 +59,7 @@ export function updateActiveEffects(worldDelta){
 
   // Drive worldScale for Clock effect.
   // Abilities (Time Slow) already use state.slowTimer/state.slowScale in loop.js.
-  if ((e.clock || 0) > 0) {
+  if ((e.clockSlow || 0) > 0) {
     // 15% speed; if player uses Time Slow concurrently, the slower wins.
     const clockScale = 0.85;
     state.worldScale = Math.min(state.worldScale || 1.0, clockScale);
@@ -74,12 +73,12 @@ export function getDamageMultiplier(){
 
 export function getCoinValueMultiplier(){
   initActiveEffects();
-  return (state.effects.coinValue2x || 0) > 0 ? 2.0 : 1.0;
+  return (state.effects.coinValue || 0) > 0 ? 2.0 : 1.0;
 }
 
 export function getXPMultiplier(){
   initActiveEffects();
-  return (state.effects.xp2x || 0) > 0 ? 2.0 : 1.0;
+  return (state.effects.xpBoost || 0) > 0 ? 2.0 : 1.0;
 }
 
 export function isInvincible(){

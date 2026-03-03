@@ -17,7 +17,8 @@ import { playerGroup, updateHealthBar } from './player.js';
 import { steerAroundProps, pushOutOfProps, hasLineOfSight } from './terrain.js';
 import { spawnEnemyDamageNum, spawnPlayerDamageNum } from './damageNumbers.js';
 import { spawnExplosion } from './particles.js';
-import { dropLoot } from './pickups.js';
+import { dropLoot } from './coins.js';
+import { spawnChest, getChestTierForLevel } from './chests.js';
 import { updateXP } from './xp.js';
 import { getXPRewardForEnemy, getCoinTierForEnemy } from './leveling.js';
 import { playSound } from './audio.js';
@@ -222,10 +223,10 @@ export function killEnemy(j) {
     }
 
     // Boss chest drop (design doc Section 10)
-    // Tier by level: 1-10 standard, 11-20 rare, 21+ epic.
-    const tier = (state.playerLevel <= 10) ? 'standard' : (state.playerLevel <= 20 ? 'rare' : 'epic');
-    // Lazy import to avoid circular deps
-    import('./pickups.js').then(m => m.spawnChest?.(e.grp.position, tier)).catch(()=>{});
+    // Tier thresholds: Standard < 40, Rare 40–69, Epic 70+
+    const L = Math.max(1, Math.floor(state.playerLevel || 1));
+    const tier = getChestTierForLevel(L);
+    spawnChest({ x: e.grp.position.x, z: e.grp.position.z }, tier, L);
 
     // Boss wave luck bonus: +5 at levels 10/20/30
     if (state.playerLevel === 10 || state.playerLevel === 20 || state.playerLevel === 30) {

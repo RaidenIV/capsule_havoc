@@ -11,6 +11,8 @@ import { updateEnemies, removeCSS2DFromGroup, killEnemy } from './enemies.js';
 import { updateSpawner, initSpawner } from './spawner.js';
 import { shootBulletWave, updateBullets, updateEnemyBullets, updateOrbitBullets, performSlash, updateSlashEffects } from './weapons.js';
 import { updatePickups } from './pickups.js';
+import { updateCoins } from './coins.js';
+import { updateChests } from './chests.js';
 import { updateActiveEffects } from './activeEffects.js';
 import { updateArmorTimers } from './armor.js';
 import { initArenaPickups, updateArenaPickups } from './arenaPickups.js';
@@ -108,7 +110,7 @@ export function tick() {
   updatePlayer(delta, state.worldScale);
   const worldDelta = delta * state.worldScale;
   // enemyTimeScale: slows only enemy movement and bullets (Time Freeze pickup)
-  const clockActive = (state.effects?.clock || 0) > 0;
+  const clockActive = (state.effects?.clockSlow || 0) > 0;
   state.enemyTimeScale = clockActive ? 0.05 : 1.0; // nearly frozen during clock effect
 
   // Timed effects (arena pickups)
@@ -201,7 +203,7 @@ export function tick() {
   updateSpawner(worldDelta);
 
   // Timed arena pickups
-  updateArenaPickups(worldDelta);
+  updateArenaPickups(worldDelta, state.elapsed);
 
   // ── World ──────────────────────────────────────────────────────────────────
   updateChunks(playerGroup.position);
@@ -282,7 +284,7 @@ export function tick() {
           // Drop loot — same coin value as a normal kill
           import('./leveling.js').then(lev => {
             const tier = lev.getCoinTierForEnemy?.(e.enemyType) ?? { value: 1, color: null };
-            import('./pickups.js').then(m => {
+            import('./coins.js').then(m => {
               if (m.dropLoot) m.dropLoot(e.grp.position, tier.value, e.coinMult || 1, tier.color ?? null);
             }).catch(()=>{});
           }).catch(()=>{});
@@ -314,7 +316,10 @@ export function tick() {
     state._slashTimer = SLASH_INTERVAL;
   }
 
+  // Coins + health pickups + chests
+  updateCoins(worldDelta);
   updatePickups(worldDelta, state.playerLevel, state.elapsed);
+  updateChests(worldDelta, state.elapsed);
   updateParticles(worldDelta);
   updateDamageNums(worldDelta);
   updateHudEffects();
