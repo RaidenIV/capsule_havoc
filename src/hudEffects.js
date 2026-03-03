@@ -46,22 +46,22 @@ export function updateHudEffects(){
 
   const e = state.effects || {};
   const entries = [
-    ['DMG×2', e.doubleDamage],
-    ['INV', e.invincibility],
-    ['COIN×2', e.coinValue2x],
-    ['XP×2', e.xp2x],
-    ['CLOCK', e.clock],
-    ['BH', e.blackHole],
+    ['⚔️ Double Damage', e.doubleDamage],
+    ['🛡️ Invincible', e.invincibility],
+    ['💰 Coins ×2', e.coinValue2x],
+    ['⭐ XP ×2', e.xp2x],
+    ['⏱️ Time Freeze', e.clock],
+    ['🕳️ Black Hole', e.blackHole],
   ].filter(([,t]) => (t||0) > 0);
 
   for (const [label, t] of entries) {
     root.appendChild(badge(label, t));
   }
 
-  // Armor as hits
+  // Armor as hit count remaining
   if ((state.armorHits || 0) > 0) {
-    const el = badge('ARM', state.armorHits);
-    el.textContent = `ARM ${state.armorHits}`;
+    const el = badge('🪖 Armor', state.armorHits);
+    el.textContent = `🪖 Armor ×${state.armorHits}`;
     root.appendChild(el);
   }
 }
