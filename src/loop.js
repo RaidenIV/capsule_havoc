@@ -3,7 +3,7 @@ import * as THREE from 'three';
 import { renderer, scene, camera, labelRenderer } from './renderer.js';
 import { renderBloom, consumeExplBloomDirty } from './bloom.js';
 import { state } from './state.js';
-import {PLAYER_MAX_HP, getEnemyCapForLevel, getActiveEnemyTypesForLevel, isBossLevel, ENEMY_TYPE, ENEMY_DEFS, getBossScaleForLevel} from './constants.js';
+import {PLAYER_MAX_HP, getEnemyCapForLevel, getActiveEnemyTypesForLevel, isBossLevel, ENEMY_TYPE, ENEMY_DEFS, getBossScaleForLevel, SLASH_INTERVAL} from './constants.js';
 import { updateSunPosition, updateOrbitLights } from './lighting.js';
 import { updateChunks } from './terrain.js';
 import { updatePlayer, updateDashStreaks, updateHealthBar } from './player.js';
@@ -237,7 +237,12 @@ export function tick() {
   updateBullets(worldDelta);
   updateEnemyBullets(worldDelta);
   updateOrbitBullets(worldDelta);
-  performSlash(worldDelta);
+  // Slash: timed by SLASH_INTERVAL, scaled by worldDelta so Time Slow affects it
+  state._slashTimer = (state._slashTimer || 0) - worldDelta;
+  if (state._slashTimer <= 0) {
+    performSlash();
+    state._slashTimer = SLASH_INTERVAL;
+  }
 
   updatePickups(worldDelta, state.playerLevel, state.elapsed);
   updateParticles(worldDelta);
