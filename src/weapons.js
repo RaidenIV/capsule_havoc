@@ -214,8 +214,8 @@ export function updateBullets(worldDelta) {
 
 // ── Update enemy bullets ──────────────────────────────────────────────────────
 function _removeEBullet(b) {
+  if (b.core) { scene.remove(b.core); b.mat?.dispose(); }
   scene.remove(b.mesh);
-  b.mat?.dispose();
   b.extraMat?.dispose();
 }
 
@@ -223,8 +223,12 @@ export function updateEnemyBullets(worldDelta) {
   for (let i = state.enemyBullets.length - 1; i >= 0; i--) {
     const b = state.enemyBullets[i];
     b.life -= worldDelta;
-    b.mesh.position.x += b.vx * worldDelta;
-    b.mesh.position.z += b.vz * worldDelta;
+    const mx = b.vx * worldDelta;
+    const mz = b.vz * worldDelta;
+    // Move both core (layer 0) and glow (layer 1) meshes
+    if (b.core) { b.core.position.x += mx; b.core.position.z += mz; }
+    b.mesh.position.x += mx;
+    b.mesh.position.z += mz;
     if (b.life <= 0) { _removeEBullet(b); state.enemyBullets.splice(i, 1); continue; }
 
     const pdx = b.mesh.position.x - playerGroup.position.x;
@@ -255,7 +259,7 @@ export function updateEnemyBullets(worldDelta) {
 
     let blocked = false;
     for (const c of propColliders) {
-      const cdx = b.mesh.position.x - c.wx, cdz = b.mesh.position.z - c.wz;
+      const cdx = b.mesh.position.x - c.wx, cdz = b.mesh.position.z - c.wz; // b.mesh = glow mesh, tracks bullet position
       if (cdx*cdx + cdz*cdz < (c.radius + 0.14) * (c.radius + 0.14)) { blocked = true; break; }
     }
     if (blocked) { _removeEBullet(b); state.enemyBullets.splice(i, 1); }
