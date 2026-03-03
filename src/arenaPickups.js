@@ -66,7 +66,7 @@ export function updateArenaPickups(worldDelta){
     const t = randType();
     spawnAtRandom(t);
     // Base 18s interval, luck can bring it down.
-    _spawnTimer = (18.0 * mult) * (0.75 + Math.random() * 0.5);
+    _spawnTimer = (45.0 * mult) * (0.75 + Math.random() * 0.5);
   }
 
   // Update / collection
