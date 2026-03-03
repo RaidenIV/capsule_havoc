@@ -5,48 +5,66 @@
 ```
 capsule_havoc/
 ├── index.html                  # HTML shell + DOM overlays (HUD, menus, banners, shop)
-├── MAP.md                      # Notes / map doc
+├── MAP.md                      # This file
 ├── styles/
-│   └── main.css                # All styling (menu, HUD, pause, shop, panel, banners)
+│   └── main.css                # All styling
 ├── assets/
-│   ├── images/                 # Logo / images
-│   ├── music/                  # Music tracks (theme.wav)
-│   └── sfx/                    # SFX (.wav)
+│   ├── images/
+│   ├── music/                  # theme.wav
+│   └── sfx/                    # All SFX (.wav) — see audio.js for full list
 └── src/
     ├── main.js                 # App bootstrap (menu → game, wiring, restarts)
-    ├── loop.js                 # Main game loop (update/render, wave flow, pause/shop gating)
-    ├── state.js                # Shared runtime state (paused, uiMode, wave state, coins, etc.)
-    ├── input.js                # Keyboard/mouse bindings (ESC pause, etc.)
+    ├── loop.js                 # Main game loop (update/render order, all per-frame calls)
+    ├── state.js                # Shared runtime state (single mutable object)
+    ├── input.js                # Keyboard bindings (WASD, Shift dash, E burst, Q slow, M mute)
     ├── gameFlow.js             # Game lifecycle (countdown, game over/victory, restart)
-    ├── constants.js            # Tunables + configs (waves, weapons, etc.)
+    ├── constants.js            # All tunables (speeds, HP, SLASH_INTERVAL=1.0s, WEAPON_CONFIG, etc.)
     │
     ├── renderer.js             # Three.js renderer/scene/camera setup
-    ├── bloom.js                # Post FX bloom pipeline
-    ├── lighting.js             # Lighting updates
-    ├── materials.js            # Shared materials/geometries helpers
-    ├── terrain.js              # Terrain + prop collision data
-    ├── particles.js            # Particle FX
-    ├── damageNumbers.js        # Damage number popups
+    ├── bloom.js                # 3-layer custom Gaussian bloom pipeline
+    ├── lighting.js             # Lights + per-tick orbit/sun updates
+    ├── materials.js            # Shared geometries, materials, cosmetics
+    ├── terrain.js              # Procedural chunks, prop colliders, LOS, steering
+    ├── particles.js            # Pooled explosion particles
+    ├── damageNumbers.js        # Floating damage/heal number sprites
     │
-    ├── player.js               # Player movement + HP + visuals
-    ├── enemies.js              # Enemies (spawn/update/boss params)
-    ├── weapons.js              # Weapons + slash logic/VFX, bullet/orbit behavior
-    ├── pickups.js              # Coins/XP pickups + collection
-    ├── xp.js                   # Upgrade-derived stats (fire interval, dmg, bullet count, etc.)
-    ├── hudCoin.js              # HUD coin display logic (coin widget/animation)
-    ├── audio.js                # Music/SFX + volume routing (master/music/sfx + mixer)
+    ├── player.js               # Player movement, dash, health/dash bars, lean
+    ├── enemies.js              # Enemy lifecycle: spawn, update, AI, death, loot drop
+    │                           #   Contact damage: discrete hit model (1 hit/sec,
+    │                           #   sound + damage number fire once per interval)
+    ├── enemyAI.js              # Decollision push system, despawn distance checks
+    ├── spawner.js              # Per-type spawn timers, quotas, screen cap, direction bias
+    ├── weapons.js              # Bullets, orbit rings, slash VFX/damage
+    │                           #   performSlash() — called by loop on SLASH_INTERVAL timer
+    ├── pickups.js              # Coins, health packs, chest proximity collection
+    ├── arenaPickups.js         # Timed arena pickups (double damage, clock, black hole, etc.)
+    ├── coins.js                # Re-export shim → pickups.js (spawnCoins, dropLoot)
+    ├── chests.js               # Re-export shim → pickups.js + ui/upgrades.js
+    ├── armor.js                # Armor charges, extra-life revive, applyPlayerDamage()
+    ├── activeEffects.js        # Timed effect state (doubleDamage, invincibility, clock, etc.)
+    ├── xp.js                   # XP award, level-up, weapon config accessors
+    │                           #   Damage formula: DMG(L) = 10 + floor((L-1)² / 50)
+    ├── leveling.js             # 3-phase XP formula, spike levels (20/40), XP rewards by class
+    ├── luck.js                 # Luck stat aggregation (shop + boss waves + curse)
+    ├── hudCoin.js              # Spinning 3D coin in HUD canvas
+    ├── hudEffects.js           # HUD badges for active timed effects + armor pips
+    ├── hudLevel.js             # Level number HUD element
+    ├── audio.js                # AudioContext, all SFX loading, music controls, volume
     │
-    ├── upgrades.js             # Upgrade/shop logic (overlay + purchases) 
+    ├── upgrades.js             # Re-export shim → ui/upgrades.js
     ├── panel/
-    │   └── index.js            # Dev/tuning control panel
-    │
-    └── ui/                     # Menu screens (modular UI)
-        ├── menu.js
-        ├── scores.js
-        ├── highScores.js
-        ├── settings.js
-        ├── storage.js
-        └── upgrades.js         # Upgrade Shop UI (overlay)
+    │   └── index.js            # Dev/tuning control panel (Tab key)
+    └── ui/
+        ├── menu.js             # Main menu controller (start, scores, settings pages)
+        ├── scores.js           # High score list renderer
+        ├── highScores.js       # High score storage (localStorage, top 10)
+        ├── settings.js         # Audio settings UI (mute, music vol, sfx vol)
+        ├── storage.js          # localStorage JSON helpers (loadJSON, saveJSON)
+        ├── upgrades.js         # 4-tab upgrade shop + chest reward overlay
+        │                       #   Tabs: Weapons · Movement · Abilities · Power Ups
+        │                       #   Weapon lasers start LOCKED (weaponTier=0);
+        │                       #   first weapon upgrade purchased unlocks bullets
+        └── chestOverlay.js     # Re-export shim → ui/upgrades.js (openChestReward)
 ```
 
 ---
