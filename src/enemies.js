@@ -322,8 +322,9 @@ export function updateEnemies(delta, worldDelta, elapsed) {
           const spd = ENEMY_BULLET_SPEED * (e.bulletSpeedMult || 1);
           const dvx = (dx/dist) * spd;
           const dvz = (dz/dist) * spd;
-          const col  = e.eliteType ? e.eliteType.color : (e.baseColor?.getHex?.() ?? 0xff4400);
-          const bMat = getEnemyBulletMat(col);
+          // Always use a bright emissive color — enemy body colors (e.g. 0x242424) are too
+          // dark to pass the bloom threshold, making bullets invisible. Use a hot red-orange.
+          const bMat = getEnemyBulletMat(0xff4400);
           const bMesh = new THREE.Mesh(enemyBulletGeo, bMat);
           _eBulletDir.set(dvx, 0, dvz).normalize();
           _eBulletQ.setFromUnitVectors(_eBulletUp, _eBulletDir);
