@@ -216,21 +216,7 @@ export const ENEMY_TYPE = Object.freeze({
 });
 
 export function getEnemyCapForLevel(level){
-  const L = Math.max(1, Math.floor(level||1));
-  if (L <= 5) return 30;
-  if (L <= 9) return 35;
-  if (L <= 10) return 35;
-  if (L <= 19) return 40;
-  if (L <= 20) return 40;
-  if (L <= 29) return 45;
-  if (L <= 30) return 45;
-  if (L <= 39) return 45;
-  if (L <= 40) return 50;
-  if (L <= 49) return 50;
-  if (L <= 50) return 55;
-  if (L <= 59) return 55;
-  if (L <= 60) return 55;
-  return 60;
+  return 50; // flat cap — always 50 enemies on screen
 }
 
 export function getActiveEnemyTypesForLevel(level){
