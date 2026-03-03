@@ -425,42 +425,37 @@ export function updateEnemies(delta, worldDelta, elapsed) {
       const push = (minD - dist) * 0.55;
       e.grp.position.x -= nx * push; e.grp.position.z -= nz * push;
       playerGroup.position.x += nx * push; playerGroup.position.z += nz * push;
-      // Play hit sound on contact (throttled via contactDmgTimer, invincible or not)
+      // Discrete hit model: one damage tick per CONTACT_HIT_INTERVAL seconds.
+      // Tick the timer down every frame while in contact.
+      state.contactDmgTimer = Math.max(0, (state.contactDmgTimer || 0) - worldDelta);
       if (state.contactDmgTimer <= 0) {
-        playSound('player_hit', 0.6, 0.95 + Math.random() * 0.1);
-        state.contactDmgTimer = 0.35; // throttle: won't fire again for 350ms
-      }
-      if (!(state.invincible || state.dashInvincible)) {
-        // Shield treats contact as a discrete "hit" with an internal cooldown.
-        if ((state.shieldCharges || 0) > 0 && (state.shieldHitCD || 0) <= 0) {
-          state.shieldCharges -= 1;
-          state.shieldHitCD = 0.6;
-          if (state.shieldCharges <= 0) {
-            const tier = Math.max(0, state.upg?.shield || 0);
-            const base = 12.0;
-            const rt = (tier >= 2) ? base * 0.65 : base;
-            state.shieldRecharge = rt;
-          }
-          playSound('shield_break', 0.65, 1.0);
-        } else {
-          const curseTier = Math.max(0, state.upg?.curse || 0);
-          const dmg = ENEMY_CONTACT_DPS * (1 + 0.20 * curseTier) * worldDelta;
-          const res = applyPlayerDamage(dmg, 'contact');
-          if (res.applied > 0) {
-            state.contactDmgAccum += res.applied;
-            state.contactDmgTimer -= worldDelta;
-            if (state.contactDmgTimer <= 0) {
-              spawnPlayerDamageNum(Math.round(state.contactDmgAccum));
-              state.contactDmgAccum = 0;
-              state.contactDmgTimer = 0.35;
+        const CONTACT_HIT_INTERVAL = 1.0; // seconds between hits
+        state.contactDmgTimer = CONTACT_HIT_INTERVAL;
+
+        if (!(state.invincible || state.dashInvincible)) {
+          // Shield absorbs the hit as one discrete charge
+          if ((state.shieldCharges || 0) > 0 && (state.shieldHitCD || 0) <= 0) {
+            state.shieldCharges -= 1;
+            state.shieldHitCD = 0.6;
+            if (state.shieldCharges <= 0) {
+              const tier = Math.max(0, state.upg?.shield || 0);
+              const base = 12.0;
+              const rt = (tier >= 2) ? base * 0.65 : base;
+              state.shieldRecharge = rt;
             }
+            playSound('shield_break', 0.65, 1.0);
+          } else {
+            // Damage = DPS × interval so average damage rate stays the same
+            const curseTier = Math.max(0, state.upg?.curse || 0);
+            const dmg = ENEMY_CONTACT_DPS * CONTACT_HIT_INTERVAL * (1 + 0.20 * curseTier);
+            const res = applyPlayerDamage(dmg, 'contact');
+            if (res.applied > 0) {
+              spawnPlayerDamageNum(Math.round(res.applied));
+              playSound('player_hit', 0.6, 0.95 + Math.random() * 0.1);
+            }
+            if (res.died) return 'DEAD';
           }
-          if (res.died) return 'DEAD';
         }
-      } else {
-        // Still tick the timer when invincible so sound stays throttled
-        state.contactDmgTimer -= worldDelta;
-        if (state.contactDmgTimer <= 0) state.contactDmgTimer = 0.35;
       }
     }
   }
