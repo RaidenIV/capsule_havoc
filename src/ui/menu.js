@@ -43,10 +43,12 @@ export function initMenuUI({ onStart }) {
   }
 
   function hideMenu() {
+    // Pre-hide HUD elements inline before switching class, so there's
+    // never a frame where mode-playing shows them before the countdown hides them.
+    const HUD_IDS = ['ui','hud-top-left','coin-hud','xp-hud','fpsOverlay','livesHud','instructions','tab-hint'];
+    HUD_IDS.forEach(id => { const el = document.getElementById(id); if (el) el.style.visibility = 'hidden'; });
     document.body.classList.remove('mode-menu');
-    // Use mode-countdown instead of mode-playing so the HUD stays
-    // hidden until the countdown finishes (avoids a brief HUD flash).
-    document.body.classList.add('mode-countdown');
+    document.body.classList.add('mode-playing');
     menu.classList.remove('show');
   }
 
