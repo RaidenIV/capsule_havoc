@@ -140,7 +140,7 @@ function ensureShopStyles() {
   const style = document.createElement('style');
   style.id = 'shop-dynamic-styles';
   style.textContent = `
-    #shopTabs { display:flex; gap:6px; margin-bottom:14px; flex-wrap:wrap; }
+    #shopTabs { display:flex; gap:6px; margin-bottom:14px; flex-wrap:wrap; position:sticky; top:0; z-index:10; background:rgba(10,12,18,0.95); backdrop-filter:blur(8px); padding:6px 0 8px; margin-left:-2px; margin-right:-2px; }
     .shop-tab-btn {
       flex:1; min-width:80px; padding:7px 10px;
       background:rgba(255,255,255,0.07); border:1px solid rgba(255,255,255,0.15);
