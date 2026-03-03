@@ -214,41 +214,32 @@ export function updateBullets(worldDelta) {
 
 // ── Update enemy bullets ──────────────────────────────────────────────────────
 function _removeEBullet(b) {
-  if (b.core) { scene.remove(b.core); b.mat?.dispose(); }
-  scene.remove(b.mesh);
-  b.extraMat?.dispose();
+  // Back/forward-compatible removal for enemy bullets
+  if (b.core) scene.remove(b.core);
+  if (b.mesh) scene.remove(b.mesh);
+  if (b.obj)  scene.remove(b.obj);
+
+  // Dispose any per-bullet materials (enemy bullet mats are per-bullet in this build)
+  b.mat?.dispose?.();
+  b.extraMat?.dispose?.();
 }
 
 export function updateEnemyBullets(worldDelta) {
   for (let i = state.enemyBullets.length - 1; i >= 0; i--) {
     const b = state.enemyBullets[i];
-
-    // Back-compat / safety: some bullets may be stored as { obj } or may be missing fields.
-    const vx = Number.isFinite(b.vx) ? b.vx : 0;
-    const vz = Number.isFinite(b.vz) ? b.vz : 0;
-
-    b.life = (Number.isFinite(b.life) ? b.life : 0) - worldDelta;
-
-    const mx = vx * worldDelta;
-    const mz = vz * worldDelta;
-
-    // Move whichever visuals exist.
-    if (b.core?.position) { b.core.position.x += mx; b.core.position.z += mz; }
-    if (b.mesh?.position) { b.mesh.position.x += mx; b.mesh.position.z += mz; }
-    if (b.obj?.position)  { b.obj.position.x  += mx; b.obj.position.z  += mz; }
-
-    const posObj = b.mesh ?? b.obj ?? b.core;
-    if (!posObj?.position) {
-      // Nothing to update/render; drop it.
-      try { _removeEBullet(b); } catch {}
-      state.enemyBullets.splice(i, 1);
-      continue;
-    }
-
+    b.life -= worldDelta;
+    const mx = b.vx * worldDelta;
+    const mz = b.vz * worldDelta;
+    // Move bullet visuals (support old {mesh} as well as newer {core+mesh})
+    if (b.core) { b.core.position.x += mx; b.core.position.z += mz; }
+    const vis = b.mesh || b.obj || b.core;
+    if (vis) { vis.position.x += mx; vis.position.z += mz; }
+    else { _removeEBullet(b); state.enemyBullets.splice(i, 1); continue; }
     if (b.life <= 0) { _removeEBullet(b); state.enemyBullets.splice(i, 1); continue; }
 
-    const pdx = posObj.position.x - playerGroup.position.x;
-    const pdz = posObj.position.z - playerGroup.position.z;
+    const visPos = (b.mesh || b.obj || b.core).position;
+    const pdx = visPos.x - playerGroup.position.x;
+    const pdz = visPos.z - playerGroup.position.z;
     if (pdx*pdx + pdz*pdz < 0.36) {
       const dmg = (Number.isFinite(b.dmg) ? b.dmg : ENEMY_BULLET_DMG);
       // Shield absorbs hits first (abilities tab)
@@ -275,7 +266,7 @@ export function updateEnemyBullets(worldDelta) {
 
     let blocked = false;
     for (const c of propColliders) {
-      const cdx = posObj.position.x - c.wx, cdz = posObj.position.z - c.wz;
+      const cdx = visPos.x - c.wx, cdz = visPos.z - c.wz; // bullet visual = glow mesh, tracks bullet position
       if (cdx*cdx + cdz*cdz < (c.radius + 0.14) * (c.radius + 0.14)) { blocked = true; break; }
     }
     if (blocked) { _removeEBullet(b); state.enemyBullets.splice(i, 1); }

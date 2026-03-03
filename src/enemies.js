@@ -5,6 +5,7 @@ import { scene, CAM_D } from './renderer.js';
 import { state } from './state.js';
 import {
   ENEMY_SPEED, ENEMY_CONTACT_DPS, ENEMY_BULLET_SPEED, ENEMY_BULLET_LIFETIME,
+  ENEMY_BULLET_DMG,
   STAGGER_DURATION, SPAWN_FLASH_DURATION, ELITE_FIRE_RATE, ELITE_TYPES, PLAYER_MAX_HP,
   ENEMY_DEFS, ENEMY_TYPE,
 } from './constants.js';
@@ -322,37 +323,28 @@ export function updateEnemies(delta, worldDelta, elapsed) {
           const spd = ENEMY_BULLET_SPEED * (e.bulletSpeedMult || 1);
           const dvx = (dx/dist) * spd;
           const dvz = (dz/dist) * spd;
-          // Always use a bright emissive color — enemy body colors (e.g. 0x242424) are too
-          // dark to pass the bloom threshold, making bullets invisible. Use a hot red-orange.
-          // Two separate meshes tracked independently (avoids Group rotation issues).
-          // core: white capsule on layer 0 (main scene); glow: orange bloom on layer 1.
+
+          // Use the proven single-mesh enemy bullet from the older working version.
+          // (Still emissive + bloom layer so it's visible.)
+          const bMat  = getEnemyBulletMat(0xff4400);
+          const bMesh = new THREE.Mesh(enemyBulletGeo, bMat);
+
           _eBulletDir.set(dvx, 0, dvz).normalize();
           _eBulletQ.setFromUnitVectors(_eBulletUp, _eBulletDir);
+          bMesh.quaternion.copy(_eBulletQ);
 
-          const spawnX = e.grp.position.x;
-          const spawnY = floorY(bulletGeoParams);
-          const spawnZ = e.grp.position.z;
+          bMesh.layers.enable(1);
+          bMesh.position.copy(e.grp.position);
+          bMesh.position.y = floorY(bulletGeoParams);
 
-          const bCoreMat = new THREE.MeshStandardMaterial({ color: 0xffffff, emissive: 0xffffff, emissiveIntensity: 0.4, metalness: 0, roughness: 0.25 });
-          const bCore = new THREE.Mesh(enemyBulletGeo, bCoreMat);
-          bCore.quaternion.copy(_eBulletQ);
-          bCore.position.set(spawnX, spawnY, spawnZ);
-          bCore.layers.set(0);
-          scene.add(bCore);
-
-          const bGlowMat = getEnemyBulletMat(0xff4400);
-          const bGlow = new THREE.Mesh(enemyBulletGeo, bGlowMat);
-          bGlow.quaternion.copy(_eBulletQ);
-          bGlow.position.set(spawnX, spawnY, spawnZ);
-          bGlow.scale.setScalar(1.25);
-          bGlow.layers.set(1);
-          scene.add(bGlow);
+          scene.add(bMesh);
 
           const curseTier = Math.max(0, state.upg?.curse || 0);
           const dmg = ENEMY_BULLET_DMG * (1 + 0.20 * curseTier);
-          state.enemyBullets.push({ core: bCore, mesh: bGlow, mat: bCoreMat, extraMat: bGlowMat, vx: dvx, vz: dvz, life: ENEMY_BULLET_LIFETIME, dmg });
+
+          state.enemyBullets.push({ mesh: bMesh, mat: bMat, vx: dvx, vz: dvz, life: ENEMY_BULLET_LIFETIME, dmg });
           playSound('elite_shoot', 0.5, 0.9 + Math.random() * 0.2);
-        }
+}
       }
     }
 
