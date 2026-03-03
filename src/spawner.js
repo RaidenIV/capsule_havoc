@@ -15,14 +15,16 @@ import { spawnEnemyAtPosition } from './enemies.js';
 
 const HARD_CAP = 50;
 
+// All intervals are short so the spawner immediately replaces killed enemies.
+// Quotas define how many of each type should be alive at once.
 const BASE = Object.freeze({
-  [ENEMY_TYPE.RUSHER]:     { quotaMin: 8, quotaMax: 12, interval: 3.0, group: true },
-  [ENEMY_TYPE.ORBITER]:    { quotaMin: 3, quotaMax: 5,  interval: 5.0, group: false },
-  [ENEMY_TYPE.TANKER]:     { quotaMin: 2, quotaMax: 3,  interval: 8.0, group: false },
-  [ENEMY_TYPE.SNIPER]:     { quotaMin: 2, quotaMax: 3,  interval: 8.0, group: false },
-  [ENEMY_TYPE.TELEPORTER]: { quotaMin: 2, quotaMax: 2,  interval: 10.0, group: false },
-  [ENEMY_TYPE.SHIELDED]:   { quotaMin: 2, quotaMax: 3,  interval: 9.0, group: false },
-  [ENEMY_TYPE.SPLITTER]:   { quotaMin: 1, quotaMax: 1,  interval: 15.0, group: false },
+  [ENEMY_TYPE.RUSHER]:     { quotaMin: 20, quotaMax: 25, interval: 0.5, group: true },
+  [ENEMY_TYPE.ORBITER]:    { quotaMin: 4,  quotaMax: 6,  interval: 0.5, group: false },
+  [ENEMY_TYPE.TANKER]:     { quotaMin: 2,  quotaMax: 3,  interval: 0.5, group: false },
+  [ENEMY_TYPE.SNIPER]:     { quotaMin: 2,  quotaMax: 3,  interval: 0.5, group: false },
+  [ENEMY_TYPE.TELEPORTER]: { quotaMin: 2,  quotaMax: 2,  interval: 0.5, group: false },
+  [ENEMY_TYPE.SHIELDED]:   { quotaMin: 2,  quotaMax: 3,  interval: 0.5, group: false },
+  [ENEMY_TYPE.SPLITTER]:   { quotaMin: 1,  quotaMax: 1,  interval: 0.5, group: false },
 });
 
 function randInt(a, b) { return a + Math.floor(Math.random() * (b - a + 1)); }
@@ -120,12 +122,13 @@ export function getSpawnPosition(isBoss = false) {
   }
 
   // Oval radii scale with camera height/distance (iso camera).
-  // Fixed spawn ring just outside the visible area.
-  // Camera is ~39 units away (iso offset), visible radius ~18 units.
-  // Spawn at 20–26 units so enemies walk on-screen within 1–2 seconds.
-  const pad = isBoss ? 8.0 : 0.0;
-  const a = 22 + pad + Math.random() * 4;
-  const b = 18 + pad + Math.random() * 4;
+  const camDist = Math.hypot(cam.position.x - px, cam.position.z - pz);
+  const baseA = camDist * 0.95;  // major axis
+  const baseB = camDist * 0.70;  // minor axis
+  const pad   = isBoss ? 6.0 : 3.5;
+
+  const a = baseA + pad;
+  const b = baseB + pad;
 
   const x = px + Math.cos(angle) * a;
   const z = pz + Math.sin(angle) * b;
