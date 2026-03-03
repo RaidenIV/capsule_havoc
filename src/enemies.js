@@ -324,18 +324,29 @@ export function updateEnemies(delta, worldDelta, elapsed) {
           const dvz = (dz/dist) * spd;
           // Always use a bright emissive color — enemy body colors (e.g. 0x242424) are too
           // dark to pass the bloom threshold, making bullets invisible. Use a hot red-orange.
-          const bMat = getEnemyBulletMat(0xff4400);
-          const bMesh = new THREE.Mesh(enemyBulletGeo, bMat);
+          // Two-mesh bullet: white core (layer 0) + orange glow (layer 1, bloom)
           _eBulletDir.set(dvx, 0, dvz).normalize();
           _eBulletQ.setFromUnitVectors(_eBulletUp, _eBulletDir);
-          bMesh.quaternion.copy(_eBulletQ);
-          bMesh.layers.set(1); // bloom pass only — makes bullets glow like player lasers
-          bMesh.position.copy(e.grp.position);
-          bMesh.position.y = floorY(bulletGeoParams);
-          scene.add(bMesh);
+          const bGrp = new THREE.Group();
+          bGrp.quaternion.copy(_eBulletQ);
+          bGrp.position.copy(e.grp.position);
+          bGrp.position.y = floorY(bulletGeoParams);
+
+          const bCoreMat = new THREE.MeshStandardMaterial({ color: 0xffffff, emissive: 0xffffff, emissiveIntensity: 0.4, metalness: 0, roughness: 0.25 });
+          const bCore = new THREE.Mesh(enemyBulletGeo, bCoreMat);
+          bCore.layers.set(0);
+          bGrp.add(bCore);
+
+          const bGlowMat = getEnemyBulletMat(0xff4400);
+          const bGlow = new THREE.Mesh(enemyBulletGeo, bGlowMat);
+          bGlow.layers.set(1);
+          bGlow.scale.setScalar(1.25);
+          bGrp.add(bGlow);
+
+          scene.add(bGrp);
           const curseTier = Math.max(0, state.upg?.curse || 0);
           const dmg = ENEMY_BULLET_DMG * (1 + 0.20 * curseTier);
-          state.enemyBullets.push({ mesh: bMesh, mat: bMat, vx: dvx, vz: dvz, life: ENEMY_BULLET_LIFETIME, dmg });
+          state.enemyBullets.push({ mesh: bGrp, mat: bCoreMat, extraMat: bGlowMat, vx: dvx, vz: dvz, life: ENEMY_BULLET_LIFETIME, dmg });
           playSound('elite_shoot', 0.5, 0.9 + Math.random() * 0.2);
         }
       }
