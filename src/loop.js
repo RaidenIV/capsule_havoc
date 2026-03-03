@@ -225,6 +225,21 @@ export function tick() {
   // ── Enemies ───────────────────────────────────────────────────────────────
   updateEnemies(delta, worldDelta, state.elapsed);
 
+  // Black Hole effect: pull all enemies toward player
+  if ((state.effects?.blackHole || 0) > 0) {
+    const PULL = 18.0; // units per second
+    for (const e of state.enemies) {
+      if (e.dead) continue;
+      const bdx = playerGroup.position.x - e.grp.position.x;
+      const bdz = playerGroup.position.z - e.grp.position.z;
+      const bd  = Math.sqrt(bdx*bdx + bdz*bdz);
+      if (bd > 0.5) {
+        e.grp.position.x += (bdx/bd) * Math.min(PULL * worldDelta, bd - 0.5);
+        e.grp.position.z += (bdz/bd) * Math.min(PULL * worldDelta, bd - 0.5);
+      }
+    }
+  }
+
   // ── Weapons / bullets ─────────────────────────────────────────────────────
   // Auto-shoot: only fires when weapon tier is active
   if ((state.weaponTier || 0) >= 1) {
