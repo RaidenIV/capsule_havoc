@@ -7,7 +7,7 @@ export const SLASH_RADIUS      = 4.0;             // blade reach
 export const SLASH_INNER_R     = 0.55;            // starts past player body
 export const SLASH_VISUAL_ARC  = Math.PI * 0.80;  // ~144° — wider wedge like reference image
 export const SLASH_HIT_ARC     = Math.PI * 0.85;  // hitbox slightly wider
-export const SLASH_INTERVAL    = 1.0;
+export const SLASH_INTERVAL    = 0.65;
 export const SLASH_DAMAGE      = 20;
 export const SLASH_DURATION    = 0.30;            // total life (s)
 export const SLASH_SWING_TIME  = 0.05;            // blade sweeps in this time (2× faster)
@@ -217,20 +217,20 @@ export const ENEMY_TYPE = Object.freeze({
 
 export function getEnemyCapForLevel(level){
   const L = Math.max(1, Math.floor(level||1));
-  if (L <= 5) return 20;
-  if (L <= 9) return 25;
-  if (L <= 10) return 25;
-  if (L <= 19) return 30;
-  if (L <= 20) return 30;
-  if (L <= 29) return 35;
-  if (L <= 30) return 35;
-  if (L <= 39) return 35;
-  if (L <= 40) return 40;
-  if (L <= 49) return 40;
-  if (L <= 50) return 40;
-  if (L <= 59) return 45;
-  if (L <= 60) return 45;
-  return 50;
+  if (L <= 5) return 30;
+  if (L <= 9) return 35;
+  if (L <= 10) return 35;
+  if (L <= 19) return 40;
+  if (L <= 20) return 40;
+  if (L <= 29) return 45;
+  if (L <= 30) return 45;
+  if (L <= 39) return 45;
+  if (L <= 40) return 50;
+  if (L <= 49) return 50;
+  if (L <= 50) return 55;
+  if (L <= 59) return 55;
+  if (L <= 60) return 55;
+  return 60;
 }
 
 export function getActiveEnemyTypesForLevel(level){
@@ -247,7 +247,7 @@ export function getActiveEnemyTypesForLevel(level){
 
 // enemy defs: percent values are fractions of player max HP (e.g. 0.10 = 10%)
 export const ENEMY_DEFS = Object.freeze({
-  [ENEMY_TYPE.RUSHER]:     { color: 0x888888, sizeMult: 0.75, hpPct: 0.50, contactPct: 0.10, shoot: false, metallic: false },
+  [ENEMY_TYPE.RUSHER]:     { color: 0x888888, sizeMult: 0.75, hpPct: 0.08, contactPct: 0.10, shoot: false, metallic: false },
     [ENEMY_TYPE.ORBITER]:    { color: 0x242424, sizeMult: 1.00, hpPct: 0.50, contactPct: 0.15, shoot: true,  bulletPct: 0.10, fireRate: 2.00, bulletSpeedMult: 1.00, metallic: true,  orbitR: 6.5 },
     [ENEMY_TYPE.TANKER]:     { color: 0x888888, sizeMult: 1.50, hpPct: 2.00, contactPct: 0.20, shoot: true,  bulletPct: 0.20, fireRate: 2.25, bulletSpeedMult: 0.85, metallic: true },
   [ENEMY_TYPE.SNIPER]:     { color: 0x9b30ff, sizeMult: 1.00, hpPct: 3.00, contactPct: 0.10, shoot: true,  bulletPct: 0.333, fireRate: 1.85, bulletSpeedMult: 1.35, metallic: false },
