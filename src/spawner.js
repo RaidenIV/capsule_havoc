@@ -120,13 +120,12 @@ export function getSpawnPosition(isBoss = false) {
   }
 
   // Oval radii scale with camera height/distance (iso camera).
-  const camDist = Math.hypot(cam.position.x - px, cam.position.z - pz);
-  const baseA = camDist * 0.95;  // major axis
-  const baseB = camDist * 0.70;  // minor axis
-  const pad   = isBoss ? 6.0 : 3.5;
-
-  const a = baseA + pad;
-  const b = baseB + pad;
+  // Fixed spawn ring just outside the visible area.
+  // Camera is ~39 units away (iso offset), visible radius ~18 units.
+  // Spawn at 20–26 units so enemies walk on-screen within 1–2 seconds.
+  const pad = isBoss ? 8.0 : 0.0;
+  const a = 22 + pad + Math.random() * 4;
+  const b = 18 + pad + Math.random() * 4;
 
   const x = px + Math.cos(angle) * a;
   const z = pz + Math.sin(angle) * b;
