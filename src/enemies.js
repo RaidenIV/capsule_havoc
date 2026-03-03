@@ -426,7 +426,10 @@ export function updateEnemies(delta, worldDelta, elapsed) {
       e.grp.position.x -= nx * push; e.grp.position.z -= nz * push;
       playerGroup.position.x += nx * push; playerGroup.position.z += nz * push;
       // Play hit sound on contact (throttled via contactDmgTimer, invincible or not)
-      if (state.contactDmgTimer <= 0) playSound('player_hit', 0.6, 0.95 + Math.random() * 0.1);
+      if (state.contactDmgTimer <= 0) {
+        playSound('player_hit', 0.6, 0.95 + Math.random() * 0.1);
+        state.contactDmgTimer = 0.35; // throttle: won't fire again for 350ms
+      }
       if (!(state.invincible || state.dashInvincible)) {
         // Shield treats contact as a discrete "hit" with an internal cooldown.
         if ((state.shieldCharges || 0) > 0 && (state.shieldHitCD || 0) <= 0) {
@@ -486,4 +489,3 @@ export function updateEnemies(delta, worldDelta, elapsed) {
     }
   }
 }
-
