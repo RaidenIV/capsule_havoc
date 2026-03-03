@@ -77,8 +77,8 @@ export function dropLoot(pos, coinValue, coinMult, coinColorHex = null) {
 // ── Update ────────────────────────────────────────────────────────────────────
 const ATTRACT_DIST_COIN = [5.0,5.5,6.0,6.5,7.0,7.5,8.0,8.5,9.0,9.5,10.0];
 const ATTRACT_SPD_COIN  = 9.0;
-const ATTRACT_DIST_HP   = 0.0; // design doc: health packs are NOT attracted
-const ATTRACT_SPD_HP    = 0.0;
+const ATTRACT_DIST_HP   = ATTRACT_DIST_COIN; // same magnet range as coins
+const ATTRACT_SPD_HP    = ATTRACT_SPD_COIN;
 const COLLECT_COIN      = 0.7;
 const COLLECT_HP        = 0.8;
 
@@ -153,7 +153,7 @@ export function updatePickups(worldDelta, playerLevel, elapsed) {
       if (healed > 0) spawnHealNum(healed);
       continue;
     }
-    if (dist < ATTRACT_DIST_HP) hp.attracting = true;
+    if (dist < attractDist) hp.attracting = true;
     if (hp.attracting) {
       const spd = ATTRACT_SPD_HP * worldDelta;
       hp.mesh.position.x += (dx/dist) * Math.min(spd, dist);
