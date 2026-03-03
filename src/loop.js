@@ -226,7 +226,7 @@ export function tick() {
   // (Wave-based spawner removed; using spawner.js)
 
   // ── Enemies ───────────────────────────────────────────────────────────────
-  updateEnemies(delta, worldDelta * state.enemyTimeScale, state.elapsed);
+  updateEnemies(delta, worldDelta * (state.enemyTimeScale ?? 1.0), state.elapsed);
 
   // ── Black Hole ─────────────────────────────────────────────────────────────
   // Spawned when the pickup is collected (see activeEffects.js applyEffect 'blackHole').
@@ -305,7 +305,7 @@ export function tick() {
     }
   }
   updateBullets(worldDelta);
-  updateEnemyBullets(worldDelta * state.enemyTimeScale);
+  updateEnemyBullets(worldDelta * (state.enemyTimeScale ?? 1.0));
   updateOrbitBullets(worldDelta);
   // Slash: timed by SLASH_INTERVAL, scaled by worldDelta so Time Slow affects it
   state._slashTimer = (state._slashTimer || 0) - worldDelta;
