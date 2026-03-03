@@ -92,10 +92,7 @@ export function startCountdown(onDone) {
         playerMesh.visible = true;
         hbObj.visible = true;
         dashBarObj.visible = !!state.hasDash;
-        // Switch body class so CSS shows the HUD
-        document.body.classList.remove('mode-countdown');
-        document.body.classList.add('mode-playing');
-        // Restore any inline visibility overrides set during countdown
+        // Restore HUD
         hudEls.forEach(el => { if (el) el.style.visibility = ''; });
         // Restore bullets and orbit rings
         state.bullets.forEach(b => { b.mesh.visible = true; });
