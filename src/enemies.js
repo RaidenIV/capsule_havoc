@@ -432,7 +432,7 @@ export function updateEnemies(delta, worldDelta, elapsed) {
         const CONTACT_HIT_INTERVAL = 1.0; // seconds between hits
         state.contactDmgTimer = CONTACT_HIT_INTERVAL;
 
-        if (!(state.invincible || state.dashInvincible)) {
+        if (!(state.invincible || state.dashInvincible || (state.effects?.invincibility || 0) > 0)) {
           // Shield absorbs the hit as one discrete charge
           if ((state.shieldCharges || 0) > 0 && (state.shieldHitCD || 0) <= 0) {
             state.shieldCharges -= 1;
