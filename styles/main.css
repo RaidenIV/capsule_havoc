@@ -916,8 +916,9 @@ body.mode-playing #menu-screen { display: none !important; }
   display: grid;
   grid-template-columns: 1fr;
   gap: 10px;
-  max-height: min(52vh, 520px);
-  overflow: auto;
+  height: min(52vh, 520px);
+  overflow-y: auto;
+  overflow-x: hidden;
 }
 
 .upgrade-cat{
