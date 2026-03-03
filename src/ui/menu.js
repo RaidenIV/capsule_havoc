@@ -44,7 +44,9 @@ export function initMenuUI({ onStart }) {
 
   function hideMenu() {
     document.body.classList.remove('mode-menu');
-    document.body.classList.add('mode-playing');
+    // Use mode-countdown instead of mode-playing so the HUD stays
+    // hidden until the countdown finishes (avoids a brief HUD flash).
+    document.body.classList.add('mode-countdown');
     menu.classList.remove('show');
   }
 
