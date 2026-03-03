@@ -197,7 +197,7 @@ export function restartGame(opts = {}) {
   state.playerLevel = 1;
   initSpawner();
   state.coins       = 0;
-  state.weaponTier  = 1; // baseline weapon enabled
+  state.weaponTier  = 0; // lasers are upgrade-only; player starts with slash only
   state.pickupRangeLvl = 0;
   state.upg = {
     dmg:0, fireRate:0, projSpeed:0, piercing:0, multishot:0,
