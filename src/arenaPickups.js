@@ -85,7 +85,19 @@ export function updateArenaPickups(worldDelta){
 
     const dx = playerGroup.position.x - p.mesh.position.x;
     const dz = playerGroup.position.z - p.mesh.position.z;
-    if (dx*dx + dz*dz < 0.85*0.85) {
+    const dist2 = dx*dx + dz*dz;
+
+    // Magnet attraction — same range as coins (level-based + magnet upgrade)
+    const baseAttract = [5.0,5.5,6.0,6.5,7.0,7.5,8.0,8.5,9.0,9.5,10.0][Math.min(state.playerLevel || 1, 10)];
+    const attractDist = baseAttract + Math.max(0, state.upg?.magnet || 0) * 1.25;
+    const dist = Math.sqrt(dist2);
+    if (dist < attractDist && dist > 0.001) {
+      const spd = 9.0 * worldDelta;
+      p.mesh.position.x += (dx / dist) * Math.min(spd, dist);
+      p.mesh.position.z += (dz / dist) * Math.min(spd, dist);
+    }
+
+    if (dist2 < 0.85*0.85) {
       // collect
       scene.remove(p.mesh);
       p.mat.dispose();
