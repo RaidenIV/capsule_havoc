@@ -107,6 +107,9 @@ export function tick() {
   // Slow-motion worldDelta is updated inside updatePlayer
   updatePlayer(delta, state.worldScale);
   const worldDelta = delta * state.worldScale;
+  // enemyTimeScale: slows only enemy movement and bullets (Time Freeze pickup)
+  const clockActive = (state.effects?.clock || 0) > 0;
+  state.enemyTimeScale = clockActive ? 0.05 : 1.0; // nearly frozen during clock effect
 
   // Timed effects (arena pickups)
   updateArmorTimers(worldDelta);
@@ -223,19 +226,71 @@ export function tick() {
   // (Wave-based spawner removed; using spawner.js)
 
   // ── Enemies ───────────────────────────────────────────────────────────────
-  updateEnemies(delta, worldDelta, state.elapsed);
+  updateEnemies(delta, worldDelta * state.enemyTimeScale, state.elapsed);
 
-  // Black Hole effect: pull all enemies toward player
-  if ((state.effects?.blackHole || 0) > 0) {
-    const PULL = 18.0; // units per second
-    for (const e of state.enemies) {
-      if (e.dead) continue;
-      const bdx = playerGroup.position.x - e.grp.position.x;
-      const bdz = playerGroup.position.z - e.grp.position.z;
-      const bd  = Math.sqrt(bdx*bdx + bdz*bdz);
-      if (bd > 0.5) {
-        e.grp.position.x += (bdx/bd) * Math.min(PULL * worldDelta, bd - 0.5);
-        e.grp.position.z += (bdz/bd) * Math.min(PULL * worldDelta, bd - 0.5);
+  // ── Black Hole ─────────────────────────────────────────────────────────────
+  // Spawned when the pickup is collected (see activeEffects.js applyEffect 'blackHole').
+  // A vortex mesh is created at a random location ~15 units from the player.
+  // Enemies pulled in are killed (coins still drop) but no explosion spawns.
+  if (!state._bhMesh && (state.effects?.blackHole || 0) > 0) {
+    // First frame of black hole — spawn the vortex
+    const ang = Math.random() * Math.PI * 2;
+    const dist = 12 + Math.random() * 6;
+    const bx = playerGroup.position.x + Math.cos(ang) * dist;
+    const bz = playerGroup.position.z + Math.sin(ang) * dist;
+    const bhGeo = new THREE.SphereGeometry(1.2, 16, 16);
+    const bhMat = new THREE.MeshStandardMaterial({
+      color: 0x000000, emissive: 0x6600ff, emissiveIntensity: 3.0,
+      transparent: true, opacity: 0.92, metalness: 0.0, roughness: 0.5,
+    });
+    const bhMesh = new THREE.Mesh(bhGeo, bhMat);
+    bhMesh.position.set(bx, 1.2, bz);
+    bhMesh.layers.enable(1);
+    scene.add(bhMesh);
+    state._bhMesh = bhMesh;
+    state._bhMat = bhMat;
+    state._bhGeo = bhGeo;
+  }
+  if (state._bhMesh) {
+    if ((state.effects?.blackHole || 0) <= 0) {
+      // Effect expired — clean up
+      scene.remove(state._bhMesh);
+      state._bhMat.dispose();
+      state._bhGeo.dispose();
+      state._bhMesh = null; state._bhMat = null; state._bhGeo = null;
+    } else {
+      // Spin and pulse
+      state._bhMesh.rotation.y += worldDelta * 2.5;
+      state._bhMat.emissiveIntensity = 2.5 + Math.sin(state.elapsed * 8) * 0.8;
+      const PULL = 22.0;
+      const KILL_R = 1.8;
+      const bhx = state._bhMesh.position.x;
+      const bhz = state._bhMesh.position.z;
+      for (let j = state.enemies.length - 1; j >= 0; j--) {
+        const e = state.enemies[j];
+        if (e.dead) continue;
+        const bdx = bhx - e.grp.position.x;
+        const bdz = bhz - e.grp.position.z;
+        const bd = Math.sqrt(bdx*bdx + bdz*bdz);
+        if (bd < KILL_R) {
+          // Silently kill enemy — drop coins but no explosion flash
+          removeCSS2DFromGroup(e.grp);
+          scene.remove(e.grp);
+          e.dead = true;
+          state.kills++;
+          const _ke = document.getElementById('kills-value'); if (_ke) _ke.textContent = state.kills;
+          // Drop loot — same coin value as a normal kill
+          import('./leveling.js').then(lev => {
+            const tier = lev.getCoinTierForEnemy?.(e.enemyType) ?? { value: 1, color: null };
+            import('./pickups.js').then(m => {
+              if (m.dropLoot) m.dropLoot(e.grp.position, tier.value, e.coinMult || 1, tier.color ?? null);
+            }).catch(()=>{});
+          }).catch(()=>{});
+          state.enemies.splice(j, 1);
+        } else if (bd < 30) {
+          e.grp.position.x += (bdx/bd) * Math.min(PULL * worldDelta, bd - KILL_R);
+          e.grp.position.z += (bdz/bd) * Math.min(PULL * worldDelta, bd - KILL_R);
+        }
       }
     }
   }
@@ -250,7 +305,7 @@ export function tick() {
     }
   }
   updateBullets(worldDelta);
-  updateEnemyBullets(worldDelta);
+  updateEnemyBullets(worldDelta * state.enemyTimeScale);
   updateOrbitBullets(worldDelta);
   // Slash: timed by SLASH_INTERVAL, scaled by worldDelta so Time Slow affects it
   state._slashTimer = (state._slashTimer || 0) - worldDelta;
