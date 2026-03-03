@@ -150,7 +150,15 @@ export function restartGame(opts = {}) {
   state.bullets.forEach(b => scene.remove(b.mesh));
   state.bullets.length = 0;
 
-  state.enemyBullets.forEach(b => scene.remove(b.mesh));
+  // Enemy bullets are two-mesh projectiles (core + glow). Make sure we remove BOTH,
+  // otherwise orphaned cores can remain in the scene looking like "frozen" lasers.
+  state.enemyBullets.forEach(b => {
+    try {
+      if (b.core) { scene.remove(b.core); b.mat?.dispose?.(); }
+      if (b.mesh) scene.remove(b.mesh);
+      b.extraMat?.dispose?.();
+    } catch {}
+  });
   state.enemyBullets.length = 0;
 
   state.particles.forEach(p => { scene.remove(p.mesh); _particleMeshPool.push(p.mesh); });
