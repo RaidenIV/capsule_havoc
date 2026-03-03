@@ -625,6 +625,18 @@ body.mode-menu canvas {
 
 body.mode-playing #menu-screen { display: none !important; }
 
+/* HUD is also hidden during countdown (before game starts) */
+body.mode-countdown #ui,
+body.mode-countdown #coin-hud,
+body.mode-countdown #xp-hud,
+body.mode-countdown #fpsOverlay,
+body.mode-countdown #instructions,
+body.mode-countdown #tab-hint,
+body.mode-countdown #hud-top-left,
+body.mode-countdown #livesHud,
+body.mode-countdown #label-layer,
+body.mode-countdown canvas { display: none !important; }
+
 .menu-screen {
   position: fixed; inset: 0; z-index: 9999;
   display: flex; align-items: center; justify-content: center;
