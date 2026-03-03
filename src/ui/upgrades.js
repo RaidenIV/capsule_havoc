@@ -1,468 +1,531 @@
-// ─── ui/upgrades.js ─────────────────────────────────────────────────────────
-// Design-doc upgrade shop + chest rewards.
-// - Shop opens after every level-up (coins are spent here)
-// - Boss drops chests; opening a chest offers 1/3/5 free upgrade items
-//
-// This module only handles UI + upgrade bookkeeping; gameplay effects are
-// applied by updating state fields consumed by other modules.
+// ─── ui/upgrades.js ──────────────────────────────────────────────────────────
+// Full 4-tab upgrade shop (Weapons / Movement / Abilities / Power Ups)
+// + Chest reward overlay
+// Based on game_design_doc.md Section 9 & 10
 
-import { state } from '../state.js';
-import { playSound } from '../audio.js';
-import { updateHealthBar, updateDashBar } from '../player.js';
+import { state }           from '../state.js';
+import { playSound }       from '../audio.js';
+import { syncOrbitBullets } from '../weapons.js';
+import { updateHealthBar } from '../player.js';
+import { recomputeLuck }   from '../luck.js';
+import { getPlayerMaxHPForLevel } from '../constants.js';
 
-let _onClose = null;
-let _mode = 'shop'; // 'shop' | 'chest'
-
-function $(id){ return document.getElementById(id); }
-
-// ── Upgrade catalog (prices from design doc Section 9) ──────────────────────
-const CATALOG = Object.freeze({
-  weapons: [
-    { key: 'dmg',       name: 'DAMAGE',           tiers: [50,150,400,1000,2500],  desc: '+15% base damage / tier' },
-    { key: 'fireRate',  name: 'FIRE RATE',        tiers: [75,200,500,1200,3000],  desc: '-10% shot cooldown / tier' },
-    { key: 'projSpeed', name: 'PROJECTILE SPEED', tiers: [100,300,800,2000],      desc: '+20% bullet speed / tier' },
-    { key: 'piercing',  name: 'PIERCING',         tiers: [200,600,1500],          desc: '+1 pierce / tier (max 3)' },
-    { key: 'multishot', name: 'MULTISHOT',        tiers: [500,1500,4000],         desc: '+1 projectile / tier (2→4)' },
-  ],
-  movement: [
-    { key: 'moveSpeed', name: 'MOVE SPEED',       tiers: [60,180,450,1100,2800],  desc: '+8% move speed / tier' },
-    { key: 'dash',      name: 'DASH',             tiers: [300,700,1800],          desc: 'T1 unlock · T2 -30% CD · T3 i-frames' },
-    { key: 'magnet',    name: 'MAGNET RADIUS',    tiers: [80,250,650,1600],       desc: 'Wider coin pull radius' },
-  ],
-  abilities: [
-    { key: 'shield',    name: 'SHIELD',           tiers: [400,1000,2500],         desc: 'Rechargeable hit-shield' },
-    { key: 'burst',     name: 'AREA BURST',       tiers: [350,900,2200,5500],     desc: 'E: radial damage pulse' },
-    { key: 'timeSlow',  name: 'TIME SLOW',        tiers: [600,1500,3800],         desc: 'Q: global slow (3–5s)' },
-  ],
-  power: [
-    { key: 'maxHealth', name: 'MAX HEALTH',       tiers: [40,120,350,900,2200],   desc: '+10% max HP / tier' },
-    { key: 'regen',     name: 'HEALTH REGEN',     tiers: [100,300,750,1800],      desc: '+1 HP/sec / tier' },
-    { key: 'xpGrowth',  name: 'XP GROWTH',        tiers: [150,400,1000,2500],     desc: '+15% XP / tier' },
-    { key: 'coinBonus', name: 'COIN BONUS',       tiers: [200,600,1500],          desc: '+20% coin value / tier' },
-    { key: 'curse',     name: 'CURSE',            tiers: [500,1500,4000],         desc: '+20% enemy HP/DMG, +25% coins, +10% XP' },
-    { key: 'luck',      name: 'LUCK',             tiers: [250,700,1800],          desc: '+5 Luck / tier' },
-  ],
-});
-
-const TAB_ORDER = [
-  { id: 'weapons', label: 'WEAPONS' },
-  { id: 'movement', label: 'MOVEMENT' },
-  { id: 'abilities', label: 'ABILITIES' },
-  { id: 'power', label: 'POWER UPS' },
+// ─────────────────────────────────────────────────────────────────────────────
+// Shop definition (Section 9)
+// Each entry: { key, name, costs[], desc(tier) }
+// ─────────────────────────────────────────────────────────────────────────────
+const TABS = [
+  {
+    id: 'weapons', label: 'Weapons',
+    upgrades: [
+      { key: 'dmg',       name: 'Damage',            costs: [50, 150, 400, 1000, 2500],
+        desc: t => `+15% weapon damage (Tier ${t})` },
+      { key: 'fireRate',  name: 'Fire Rate',          costs: [75, 200, 500, 1200, 3000],
+        desc: t => `-10% shot cooldown (Tier ${t})` },
+      { key: 'projSpeed', name: 'Projectile Speed',   costs: [100, 300, 800, 2000],
+        desc: t => `+20% projectile speed (Tier ${t})` },
+      { key: 'piercing',  name: 'Piercing',           costs: [200, 600, 1500],
+        desc: t => `+1 enemy pierced per shot (Tier ${t})` },
+      { key: 'multishot', name: 'Multishot',          costs: [500, 1500, 4000],
+        desc: t => `+1 extra projectile per shot (Tier ${t})` },
+    ],
+  },
+  {
+    id: 'movement', label: 'Movement',
+    upgrades: [
+      { key: 'moveSpeed', name: 'Move Speed',         costs: [60, 180, 450, 1100, 2800],
+        desc: t => `+8% movement speed (Tier ${t})` },
+      { key: 'dash',      name: 'Dash',               costs: [300, 700, 1800],
+        desc: t => ['Unlocks dash (Shift key)', 'Reduces cooldown by 30%', 'Adds i-frames during dash'][t-1] },
+      { key: 'magnet',    name: 'Magnet Radius',      costs: [80, 250, 650, 1600],
+        desc: t => `+1.25 coin attraction range (Tier ${t})` },
+    ],
+  },
+  {
+    id: 'abilities', label: 'Abilities',
+    upgrades: [
+      { key: 'shield',    name: 'Shield',             costs: [400, 1000, 2500],
+        desc: t => ['Rechargeable 1-hit shield', '-35% recharge time', '2-hit shield'][t-1] },
+      { key: 'burst',     name: 'Area Burst [E]',     costs: [350, 900, 2200, 5500],
+        desc: t => ['+Radial damage pulse', '+25% radius & damage', '-30% cooldown', '+Knockback on burst'][t-1] },
+      { key: 'timeSlow',  name: 'Time Slow [Q]',      costs: [600, 1500, 3800],
+        desc: t => ['50% slow for 3s on enemies', 'Extends duration to 5s', 'Deepens slow to 25% speed'][t-1] },
+    ],
+  },
+  {
+    id: 'powerups', label: 'Power Ups',
+    upgrades: [
+      { key: 'maxHealth', name: 'Max Health',         costs: [40, 120, 350, 900, 2200],
+        desc: t => `+10% max HP (Tier ${t})` },
+      { key: 'regen',     name: 'Health Regen',       costs: [100, 300, 750, 1800],
+        desc: t => `+${t} HP/sec regeneration` },
+      { key: 'xpGrowth',  name: 'XP Growth',          costs: [150, 400, 1000, 2500],
+        desc: t => `+15% XP from kills (Tier ${t})` },
+      { key: 'coinBonus', name: 'Coin Bonus',         costs: [200, 600, 1500],
+        desc: t => `+20% coins per kill (Tier ${t})` },
+      { key: 'curse',     name: 'Curse ⚠',           costs: [500, 1500, 4000],
+        desc: t => `Enemies +20% HP/DMG → +25% coins, +10% XP (Tier ${t})` },
+      { key: 'luck',      name: 'Luck',               costs: [250, 700, 1800],
+        desc: t => `+5 Luck — better chests & 4th level option (Tier ${t})` },
+    ],
+  },
 ];
 
-function clampInt(n, lo, hi){ return Math.max(lo, Math.min(hi, n|0)); }
+// Flat list of all upgrades (used by chest reward item picker)
+const ALL_UPGRADES = TABS.flatMap(tab => tab.upgrades);
 
-// ── Luck helpers (Section 11) ───────────────────────────────────────────────
-export function recalcLuck(){
-  const shopLuck = (state.upg?.luck || 0) * 5;
-  const curse = clampInt(state.upg?.curse || 0, 0, 3);
-  const curseLuck = curse === 1 ? 3 : curse === 2 ? 6 : curse === 3 ? 10 : 0;
-  const bossLuck = state.bossLuck || 0;
-  state.luck = shopLuck + curseLuck + bossLuck;
-}
+// ─────────────────────────────────────────────────────────────────────────────
+// Side-effects when an upgrade is purchased
+// ─────────────────────────────────────────────────────────────────────────────
+function applyUpgradeEffect(key, newTier) {
+  switch (key) {
+    case 'dash':
+      if (newTier >= 1) state.hasDash = true;
+      break;
 
-function chanceFourthOption(luck){
-  if (luck < 10) return 0;
-  if (luck < 15) return 0.15;
-  if (luck < 20) return 0.30;
-  if (luck < 25) return 0.50;
-  if (luck < 30) return 0.70;
-  return 0.90;
-}
+    case 'luck':
+      try { recomputeLuck(); } catch {}
+      break;
 
-function chestItemRollCount(luck){
-  // Based on table in Section 10.
-  // We approximate with piecewise linear interpolation between Luck 0/10/20/30.
-  const L = Math.max(0, Math.min(30, luck));
-  const lerp = (a,b,t)=>a+(b-a)*t;
-  function probsAt(x){
-    if (x <= 10) {
-      const t = x/10;
-      return {
-        p1: lerp(0.70,0.45,t),
-        p3: lerp(0.25,0.40,t),
-        p5: lerp(0.05,0.15,t),
-      };
+    case 'maxHealth': {
+      const base   = getPlayerMaxHPForLevel(state.playerLevel || 1);
+      const newMax = Math.round(base * (1 + 0.10 * newTier));
+      const pct    = (state.playerMaxHP || 100) > 0
+        ? state.playerHP / state.playerMaxHP
+        : 1;
+      state.playerMaxHP = newMax;
+      state.playerHP    = Math.max(1, Math.round(pct * newMax));
+      try { updateHealthBar(); } catch {}
+      break;
     }
-    if (x <= 20) {
-      const t = (x-10)/10;
-      return {
-        p1: lerp(0.45,0.20,t),
-        p3: lerp(0.40,0.55,t),
-        p5: lerp(0.15,0.25,t),
-      };
-    }
-    const t = (x-20)/10;
-    return {
-      p1: lerp(0.20,0.00,t),
-      p3: lerp(0.55,0.632,t),
-      p5: lerp(0.25,0.368,t),
-    };
+
+    case 'shield':
+      // Grant initial shield charge if none exist yet
+      if (newTier >= 1 && (state.shieldCharges || 0) <= 0) {
+        state.shieldCharges  = 1;
+        state.shieldRecharge = 0;
+      }
+      if (newTier >= 3) state.shieldCharges = Math.max(state.shieldCharges, 2);
+      break;
+
+    case 'dmg':
+    case 'fireRate':
+    case 'projSpeed':
+    case 'multishot':
+      // Weapon changes that affect orbit rings / bullet logic
+      try { syncOrbitBullets(); } catch {}
+      break;
+
+    default:
+      break;
   }
-  const p = probsAt(L);
-  const r = Math.random();
-  if (r < p.p1) return 1;
-  if (r < p.p1 + p.p3) return 3;
-  return 5;
 }
 
-function updateCoinsUI(){
+// ─────────────────────────────────────────────────────────────────────────────
+// DOM helpers
+// ─────────────────────────────────────────────────────────────────────────────
+function $(id) { return document.getElementById(id); }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Shop state
+// ─────────────────────────────────────────────────────────────────────────────
+let _activeTab = 'weapons';
+let _onClose   = null;
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Inject minimal tab + shop CSS (idempotent)
+// ─────────────────────────────────────────────────────────────────────────────
+function ensureShopStyles() {
+  if (document.getElementById('shop-dynamic-styles')) return;
+  const style = document.createElement('style');
+  style.id = 'shop-dynamic-styles';
+  style.textContent = `
+    #shopTabs { display:flex; gap:6px; margin-bottom:14px; flex-wrap:wrap; position:sticky; top:0; z-index:10; background:rgba(10,12,18,0.95); backdrop-filter:blur(8px); padding:6px 0 8px; margin-left:-2px; margin-right:-2px; }
+    .shop-tab-btn {
+      flex:1; min-width:80px; padding:7px 10px;
+      background:rgba(255,255,255,0.07); border:1px solid rgba(255,255,255,0.15);
+      border-radius:8px; color:#aaa; font-size:12px; font-weight:700;
+      text-transform:uppercase; letter-spacing:.05em; cursor:pointer;
+      transition:background .15s,color .15s,border-color .15s;
+    }
+    .shop-tab-btn:hover  { background:rgba(0,229,255,0.12); color:#00e5ff; border-color:#00e5ff44; }
+    .shop-tab-btn.active { background:rgba(0,229,255,0.18); color:#00e5ff; border-color:#00e5ff; }
+    .shop-tab-content    { display:none; }
+    .shop-tab-content.active { display:block; }
+    .upg-section-label {
+      font-size:10px; font-weight:700; letter-spacing:.12em; text-transform:uppercase;
+      color:#555; margin:14px 0 6px; padding-bottom:4px;
+      border-bottom:1px solid rgba(255,255,255,0.07);
+    }
+    .upgrade-row {
+      display:flex; align-items:center; justify-content:space-between;
+      padding:9px 10px; border-radius:8px; margin-bottom:5px;
+      background:rgba(255,255,255,0.04); gap:10px;
+    }
+    .upgrade-row:hover { background:rgba(255,255,255,0.07); }
+    .upg-name  { font-size:13px; font-weight:700; color:#ddd; margin-bottom:2px; }
+    .upg-meta  { font-size:11px; color:#777; }
+    .upg-tier  { font-size:11px; color:#00e5ff88; margin-left:4px; }
+    .upg-buy {
+      display:flex; align-items:center; gap:6px;
+      padding:6px 12px; border-radius:6px; border:1px solid rgba(0,229,255,0.3);
+      background:rgba(0,229,255,0.1); color:#00e5ff; font-size:12px; font-weight:700;
+      cursor:pointer; white-space:nowrap; transition:background .12s, opacity .12s;
+      flex-shrink:0;
+    }
+    .upg-buy:hover:not(:disabled) { background:rgba(0,229,255,0.22); }
+    .upg-buy:disabled { opacity:0.38; cursor:not-allowed; }
+    .upg-buy.owned { border-color:rgba(0,255,102,0.3); background:rgba(0,255,102,0.08); color:#00ff66; }
+    .upgrade-coins { display:flex; align-items:center; gap:3px; font-size:11px; }
+    .upgrade-coins .coin-icon {
+      display:inline-block; width:8px; height:8px; border-radius:50%;
+      background:#ffe566; box-shadow:0 0 4px #f0a80088;
+    }
+    /* Chest overlay */
+    #chestOverlay {
+      display:none; position:fixed; inset:0; z-index:120;
+      background:rgba(0,0,0,0.82); align-items:center; justify-content:center;
+    }
+    #chestOverlay.show { display:flex; }
+    #chestOverlay .chest-box {
+      background:#0e0e18; border:1px solid rgba(255,255,255,0.12); border-radius:16px;
+      padding:28px 32px; min-width:340px; max-width:520px; width:90%;
+      display:flex; flex-direction:column; gap:14px;
+    }
+    #chestOverlay h2 { font-size:20px; font-weight:800; color:#ffe566; margin:0; text-align:center; }
+    #chestOverlay .chest-sub { font-size:12px; color:#666; text-align:center; margin-top:-8px; }
+    #chestOverlay .chest-items { display:flex; flex-direction:column; gap:8px; }
+    #chestOverlay .chest-item {
+      padding:10px 14px; border-radius:8px;
+      background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1);
+      cursor:pointer; transition:background .12s, border-color .12s;
+    }
+    #chestOverlay .chest-item:hover { background:rgba(0,229,255,0.12); border-color:#00e5ff44; }
+    #chestOverlay .chest-item .ci-name { font-size:13px; font-weight:700; color:#ddd; }
+    #chestOverlay .chest-item .ci-desc { font-size:11px; color:#777; margin-top:2px; }
+    #chestOverlay .chest-close { font-size:12px; color:#555; text-align:center; cursor:pointer; }
+    #chestOverlay .chest-close:hover { color:#aaa; }
+    .curse-warning { color:#ff8844; font-size:10px; margin-top:2px; }
+  `;
+  document.head.appendChild(style);
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Build or re-inject the tab bar into the overlay
+// ─────────────────────────────────────────────────────────────────────────────
+function ensureTabBar(overlay) {
+  if (overlay.querySelector('#shopTabs')) return;
+
+  // Insert tab bar before upgradeList
+  const tabBar = document.createElement('div');
+  tabBar.id = 'shopTabs';
+
+  TABS.forEach(tab => {
+    const btn = document.createElement('button');
+    btn.className = 'shop-tab-btn' + (tab.id === _activeTab ? ' active' : '');
+    btn.dataset.tab = tab.id;
+    btn.textContent = tab.label;
+    btn.addEventListener('click', () => {
+      _activeTab = tab.id;
+      renderShop();
+    });
+    tabBar.appendChild(btn);
+  });
+
+  const upgradeList = $('upgradeList');
+  if (upgradeList) {
+    upgradeList.parentNode.insertBefore(tabBar, upgradeList);
+  } else {
+    overlay.appendChild(tabBar);
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Main shop render
+// ─────────────────────────────────────────────────────────────────────────────
+function renderShop() {
+  const overlay = $('upgradeOverlay');
+  if (!overlay) return;
+
+  ensureShopStyles();
+  ensureTabBar(overlay);
+
+  // Update tab button states
+  overlay.querySelectorAll('.shop-tab-btn').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.tab === _activeTab);
+  });
+
+  const list = $('upgradeList');
+  if (!list) return;
+  list.innerHTML = '';
+
+  const tabDef = TABS.find(t => t.id === _activeTab);
+  if (!tabDef) return;
+
+  const coins = state.coins || 0;
+
+  tabDef.upgrades.forEach(upg => {
+    const currentTier = Math.max(0, state.upg?.[upg.key] || 0);
+    const maxTier     = upg.costs.length;
+    const isMaxed     = currentTier >= maxTier;
+    const nextCost    = isMaxed ? 0 : upg.costs[currentTier];
+    const canAfford   = coins >= nextCost;
+
+    const row = document.createElement('div');
+    row.className = 'upgrade-row';
+
+    // Left side
+    const left = document.createElement('div');
+    left.style.flex = '1';
+
+    const nameEl = document.createElement('div');
+    nameEl.className = 'upg-name';
+    nameEl.innerHTML = upg.name;
+    if (currentTier > 0) {
+      const tierBadge = document.createElement('span');
+      tierBadge.className = 'upg-tier';
+      tierBadge.textContent = `[${currentTier}/${maxTier}]`;
+      nameEl.appendChild(tierBadge);
+    }
+
+    const descEl = document.createElement('div');
+    descEl.className = 'upg-meta';
+    if (isMaxed) {
+      descEl.textContent = 'Maxed';
+      descEl.style.color = '#00ff66aa';
+    } else {
+      descEl.textContent = upg.desc(currentTier + 1);
+    }
+
+    left.appendChild(nameEl);
+    left.appendChild(descEl);
+
+    // Curse warning
+    if (upg.key === 'curse' && currentTier > 0) {
+      const warn = document.createElement('div');
+      warn.className = 'curse-warning';
+      warn.textContent = `⚠ Enemies have +${currentTier * 20}% HP and damage`;
+      left.appendChild(warn);
+    }
+
+    // Buy button
+    const btn = document.createElement('button');
+    btn.className = 'upg-buy' + (isMaxed ? ' owned' : '');
+    btn.disabled  = isMaxed || !canAfford;
+
+    if (isMaxed) {
+      btn.textContent = 'MAXED';
+    } else {
+      const label = document.createElement('span');
+      label.textContent = canAfford ? 'BUY' : 'NEED';
+
+      const pill = document.createElement('span');
+      pill.className = 'upgrade-coins';
+      const coinDot = document.createElement('span');
+      coinDot.className = 'coin-icon';
+      const costEl = document.createElement('span');
+      costEl.textContent = String(nextCost);
+      pill.appendChild(coinDot);
+      pill.appendChild(costEl);
+
+      btn.appendChild(label);
+      btn.appendChild(pill);
+    }
+
+    btn.addEventListener('click', () => {
+      if (btn.disabled) return;
+      const c = state.coins || 0;
+      if (c < nextCost) return;
+
+      state.coins -= nextCost;
+      state.upg[upg.key] = currentTier + 1;
+
+      applyUpgradeEffect(upg.key, currentTier + 1);
+      playSound?.('purchase', 0.8);
+
+      updateCoinsUI();
+      renderShop();
+    });
+
+    row.appendChild(left);
+    row.appendChild(btn);
+    list.appendChild(row);
+  });
+}
+
+function updateCoinsUI() {
   const el = $('upgradeCoins');
   if (el) el.textContent = String(state.coins || 0);
 }
 
-function ensureOverlay(){
-  const ov = $('upgradeOverlay');
-  const list = $('upgradeList');
-  if (!ov || !list) return false;
-  return true;
-}
+// ─────────────────────────────────────────────────────────────────────────────
+// Open / close
+// ─────────────────────────────────────────────────────────────────────────────
+export function openUpgradeShop(level, onClose) {
+  _onClose = typeof onClose === 'function' ? onClose : null;
 
-function clearOverlay(){
-  const list = $('upgradeList');
-  if (list) list.innerHTML = '';
-}
+  const overlay = $('upgradeOverlay');
+  if (!overlay) return;
 
-function setTitle(text){
-  const t = document.querySelector('#upgradeOverlay .upgrade-title');
-  if (t) t.textContent = text;
-}
+  state.upgradeOpen = true;
+  state.paused      = true;
 
-function setFooterButtons({ primaryLabel='CONTINUE', onPrimary=null, secondaryLabel=null, onSecondary=null }){
+  updateCoinsUI();
+  renderShop();
+
+  overlay.classList.add('show');
+  overlay.setAttribute('aria-hidden', 'false');
+
   const btn = $('upgradeContinueBtn');
-  if (btn){
-    btn.textContent = primaryLabel;
-    btn.onclick = null;
-    btn.onclick = () => onPrimary?.();
-  }
-
-  // Optional secondary button (created once)
-  const footer = btn?.parentElement;
-  if (!footer) return;
-  let sec = $('upgradeSecondaryBtn');
-  if (!secondaryLabel) {
-    if (sec) sec.remove();
-    return;
-  }
-  if (!sec) {
-    sec = document.createElement('button');
-    sec.id = 'upgradeSecondaryBtn';
-    sec.className = 'upgrade-continue';
-    sec.style.marginRight = '10px';
-    footer.insertBefore(sec, btn);
-  }
-  sec.textContent = secondaryLabel;
-  sec.onclick = () => onSecondary?.();
-}
-
-// ── Upgrade application (stat-side effects) ─────────────────────────────────
-export function applyUpgradeSideEffects(){
-  // Dash unlock is tied to dash tier.
-  state.hasDash = (state.upg?.dash || 0) > 0;
-  updateDashBar?.();
-
-  // Curse tier is mirrored for convenience.
-  state.curseTier = clampInt(state.upg?.curse || 0, 0, 3);
-  recalcLuck();
-
-  // Max HP tiers (+10% each)
-  const base = 100 + 5 * Math.max(0, (state.playerLevel || 1) - 1);
-  const hpMult = 1 + 0.10 * clampInt(state.upg?.maxHealth || 0, 0, 5);
-  state.playerMaxHP = Math.round(base * hpMult);
-  state.playerHP = Math.min(state.playerHP, state.playerMaxHP);
-  updateHealthBar?.();
-}
-
-function buyTier(upgKey, cost, { free=false } = {}){
-  if (!state.upg) state.upg = {};
-  const cur = state.upg[upgKey] || 0;
-  if (!free) {
-    if ((state.coins || 0) < cost) return false;
-    state.coins -= cost;
-  }
-  state.upg[upgKey] = cur + 1;
-  playSound?.('purchase', 0.8);
-  updateCoinsUI();
-  applyUpgradeSideEffects();
-  return true;
-}
-
-function makeTabs(activeTab, onSelect){
-  const list = $('upgradeList');
-  const wrap = document.createElement('div');
-  wrap.style.display = 'flex';
-  wrap.style.gap = '8px';
-  wrap.style.padding = '6px 2px 10px 2px';
-  wrap.style.flexWrap = 'wrap';
-
-  TAB_ORDER.forEach(t => {
-    const b = document.createElement('button');
-    b.className = 'upg-buy';
-    b.style.padding = '10px 12px';
-    b.style.borderRadius = '10px';
-    b.style.opacity = (t.id === activeTab) ? '1' : '0.65';
-    b.textContent = t.label;
-    b.onclick = () => onSelect?.(t.id);
-    wrap.appendChild(b);
-  });
-  list.appendChild(wrap);
-}
-
-function renderShop(activeTab){
-  clearOverlay();
-  setTitle('UPGRADE SHOP');
-  updateCoinsUI();
-  makeTabs(activeTab, (t) => renderShop(t));
-
-  // Optional quick-picks block (3 or 4 suggested items) based on luck.
-  recalcLuck();
-  const picks = document.createElement('div');
-  picks.className = 'upg-section';
-  const h = document.createElement('div');
-  h.className = 'cp-section-label upg-section-label';
-  h.textContent = `LEVEL-UP PICKS${Math.random() < chanceFourthOption(state.luck) ? ' (4)' : ''}`;
-  picks.appendChild(h);
-  $('upgradeList').appendChild(picks);
-  renderQuickPicks(picks);
-
-  // Full tab list
-  const section = document.createElement('div');
-  section.className = 'upg-section';
-  const sh = document.createElement('div');
-  sh.className = 'cp-section-label upg-section-label';
-  sh.textContent = TAB_ORDER.find(x=>x.id===activeTab)?.label || 'UPGRADES';
-  section.appendChild(sh);
-  $('upgradeList').appendChild(section);
-
-  const items = CATALOG[activeTab] || [];
-  items.forEach(item => {
-    const cur = state.upg?.[item.key] || 0;
-    const max = item.tiers.length;
-    const nextIdx = cur;
-    const ownedMax = cur >= max;
-    const cost = ownedMax ? null : item.tiers[nextIdx];
-    const affordable = !ownedMax && (state.coins || 0) >= cost;
-
-    const row = document.createElement('div');
-    row.className = 'upgrade-row';
-
-    const left = document.createElement('div');
-    const name = document.createElement('div');
-    name.className = 'upg-name';
-    name.textContent = `${item.name}  (T${Math.min(cur+1,max)}/${max})`;
-    const meta = document.createElement('div');
-    meta.className = 'upg-meta';
-    meta.textContent = ownedMax ? 'MAXED' : item.desc;
-    left.appendChild(name);
-    left.appendChild(meta);
-
-    const btn = document.createElement('button');
-    btn.className = 'upg-buy';
-    btn.disabled = ownedMax || !affordable;
-    btn.textContent = ownedMax ? 'MAX' : (affordable ? 'BUY' : 'NEED');
-    if (!ownedMax) {
-      const pill = document.createElement('span');
-      pill.className = 'upgrade-coins';
-      const coin = document.createElement('span');
-      coin.className = 'coin-icon';
-      coin.style.animation = 'none';
-      const count = document.createElement('span');
-      count.className = 'coin-count';
-      count.textContent = String(cost);
-      pill.appendChild(coin);
-      pill.appendChild(count);
-      btn.appendChild(pill);
-    }
+  if (btn) {
     btn.onclick = () => {
-      if (ownedMax) return;
-      if (buyTier(item.key, cost)) renderShop(activeTab);
-    };
-
-    row.appendChild(left);
-    row.appendChild(btn);
-    section.appendChild(row);
-  });
-
-  setFooterButtons({
-    primaryLabel: 'CONTINUE',
-    onPrimary: () => closeUpgradeShopIfOpen(),
-  });
-}
-
-function pickNextUpgradeable(maxTierAllowed){
-  // Flat pool across tabs, but only upgrades that aren't maxed and within max tier.
-  const pool = [];
-  for (const tab of Object.keys(CATALOG)) {
-    for (const item of CATALOG[tab]) {
-      const cur = state.upg?.[item.key] || 0;
-      const max = Math.min(item.tiers.length, maxTierAllowed);
-      if (cur < max) pool.push(item);
-    }
-  }
-  if (!pool.length) return null;
-  return pool[Math.floor(Math.random() * pool.length)];
-}
-
-function renderQuickPicks(container){
-  // Suggest 3 upgrades (4 with luck chance). These are NOT free; they're just curated.
-  const count = 3 + (Math.random() < chanceFourthOption(state.luck) ? 1 : 0);
-  const seen = new Set();
-  for (let i = 0; i < count; i++) {
-    const item = pickNextUpgradeable(99);
-    if (!item || seen.has(item.key)) continue;
-    seen.add(item.key);
-    const cur = state.upg?.[item.key] || 0;
-    const max = item.tiers.length;
-    if (cur >= max) continue;
-    const cost = item.tiers[cur];
-    const affordable = (state.coins || 0) >= cost;
-
-    const row = document.createElement('div');
-    row.className = 'upgrade-row';
-    const left = document.createElement('div');
-    const name = document.createElement('div');
-    name.className = 'upg-name';
-    name.textContent = `${item.name} (Next Tier)`;
-    const meta = document.createElement('div');
-    meta.className = 'upg-meta';
-    meta.textContent = item.desc;
-    left.appendChild(name);
-    left.appendChild(meta);
-
-    const btn = document.createElement('button');
-    btn.className = 'upg-buy';
-    btn.disabled = !affordable;
-    btn.textContent = affordable ? 'BUY' : 'NEED';
-    const pill = document.createElement('span');
-    pill.className = 'upgrade-coins';
-    const coin = document.createElement('span');
-    coin.className = 'coin-icon';
-    coin.style.animation = 'none';
-    const c = document.createElement('span');
-    c.className = 'coin-count';
-    c.textContent = String(cost);
-    pill.appendChild(coin); pill.appendChild(c);
-    btn.appendChild(pill);
-    btn.onclick = () => { if (buyTier(item.key, cost)) renderShop('weapons'); };
-
-    row.appendChild(left);
-    row.appendChild(btn);
-    container.appendChild(row);
-  }
-}
-
-function chestMaxTierForTier(chestTier){
-  if (chestTier === 'standard') return 2;
-  if (chestTier === 'rare') return 4;
-  return 5; // epic
-}
-
-function renderChest(chestTier){
-  clearOverlay();
-  updateCoinsUI();
-  recalcLuck();
-
-  const maxTier = chestMaxTierForTier(chestTier);
-  setTitle(`${chestTier.toUpperCase()} CHEST`);
-
-  const list = $('upgradeList');
-  const sec = document.createElement('div');
-  sec.className = 'upg-section';
-  const h = document.createElement('div');
-  h.className = 'cp-section-label upg-section-label';
-  h.textContent = `CHOOSE ONE REWARD  •  Luck ${state.luck}  •  Max Tier T${maxTier}`;
-  sec.appendChild(h);
-  list.appendChild(sec);
-
-  const rollCount = chestItemRollCount(state.luck);
-  const options = [];
-  const used = new Set();
-  for (let i = 0; i < rollCount; i++) {
-    let pick = null;
-    for (let tries = 0; tries < 20; tries++) {
-      const it = pickNextUpgradeable(maxTier);
-      if (!it) break;
-      if (!used.has(it.key)) { pick = it; break; }
-    }
-    if (pick) { used.add(pick.key); options.push(pick); }
-  }
-
-  if (!options.length) {
-    // All upgrades maxed (or capped by chest tier) → coin payout.
-    const payout = 500;
-    state.coins = (state.coins || 0) + payout;
-    updateCoinsUI();
-    const msg = document.createElement('div');
-    msg.className = 'upg-meta';
-    msg.style.padding = '10px 6px';
-    msg.textContent = `All eligible upgrades are maxed. Chest converted to +${payout} coins.`;
-    sec.appendChild(msg);
-    setFooterButtons({ primaryLabel: 'CONTINUE', onPrimary: () => closeUpgradeShopIfOpen() });
-    return;
-  }
-
-  options.forEach(item => {
-    const cur = state.upg?.[item.key] || 0;
-    const cost = item.tiers[cur] ?? 0;
-    const row = document.createElement('div');
-    row.className = 'upgrade-row';
-    const left = document.createElement('div');
-    const name = document.createElement('div');
-    name.className = 'upg-name';
-    name.textContent = `${item.name}  (FREE Tier ${cur+1})`;
-    const meta = document.createElement('div');
-    meta.className = 'upg-meta';
-    meta.textContent = item.desc;
-    left.appendChild(name);
-    left.appendChild(meta);
-
-    const btn = document.createElement('button');
-    btn.className = 'upg-buy';
-    btn.textContent = 'TAKE';
-    btn.onclick = () => {
-      buyTier(item.key, cost, { free: true });
       closeUpgradeShopIfOpen();
+      if (_onClose) _onClose();
     };
-    row.appendChild(left);
-    row.appendChild(btn);
-    sec.appendChild(row);
+  }
+}
+
+export function closeUpgradeShopIfOpen() {
+  const overlay = $('upgradeOverlay');
+  if (!overlay) return;
+
+  overlay.classList.remove('show');
+  overlay.setAttribute('aria-hidden', 'true');
+
+  state.upgradeOpen = false;
+  state.paused      = false;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Chest reward overlay (Section 10)
+// ─────────────────────────────────────────────────────────────────────────────
+
+// Determine item count from Luck (design doc table)
+function rollChestItemCount() {
+  const luck = state.luck || 0;
+  // Probability tables for item counts 1, 3, 5
+  // Luck:  0      10     20     30
+  const p1 = luck <= 0  ? 0.70 : luck <= 10 ? 0.45 : luck <= 20 ? 0.20 : 0.00;
+  const p5 = luck <= 0  ? 0.05 : luck <= 10 ? 0.15 : luck <= 20 ? 0.25 : 0.368;
+  const r  = Math.random();
+  if (r < p5) return 5;
+  if (r < p5 + (1 - p1 - p5)) return 3;
+  return 1;
+}
+
+// Pick `count` upgrades from the pool that aren't yet maxed
+function pickChestItems(count, chestTier) {
+  // Max shop tier offered per chest tier (design doc Section 10)
+  const tierCap = { standard: 2, rare: 4, epic: 5 }[chestTier] || 2;
+
+  // Candidates: upgrades that have a next tier to purchase and are within the tier cap
+  const candidates = ALL_UPGRADES.filter(upg => {
+    const cur = state.upg?.[upg.key] || 0;
+    return cur < upg.costs.length && (cur + 1) <= tierCap;
   });
 
-  setFooterButtons({ primaryLabel: 'SKIP', onPrimary: () => closeUpgradeShopIfOpen() });
+  if (!candidates.length) return []; // all maxed → coin payout handled by caller
+
+  // Shuffle
+  const pool = [...candidates];
+  for (let i = pool.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [pool[i], pool[j]] = [pool[j], pool[i]];
+  }
+
+  return pool.slice(0, Math.min(count, pool.length));
 }
 
-export function openUpgradeShop(){
-  if (!ensureOverlay()) return;
-  _mode = 'shop';
-  state.upgradeOpen = true;
-  const ov = $('upgradeOverlay');
-  ov?.classList.add('show');
-  ov?.setAttribute('aria-hidden','false');
-  applyUpgradeSideEffects();
-  renderShop('weapons');
+function ensureChestOverlay() {
+  if ($('chestOverlay')) return;
+
+  ensureShopStyles();
+
+  const el = document.createElement('div');
+  el.id = 'chestOverlay';
+  el.innerHTML = `
+    <div class="chest-box">
+      <h2 id="chestOverlayTitle">CHEST REWARD</h2>
+      <div class="chest-sub" id="chestOverlaySub">Choose one upgrade to keep</div>
+      <div class="chest-items" id="chestItems"></div>
+      <div class="chest-close" id="chestSkipBtn">Skip (discard all)</div>
+    </div>
+  `;
+  document.body.appendChild(el);
+
+  $('chestSkipBtn').addEventListener('click', closeChestOverlay);
 }
 
-export function openChestReward(chestTier='standard', onClose=null){
-  if (!ensureOverlay()) return;
-  _mode = 'chest';
-  _onClose = onClose;
-  state.upgradeOpen = true;
-  const ov = $('upgradeOverlay');
-  ov?.classList.add('show');
-  ov?.setAttribute('aria-hidden','false');
-  applyUpgradeSideEffects();
-  renderChest(chestTier);
-}
-
-export function closeUpgradeShopIfOpen(){
-  const ov = $('upgradeOverlay');
-  if (!ov) return;
-  ov.classList.remove('show');
-  ov.setAttribute('aria-hidden','true');
+function closeChestOverlay() {
+  const el = $('chestOverlay');
+  if (el) el.classList.remove('show');
   state.upgradeOpen = false;
-  clearOverlay();
-  const cb = _onClose;
-  _onClose = null;
-  cb?.();
+  state.paused      = false;
+}
+
+export function openChestReward(tier = 'standard') {
+  ensureChestOverlay();
+  ensureShopStyles();
+
+  const count   = rollChestItemCount();
+  const items   = pickChestItems(count, tier);
+
+  const overlay = $('chestOverlay');
+  const title   = $('chestOverlayTitle');
+  const sub     = $('chestOverlaySub');
+  const list    = $('chestItems');
+
+  if (!overlay || !list) return;
+
+  // Coin payout if nothing available
+  if (!items.length) {
+    const payout = count * 50;
+    state.coins += payout;
+    const coinEl = document.getElementById('coin-count');
+    if (coinEl) coinEl.textContent = state.coins;
+    playSound?.('coin', 0.6, 1.0);
+    return;
+  }
+
+  const tierLabel = { standard: 'Standard Chest', rare: 'Rare Chest', epic: 'Epic Chest' }[tier] || 'Chest';
+  const tierColor = { standard: '#ffe566', rare: '#55ccff', epic: '#cc55ff' }[tier] || '#ffe566';
+
+  title.textContent   = tierLabel;
+  title.style.color   = tierColor;
+  sub.textContent     = `${items.length} item${items.length > 1 ? 's' : ''} found — choose one to keep`;
+
+  list.innerHTML = '';
+  state.upgradeOpen = true;
+  state.paused      = true;
+
+  items.forEach(upg => {
+    const cur     = state.upg?.[upg.key] || 0;
+    const nextT   = cur + 1;
+    const cost    = upg.costs[cur] || 0;
+
+    const div = document.createElement('div');
+    div.className = 'chest-item';
+
+    const nameEl = document.createElement('div');
+    nameEl.className = 'ci-name';
+    nameEl.textContent = `${upg.name}  →  Tier ${nextT}`;
+
+    const descEl = document.createElement('div');
+    descEl.className = 'ci-desc';
+    descEl.textContent = upg.desc(nextT) + `  (shop value: ${cost} coins)`;
+
+    div.appendChild(nameEl);
+    div.appendChild(descEl);
+
+    div.addEventListener('click', () => {
+      state.upg[upg.key] = nextT;
+      applyUpgradeEffect(upg.key, nextT);
+      playSound?.('chest_item_select', 0.7);
+      closeChestOverlay();
+    });
+
+    list.appendChild(div);
+  });
+
+  overlay.classList.add('show');
 }
