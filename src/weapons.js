@@ -213,13 +213,19 @@ export function updateBullets(worldDelta) {
 }
 
 // ── Update enemy bullets ──────────────────────────────────────────────────────
+function _removeEBullet(b) {
+  scene.remove(b.mesh);
+  b.mat?.dispose();
+  b.extraMat?.dispose();
+}
+
 export function updateEnemyBullets(worldDelta) {
   for (let i = state.enemyBullets.length - 1; i >= 0; i--) {
     const b = state.enemyBullets[i];
     b.life -= worldDelta;
     b.mesh.position.x += b.vx * worldDelta;
     b.mesh.position.z += b.vz * worldDelta;
-    if (b.life <= 0) { scene.remove(b.mesh); state.enemyBullets.splice(i, 1); continue; }
+    if (b.life <= 0) { _removeEBullet(b); state.enemyBullets.splice(i, 1); continue; }
 
     const pdx = b.mesh.position.x - playerGroup.position.x;
     const pdz = b.mesh.position.z - playerGroup.position.z;
@@ -243,7 +249,7 @@ export function updateEnemyBullets(worldDelta) {
           if (res.died) return 'DEAD';
         }
       }
-      scene.remove(b.mesh); state.enemyBullets.splice(i, 1);
+      _removeEBullet(b); state.enemyBullets.splice(i, 1);
       continue;
     }
 
@@ -252,7 +258,7 @@ export function updateEnemyBullets(worldDelta) {
       const cdx = b.mesh.position.x - c.wx, cdz = b.mesh.position.z - c.wz;
       if (cdx*cdx + cdz*cdz < (c.radius + 0.14) * (c.radius + 0.14)) { blocked = true; break; }
     }
-    if (blocked) { scene.remove(b.mesh); state.enemyBullets.splice(i, 1); }
+    if (blocked) { _removeEBullet(b); state.enemyBullets.splice(i, 1); }
   }
 }
 
@@ -424,12 +430,11 @@ export function performSlash() {
   arcMesh.layers.enable(1); arcMesh.layers.enable(2);
 scene.add(arcMesh);
 
-    // Slash damage scales with playerBaseDMG + dmg upgrade tier (same as bullets).
-  // Weapon tier does NOT gate slash — it's always available.
-  const dmgTier = Math.max(0, state.upg?.dmg || 0);
-  const dmgMult = 1 + 0.15 * dmgTier;
-  const baseDmg = state.playerBaseDMG || 10;
-  const dmg = Math.max(1, Math.round(baseDmg * dmgMult * 1.8));
+    // Slash damage should not collapse when weaponTier=0 (no gun).
+  // Use Tier-1 weapon damage baseline if gun is not yet purchased.
+  const baseCfg = (state.weaponTier ?? 0) <= 0 ? WEAPON_CONFIG[0] : getWeaponConfig();
+  const baseDmg = Math.round(10 * (baseCfg?.[2] ?? 1));
+  const dmg = Math.max(1, Math.round(baseDmg * 1.8));
   _spinDamage(px, pz, range, dmg);
   playSound('laser_sword', 0.72, 0.93 + Math.random() * 0.14);
 
