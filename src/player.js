@@ -89,7 +89,8 @@ export function stampDashGhost() {
 const _v  = new THREE.Vector3();
 
 export function updatePlayer(delta, worldScale) {
-  const slowTarget = state.slowTimer > 0 ? (state.slowScale || 0.5) : 1.0;
+  const clockScale = (state.effects?.clock || 0) > 0 ? 0.15 : 1.0; // Time Freeze: 85% slow
+  const slowTarget = state.slowTimer > 0 ? Math.min(clockScale, (state.slowScale || 0.5)) : clockScale;
   const wsTarget = state.dashTimer > 0 ? Math.min(DASH_SLOW_SCALE, slowTarget) : slowTarget;
   const wsRate   = wsTarget < worldScale ? SLOW_SNAP_RATE : SLOW_RECOVER_RATE;
   state.worldScale += (wsTarget - state.worldScale) * Math.min(1, wsRate * delta);
