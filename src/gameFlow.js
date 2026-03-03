@@ -50,8 +50,10 @@ export function startCountdown(onDone) {
   ].map(id => document.getElementById(id));
   hudEls.forEach(el => { if (el) el.style.visibility = 'hidden'; });
 
-  // Hide any bullets already in scene (player bullets can be stored as {obj} (Group) or legacy {mesh})
+  // Hide any bullets already in scene
   state.bullets.forEach(b => { const o = b.obj ?? b.mesh; if (o) o.visible = false; });
+  // Hide any enemy bullets already in scene
+  state.enemyBullets.forEach(b => { if (b.core) b.core.visible = false; if (b.mesh) b.mesh.visible = false; if (b.obj) b.obj.visible = false; });
   state.orbitRings.forEach(r => r.meshes.forEach(m => { m.visible = false; }));
 
   // Hide enemies
@@ -97,6 +99,8 @@ export function startCountdown(onDone) {
         // Restore bullets and orbit rings
         state.bullets.forEach(b => { const o = b.obj ?? b.mesh; if (o) o.visible = true; });
         state.orbitRings.forEach(r => r.meshes.forEach(m => { m.visible = true; }));
+        // Restore enemy bullets
+        state.enemyBullets.forEach(b => { if (b.core) b.core.visible = true; if (b.mesh) b.mesh.visible = true; if (b.obj) b.obj.visible = true; });
         // Restore enemies
         state.enemies.forEach(e => { e.grp.visible = true; });
 
