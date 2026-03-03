@@ -328,7 +328,7 @@ export function updateEnemies(delta, worldDelta, elapsed) {
           _eBulletDir.set(dvx, 0, dvz).normalize();
           _eBulletQ.setFromUnitVectors(_eBulletUp, _eBulletDir);
           bMesh.quaternion.copy(_eBulletQ);
-          bMesh.layers.enable(1);
+          bMesh.layers.set(1); // bloom pass only — makes bullets glow like player lasers
           bMesh.position.copy(e.grp.position);
           bMesh.position.y = floorY(bulletGeoParams);
           scene.add(bMesh);
