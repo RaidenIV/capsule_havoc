@@ -92,7 +92,10 @@ export function startCountdown(onDone) {
         playerMesh.visible = true;
         hbObj.visible = true;
         dashBarObj.visible = !!state.hasDash;
-        // Restore HUD
+        // Switch body class so CSS shows the HUD
+        document.body.classList.remove('mode-countdown');
+        document.body.classList.add('mode-playing');
+        // Restore any inline visibility overrides set during countdown
         hudEls.forEach(el => { if (el) el.style.visibility = ''; });
         // Restore bullets and orbit rings
         state.bullets.forEach(b => { b.mesh.visible = true; });
@@ -197,7 +200,7 @@ export function restartGame(opts = {}) {
   state.playerLevel = 1;
   initSpawner();
   state.coins       = 0;
-  state.weaponTier  = 0; // lasers are upgrade-only; player starts with slash only
+  state.weaponTier  = 1; // baseline weapon enabled
   state.pickupRangeLvl = 0;
   state.upg = {
     dmg:0, fireRate:0, projSpeed:0, piercing:0, multishot:0,
