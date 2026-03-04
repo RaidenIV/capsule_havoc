@@ -15,6 +15,7 @@ import { togglePanel, togglePause } from './panel/index.js';
 import { initAudio, resumeAudioContext, playSound, playSplashSound, stopMusic } from './audio.js';
 import { initMenuUI }       from './ui/menu.js';
 import { initHudCoin }      from './hudCoin.js';
+import { runBootScreen }    from './ui/boot.js';
 
 // ── Wire cross-module callbacks (breaks enemies ↔ weapons circular deps) ──────
 setVictoryCallback(triggerVictory);
@@ -36,9 +37,6 @@ initInput({
   onFirstKey: resumeAudioContext, // satisfies browser autoplay policy
 });
 
-// Also unlock audio on the first pointer/touch gesture (many players never press a key on the menu).
-window.addEventListener('pointerdown', resumeAudioContext, { once: true, passive: true });
-
 // ── Expose restart globally for the HTML restart button onclick ───────────────
 window.restartGame = restartGame;
 
@@ -48,38 +46,28 @@ window.addEventListener('resize', () => {
   onBloomResize();
 });
 
-// ── Menu-driven start ─────────────────────────────────────────────────────────
+// ── Initial UI + state ────────────────────────────────────────────────────────
 updateHealthBar();
 updateXP(0);
 initHudCoin();
 
-// Show menu first; defer tick()/spawns/countdown until Start is pressed.
-state.uiMode = 'menu';
+// Defer game loop + spawns until Start is pressed.
+state.uiMode = 'boot';
 state.paused = true;
 
-// Keep menu hidden until splash finishes (if splash element exists)
+// Keep menu + splash hidden until boot/start sequence runs
 const menuScreenEl = document.getElementById('menu-screen');
 const splashEl     = document.getElementById('splash-screen');
 
-if (splashEl && menuScreenEl) {
-  menuScreenEl.style.visibility = 'hidden';
-
-  // Play splash sound — fires immediately if AudioContext is already running,
-  // or as soon as the user's first gesture unlocks it
-  playSplashSound();
-
-  setTimeout(() => {
-    splashEl.classList.add('fade-out');
-    splashEl.addEventListener('animationend', () => {
-      splashEl.remove();
-      menuScreenEl.style.visibility = '';
-    }, { once: true });
-  }, 2000);
+if (menuScreenEl) menuScreenEl.style.visibility = 'hidden';
+if (splashEl) {
+  splashEl.classList.add('boot-hidden');
 }
 
+// Initialize menu UI (creates DOM wiring), but keep it hidden until after splash.
 const menuUI = initMenuUI({
   onStart: async () => {
-    // Switch screens
+    // This is the "Start Game" from the menu, not the initial PRESS START flow.
     menuUI.hideMenu();
     state.uiMode = 'playing';
 
@@ -97,6 +85,42 @@ const menuUI = initMenuUI({
 
     // Start countdown on next frames so UI/layout is stable
     requestAnimationFrame(() => requestAnimationFrame(() => startCountdown()));
+  }
+});
+
+// ── Boot → Splash → Menu flow (guarantees audio works) ─────────────────────────
+runBootScreen({
+  onStart: async () => {
+    // First user gesture: unlock audio deterministically and preload buffers.
+    resumeAudioContext();
+    await initAudio();
+
+    // Show logo splash + play SFX
+    if (splashEl) {
+      splashEl.classList.remove('boot-hidden');
+      // Force layout so splashIn animation reliably runs on show
+      void splashEl.offsetHeight;
+
+      playSplashSound();
+
+      // Hold for 2s, then fade out and reveal menu
+      setTimeout(() => {
+        splashEl.classList.add('fade-out');
+        splashEl.addEventListener('animationend', () => {
+          splashEl.remove();
+          if (menuScreenEl) menuScreenEl.style.visibility = '';
+          state.uiMode = 'menu';
+          state.paused = true;
+          menuUI.showMenu();
+        }, { once: true });
+      }, 2000);
+    } else {
+      // No splash element — just show menu
+      if (menuScreenEl) menuScreenEl.style.visibility = '';
+      state.uiMode = 'menu';
+      state.paused = true;
+      menuUI.showMenu();
+    }
   }
 });
 
