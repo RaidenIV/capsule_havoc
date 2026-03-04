@@ -95,7 +95,7 @@ function ensureToastStyles(){
   if (_toastStyleEl) return;
   _toastStyleEl = document.createElement('style');
   _toastStyleEl.textContent = `
-    #powerup-toast{ position:absolute; left:50%; top:128px; transform: translateX(-50%); z-index: 30; pointer-events:none; }
+    #powerup-toast{ position:absolute; left:50%; top:160px; transform: translateX(-50%); z-index: 30; pointer-events:none; }
     .putoast{ display:flex; align-items:center; gap:10px; padding:10px 14px; border-radius: 16px;
       background: rgba(0,0,0,0.35); border: 1px solid rgba(255,255,255,0.14);
       box-shadow: 0 10px 30px rgba(0,0,0,0.35);
@@ -148,7 +148,7 @@ function renderToast(label, secondsOrNull){
 
   const txt = document.createElement('div');
   txt.className = 'putoast-txt';
-  txt.textContent = String(label || 'Power Up');
+  txt.textContent = `PWR • ${String(label || 'Power Up')}`;
 
   const time = document.createElement('div');
   time.className = 'putoast-time';

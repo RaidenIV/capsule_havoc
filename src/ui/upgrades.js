@@ -6,6 +6,7 @@
 import { state }           from '../state.js';
 import { playSound }       from '../audio.js';
 import { syncOrbitBullets } from '../weapons.js';
+import { getFireInterval, getWaveBullets, getBulletDamage } from '../xp.js';
 import { updateHealthBar } from '../player.js';
 import { recomputeLuck }   from '../luck.js';
 import { getPlayerMaxHPForLevel } from '../constants.js';
@@ -43,10 +44,12 @@ const TABS = [
       { key: 'fireRate',  name: 'Fire Rate',          requires: { key: 'laserFire', minTier: 1 },  costs: [75, 200, 500, 1200, 3000],
         desc: t => `-10% shot cooldown (Tier ${t})` },
       { key: 'projSpeed', name: 'Projectile Speed',   costs: [100, 300, 800, 2000],
+    requires: { key: 'laserFire', minTier: 1 },
         desc: t => `+20% projectile speed (Tier ${t})` },
       { key: 'piercing',  name: 'Piercing',           costs: [200, 600, 1500],
         desc: t => `+1 enemy pierced per shot (Tier ${t})` },
       { key: 'multishot', name: 'Multishot',          costs: [500, 1500, 4000],
+    requires: { key: 'laserFire', minTier: 1 },
         desc: t => `+1 extra projectile per shot (Tier ${t})` },
     ],
   },
@@ -153,6 +156,100 @@ function applyUpgradeEffect(key, newTier) {
 // ─────────────────────────────────────────────────────────────────────────────
 // DOM helpers
 // ─────────────────────────────────────────────────────────────────────────────
+
+let _statsPanel = null;
+function ensureStatsPanel(){
+  if (_statsPanel) return _statsPanel;
+  const overlay = $('upgradeOverlay');
+  if (!overlay) return null;
+
+  const panel = document.createElement('div');
+  panel.id = 'upgradeStatsPanel';
+  panel.style.cssText = `
+    position:absolute;
+    right: 18px;
+    top: 92px;
+    width: 260px;
+    max-height: calc(100% - 140px);
+    overflow:auto;
+    padding: 14px 14px;
+    border-radius: 18px;
+    background: rgba(0,0,0,0.38);
+    border: 1px solid rgba(255,255,255,0.14);
+    box-shadow: 0 12px 34px rgba(0,0,0,0.40);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    color: #fff;
+    font-family: Rajdhani, system-ui, sans-serif;
+    z-index: 5;
+  `;
+  panel.innerHTML = `
+    <div style="font-weight:900;letter-spacing:0.08em;font-size:13px;opacity:0.9;margin-bottom:10px;">PLAYER STATS</div>
+    <div id="upgradeStatsBody" style="display:flex;flex-direction:column;gap:8px;"></div>
+  `;
+  overlay.appendChild(panel);
+  _statsPanel = panel;
+  return panel;
+}
+
+function _statRow(label, value){
+  return `
+    <div style="display:flex;justify-content:space-between;gap:10px;align-items:baseline;">
+      <div style="opacity:0.85;font-weight:700;font-size:13px;">${label}</div>
+      <div style="font-weight:900;font-size:14px;white-space:nowrap;">${value}</div>
+    </div>`;
+}
+
+function updateStatsPanel(){
+  const panel = ensureStatsPanel();
+  if (!panel) return;
+  const body = panel.querySelector('#upgradeStatsBody');
+  if (!body) return;
+
+  const hp = Math.round(state.playerHP);
+  const maxHp = Math.round(state.playerMaxHP || 100);
+  const dmg = Math.round(getBulletDamage());
+  const shots = Math.max(1, getWaveBullets());
+  const fire = getFireInterval();
+
+  const laserTier = Math.max(0, state.upg?.laserFire || 0);
+  const orbitTier = Math.max(0, state.upg?.orbit || 0);
+
+  const msTier = Math.max(0, (state.upg?.multishot ?? state.upg?.multiShot ?? 0));
+  const psTier = Math.max(0, (state.upg?.projSpeed ?? 0));
+  const pierce = Math.max(0, (state.upg?.piercing ?? 0));
+
+  const moveTier = Math.max(0, (state.upg?.move || 0));
+  const dashTier = Math.max(0, (state.upg?.dash || 0));
+  const magnetTier = Math.max(0, (state.upg?.magnet || 0));
+
+  const shieldTier = Math.max(0, (state.upg?.shield || 0));
+  const armorHits = Math.max(0, state.armorHits || 0);
+  const lives = Math.max(0, state.extraLives || 0);
+
+  const luck = Math.max(0, state.luck || 0);
+  const curse = Math.max(0, state.curseTier || 0);
+
+  body.innerHTML = [
+    _statRow('HP', `${hp} / ${maxHp}`),
+    _statRow('Damage', `${dmg}`),
+    _statRow('Shots', `${shots}x`),
+    _statRow('Fire Interval', `${fire.toFixed(2)}s`),
+    _statRow('Laser Tier', `${laserTier}`),
+    _statRow('Orbit Tier', `${orbitTier}`),
+    _statRow('Multishot', `+${msTier}`),
+    _statRow('Proj Speed', `T${psTier}`),
+    _statRow('Piercing', `T${pierce}`),
+    _statRow('Move Speed', `T${moveTier}`),
+    _statRow('Dash', `T${dashTier}`),
+    _statRow('Magnet', `T${magnetTier}`),
+    _statRow('Shield', `T${shieldTier}`),
+    _statRow('Armor', `${armorHits}`),
+    _statRow('Extra Life', `${lives}`),
+    _statRow('Luck', `${luck}`),
+    _statRow('Curse', `${curse}`),
+  ].join('');
+}
 function $(id) { return document.getElementById(id); }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -257,6 +354,7 @@ function ensureTabBar(overlay) {
     btn.addEventListener('click', () => {
       _activeTab = tab.id;
       renderShop();
+  updateStatsPanel();
     });
     tabBar.appendChild(btn);
   });
@@ -385,12 +483,15 @@ function renderShop() {
 
       updateCoinsUI();
       renderShop();
+  updateStatsPanel();
     });
 
     row.appendChild(left);
     row.appendChild(btn);
     list.appendChild(row);
   });
+
+  try { updateStatsPanel(); } catch {}
 }
 
 function updateCoinsUI() {
@@ -412,6 +513,7 @@ export function openUpgradeShop(level, onClose) {
 
   updateCoinsUI();
   renderShop();
+  updateStatsPanel();
 
   overlay.classList.add('show');
   overlay.setAttribute('aria-hidden', 'false');
@@ -428,6 +530,9 @@ export function openUpgradeShop(level, onClose) {
 export function closeUpgradeShopIfOpen() {
   const overlay = $('upgradeOverlay');
   if (!overlay) return;
+
+  // Remove stats panel (recreated on next open)
+  try { if (_statsPanel) { _statsPanel.remove(); _statsPanel = null; } } catch {}
 
   overlay.classList.remove('show');
   overlay.setAttribute('aria-hidden', 'true');

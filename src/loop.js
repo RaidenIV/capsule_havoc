@@ -31,6 +31,8 @@ const fpsValEl = document.getElementById('fpsVal');
 const livesHudEl = document.getElementById('livesHud');
 const livesValEl = document.getElementById('livesVal');
 let _lastLives = null;
+let _lastHP = null;
+let _lastMaxHP = null;
 
 export const clock = new THREE.Clock();
 let fpsEMA = 60;
@@ -140,6 +142,17 @@ export function tick() {
   const regenTier = Math.max(0, state.upg?.regen || 0);
   if (regenTier > 0 && state.playerHP < state.playerMaxHP) {
     state.playerHP = Math.min(state.playerMaxHP, state.playerHP + regenTier * worldDelta);
+  }
+
+
+  // Keep the player health bar in sync (regen + pickups + upgrades)
+  // without spamming layout writes.
+  const hpNow = state.playerHP;
+  const maxNow = state.playerMaxHP;
+  if (_lastHP === null || _lastMaxHP === null || Math.abs(hpNow - _lastHP) > 1e-3 || Math.abs(maxNow - _lastMaxHP) > 1e-3) {
+    _lastHP = hpNow;
+    _lastMaxHP = maxNow;
+    try { updateHealthBar(); } catch {}
   }
 
   // Cooldowns

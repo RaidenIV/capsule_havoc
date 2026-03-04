@@ -25,6 +25,31 @@ function makeOrbitMat(color) {
   });
 }
 
+// Orbit visuals should match player lasers: a white core "rod" plus colored bloom glow.
+const _orbitCoreMat = new THREE.MeshStandardMaterial({
+  color: 0xffffff,
+  emissive: 0xffffff,
+  emissiveIntensity: 0.35,
+  metalness: 0.15,
+  roughness: 0.35,
+});
+function _makeOrbitVisual(color) {
+  const g = new THREE.Group();
+
+  const core = new THREE.Mesh(bulletGeo, _orbitCoreMat);
+  core.layers.set(0);
+  g.add(core);
+
+  const glowMat = makeOrbitMat(color);
+  glowMat.emissiveIntensity = 1.25; // lower than before; bloom is handled by layer
+  const glow = new THREE.Mesh(bulletGeo, glowMat);
+  glow.layers.set(1);
+  glow.scale.setScalar(1.35);
+  g.add(glow);
+
+  return g;
+}
+
 function getOrbitRingDefsFromTier(tier) {
   const C  = WEAPON_CONFIG;
   const ring = (lv, flip = false) => ({
@@ -55,10 +80,9 @@ export function syncOrbitBullets() {
   for (const def of getOrbitRingDefsFromTier(orbitTier)) {
     const meshes = [];
     for (let i = 0; i < def.count; i++) {
-      const mesh = new THREE.Mesh(bulletGeo, makeOrbitMat(def.color));
-      mesh.layers.set(1);
-      scene.add(mesh);
-      meshes.push(mesh);
+      const obj = _makeOrbitVisual(def.color);
+      scene.add(obj);
+      meshes.push(obj);
     }
     state.orbitRings.push({ def, meshes, angle: 0 });
   }
