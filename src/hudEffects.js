@@ -95,7 +95,7 @@ function ensureToastStyles(){
   if (_toastStyleEl) return;
   _toastStyleEl = document.createElement('style');
   _toastStyleEl.textContent = `
-    #powerup-toast{ position:absolute; left:50%; top:88px; transform: translateX(-50%); z-index: 30; pointer-events:none; }
+    #powerup-toast{ position:absolute; left:50%; top:128px; transform: translateX(-50%); z-index: 30; pointer-events:none; }
     .putoast{ display:flex; align-items:center; gap:10px; padding:10px 14px; border-radius: 16px;
       background: rgba(0,0,0,0.35); border: 1px solid rgba(255,255,255,0.14);
       box-shadow: 0 10px 30px rgba(0,0,0,0.35);
@@ -136,9 +136,32 @@ function getEffectRemaining(key){
 function renderToast(label, secondsOrNull){
   const host = ensureToastHost();
   if (!host) return;
-  const icon = '✦';
-  const secTxt = (Number.isFinite(secondsOrNull) && secondsOrNull > 0) ? ` (${Math.round(secondsOrNull)}s)` : '';
-  host.innerHTML = `<div class="putoast putoast-in"><div class="putoast-ic">${icon}</div><div class="putoast-txt">${label}</div><div class="putoast-time">${secTxt}</div></div>`;
+
+  // Build DOM (no unicode icons) so fonts never render "tofu" boxes.
+  host.innerHTML = '';
+  const wrap = document.createElement('div');
+  wrap.className = 'putoast putoast-in';
+
+  const ic = document.createElement('div');
+  ic.className = 'putoast-ic';
+  ic.textContent = 'PWR';
+
+  const txt = document.createElement('div');
+  txt.className = 'putoast-txt';
+  txt.textContent = String(label || 'Power Up');
+
+  const time = document.createElement('div');
+  time.className = 'putoast-time';
+  if (Number.isFinite(secondsOrNull) && secondsOrNull > 0) {
+    time.textContent = `(${Math.round(secondsOrNull)}s)`;
+  } else {
+    time.textContent = '';
+  }
+
+  wrap.appendChild(ic);
+  wrap.appendChild(txt);
+  wrap.appendChild(time);
+  host.appendChild(wrap);
 }
 
 function updatePersistentToast(){
