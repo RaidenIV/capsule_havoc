@@ -29,17 +29,21 @@ export async function runBootScreen({ onStart }){
   btn.classList.remove('ready');
 
   const lines = [
-    ['> waking reactor core…', 'boot-prompt'],
-    ['OK   power bus stable', 'boot-ok'],
-    ['> calibrating thrusters…', 'boot-prompt'],
-    ['OK   vector lock acquired', 'boot-ok'],
-    ['> mounting arena geometry…', 'boot-prompt'],
-    ['OK   navmesh compiled', 'boot-ok'],
-    ['> loading weapon systems…', 'boot-prompt'],
+    ['[BOOT] TACTICAL SYSTEMS INITIALIZING…', 'boot-prompt'],
+    ['OK   secure channel: ESTABLISHED', 'boot-ok'],
+    ['> verifying IFF transponder…', 'boot-prompt'],
+    ['OK   IFF: GREEN / FRIENDLY', 'boot-ok'],
+    ['> loading mission package: OPERATION HAVOC…', 'boot-prompt'],
+    ['OK   ROE profile loaded', 'boot-ok'],
+    ['> syncing sat-nav / arena grid…', 'boot-prompt'],
+    ['OK   grid lock acquired', 'boot-ok'],
+    ['> arming weapons matrix…', 'boot-prompt'],
     ['OK   emitters online', 'boot-ok'],
-    ['> verifying SFX bank…', 'boot-prompt'],
-    ['WARN audio locked until user input', 'boot-warn'],
-    ['> standing by…', 'boot-prompt'],
+    ['> validating armor & shield protocols…', 'boot-prompt'],
+    ['OK   defensive systems nominal', 'boot-ok'],
+    ['> staging audio assets…', 'boot-prompt'],
+    ['WARN audio interlock: awaiting user input', 'boot-warn'],
+    ['> awaiting command…', 'boot-prompt'],
   ];
 
   for (let i=0; i<lines.length; i++){
