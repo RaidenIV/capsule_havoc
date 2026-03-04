@@ -18,7 +18,7 @@ const TABS = [
   {
     id: 'weapons', label: 'Weapons',
     upgrades: [
-{ key: 'laserFire', name: 'Laser Fire',         costs: [300, 900, 2200, 5500, 12000],
+{ key: 'laserFire', name: 'Laser Fire',         costs: [ 250, 900, 2200, 5500, 12000],
   desc: t => t === 1
     ? 'Unlocks automatic laser fire'
     : `Improves laser pattern (Tier ${t})` },
@@ -281,7 +281,18 @@ function renderShop() {
 
   const coins = state.coins || 0;
 
-  tabDef.upgrades.forEach(upg => {
+  const upgradesSorted = [...tabDef.upgrades].sort((a, b) => {
+    const ta = Math.max(0, state.upg?.[a.key] || 0);
+    const tb = Math.max(0, state.upg?.[b.key] || 0);
+    const ma = a.costs.length;
+    const mb = b.costs.length;
+    const ca = ta >= ma ? Number.POSITIVE_INFINITY : (a.costs[ta] ?? Number.POSITIVE_INFINITY);
+    const cb = tb >= mb ? Number.POSITIVE_INFINITY : (b.costs[tb] ?? Number.POSITIVE_INFINITY);
+    if (ca !== cb) return ca - cb;
+    return (a.name || '').localeCompare(b.name || '');
+  });
+
+  upgradesSorted.forEach(upg => {
     const currentTier = Math.max(0, state.upg?.[upg.key] || 0);
     const maxTier     = upg.costs.length;
     const isMaxed     = currentTier >= maxTier;

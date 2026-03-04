@@ -1,21 +1,17 @@
 // ─── ui/chestOverlay.js ─────────────────────────────────────────────────────
 // Stable chest overlay API.
-// We use dynamic import to avoid hard ESM named-export coupling across versions.
+// The overlay implementation currently lives in ui/upgrades.js (to share styles).
+// This wrapper provides consistent named exports for the rest of the game.
 
-export async function openChestReward(tier = 'standard') {
+export async function openChestOverlay(tier = 'standard') {
   const mod = await import('./upgrades.js');
-  if (typeof mod.openChestReward === 'function') {
-    return mod.openChestReward(tier);
-  }
-  console.warn('[chestOverlay] openChestReward not found in ui/upgrades.js; tier=', tier);
+  // Prefer openChestReward (current), fall back to openChestOverlay if renamed.
+  const fn = mod.openChestReward || mod.openChestOverlay;
+  if (typeof fn === 'function') fn(tier);
 }
 
 export async function closeChestOverlay() {
   const mod = await import('./upgrades.js');
-  if (typeof mod.closeUpgradeShopIfOpen === 'function') {
-    return mod.closeUpgradeShopIfOpen();
-  }
+  const fn = mod.closeUpgradeShopIfOpen || mod.closeChestOverlay;
+  if (typeof fn === 'function') fn();
 }
-
-// Back-compat aliases
-export const openChestOverlay = openChestReward;
