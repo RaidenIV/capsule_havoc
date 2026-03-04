@@ -114,7 +114,7 @@ export function shootBulletWave() {
   const psTier = Math.max(0, state.upg?.projSpeed || 0);
   const speed  = BULLET_SPEED * (1 + 0.20 * psTier);
   const pierce = Math.max(0, state.upg?.piercing || 0);
-  const msTier = Math.max(0, state.upg?.multishot || 0); // adds pellets per direction
+  const msTier = Math.max(0, (state.upg?.multishot ?? state.upg?.multiShot ?? state.upg?.multishots ?? 0)); // adds pellets per direction
   const pellets = 1 + msTier;
   playSound('shoot', 0.45, 0.92 + Math.random() * 0.16); // slight pitch variation
   for (let i = 0; i < dirs; i++) {

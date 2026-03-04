@@ -41,6 +41,7 @@ function badge(label, seconds){
 
 
 export function updateHudEffects(){
+  updatePersistentToast();
   // Keep only persistent indicators (no timed-effect badges).
   const root = ensure();
   if (!root) return;
@@ -113,6 +114,7 @@ function ensureToastStyles(){
 }
 let _toastHost = null;
 let _toastTimer = null;
+let _toastPersist = null; // { label, key }
 
 function ensureToastHost(){
   if (_toastHost) return _toastHost;
@@ -124,16 +126,53 @@ function ensureToastHost(){
   return _toastHost;
 }
 
-export function notifyPowerup(label, seconds){
+function getEffectRemaining(key){
+  try {
+    const v = state?.effects?.[key];
+    return (Number.isFinite(v) && v > 0) ? v : 0;
+  } catch { return 0; }
+}
+
+function renderToast(label, secondsOrNull){
+  const host = ensureToastHost();
+  if (!host) return;
+  const icon = '✦';
+  const secTxt = (Number.isFinite(secondsOrNull) && secondsOrNull > 0) ? ` (${Math.round(secondsOrNull)}s)` : '';
+  host.innerHTML = `<div class="putoast putoast-in"><div class="putoast-ic">${icon}</div><div class="putoast-txt">${label}</div><div class="putoast-time">${secTxt}</div></div>`;
+}
+
+function updatePersistentToast(){
+  if (!_toastPersist) return;
+  const rem = getEffectRemaining(_toastPersist.key);
+  const host = ensureToastHost();
+  if (rem <= 0) {
+    _toastPersist = null;
+    if (host) host.innerHTML = '';
+    return;
+  }
+  const el = host?.firstElementChild;
+  const t = el?.querySelector?.('.putoast-time');
+  if (t) t.textContent = ` (${Math.round(rem)}s)`;
+}
+
+
+export function notifyPowerup(label, seconds, effectKey){
   ensureToastStyles();
   const host = ensureToastHost();
   if (!host) return;
 
+  const isTimed = (typeof effectKey === 'string' && effectKey.length && Number.isFinite(seconds) && seconds > 0);
+  if (isTimed) {
+    _toastPersist = { label, key: effectKey };
+    if (_toastTimer) { clearTimeout(_toastTimer); _toastTimer = null; }
+    renderToast(label, Math.round(getEffectRemaining(effectKey)));
+    return;
+  }
+
+  _toastPersist = null;
   if (_toastTimer) { clearTimeout(_toastTimer); _toastTimer = null; }
 
-  const icon = '✦';
-  const secTxt = (Number.isFinite(seconds) && seconds > 0) ? ` (${Math.round(seconds)}s)` : '';
-  host.innerHTML = `<div class="putoast putoast-in"><div class="putoast-ic">${icon}</div><div class="putoast-txt">${label}</div><div class="putoast-time">${secTxt}</div></div>`;
+  renderToast(label, (Number.isFinite(seconds) && seconds > 0) ? Math.round(seconds) : null);
 
   _toastTimer = setTimeout(() => {
     const el = host.firstElementChild;

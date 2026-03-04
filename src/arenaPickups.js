@@ -114,13 +114,13 @@ export function updateArenaPickups(worldDelta){
         applyEffect(p.type, dur);
 
         switch (p.type) {
-          case 'doubleDamage':   notifyPowerup('Double Damage', dur); break;
-          case 'invincibility':  notifyPowerup('Invincibility', dur); break;
-          case 'coinValue2x':    notifyPowerup('2× Coin Value', dur); break;
-          case 'xp2x':           notifyPowerup('2× XP', dur); break;
-          case 'clock':          notifyPowerup('Time Slow', dur); break;
-          case 'blackHole':      notifyPowerup('Black Hole', dur); break;
-          default:               notifyPowerup(p.type, dur); break;
+          case 'doubleDamage':   notifyPowerup('Double Damage', dur, 'doubleDamage'); break;
+          case 'invincibility':  notifyPowerup('Invincibility', dur, 'invincibility'); break;
+          case 'coinValue2x':    notifyPowerup('2× Coin Value', dur, 'coinValue2x'); break;
+          case 'xp2x':           notifyPowerup('2× XP', dur, 'xp2x'); break;
+          case 'clock':          notifyPowerup('Time Slow', dur, 'clock'); break;
+          case 'blackHole':      notifyPowerup('Black Hole', dur, 'blackHole'); break;
+          default:               notifyPowerup(p.type, dur, p.type); break;
         }
       }
       // small pickup blip
