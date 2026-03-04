@@ -25,24 +25,20 @@ function makeOrbitMat(color) {
   });
 }
 
-function getOrbitRingDefs(orbitTier) {
+function getOrbitRingDefsFromTier(tier) {
   const C  = WEAPON_CONFIG;
   const ring = (lv, flip = false) => ({
     count: C[lv][3], radius: C[lv][4], speed: C[lv][5] * (flip ? -1 : 1), color: C[lv][6],
   });
-  switch (orbitTier) {
-    case 0: case 1: return [];
-    case 2: return [ring(2)];
-    case 3: return [ring(3)];
-    case 4: return [ring(4)];
-    case 5: return [ring(5)];
-    case 6:  return [ring(6),  ring(3, true)];
-    case 7:  return [ring(7),  ring(4, true)];
-    case 8:  return [ring(8),  ring(5, true)];
-    case 9:  return [ring(9),  ring(6, true)];
-    case 10: return [ring(10), ring(6, true)];
-    default: return [ring(Math.min(orbitTier, 10))];
-  }
+
+  const t = Math.max(0, tier | 0);
+  if (t <= 0) return [];
+  if (t === 1) return [ring(2)];
+  if (t === 2) return [ring(3)];
+  if (t === 3) return [ring(4)];
+  if (t === 4) return [ring(5), ring(3, true)];
+  // t >= 5
+  return [ring(6), ring(4, true)];
 }
 
 export function destroyOrbitBullets() {
@@ -55,7 +51,8 @@ export function destroyOrbitBullets() {
 
 export function syncOrbitBullets() {
   destroyOrbitBullets();
-  for (const def of getOrbitRingDefs(state.upg?.orbit || 0)) {
+    const orbitTier = Math.max(0, state.upg?.orbit || 0);
+  for (const def of getOrbitRingDefsFromTier(orbitTier)) {
     const meshes = [];
     for (let i = 0; i < def.count; i++) {
       const mesh = new THREE.Mesh(bulletGeo, makeOrbitMat(def.color));
@@ -441,11 +438,11 @@ export function performSlash() {
   arcMesh.layers.enable(1); arcMesh.layers.enable(2);
 scene.add(arcMesh);
 
-    // Slash damage should not collapse when weaponTier=0 (no gun).
-  // Use Tier-1 weapon damage baseline if gun is not yet purchased.
-  const baseCfg = (state.weaponTier ?? 0) <= 0 ? WEAPON_CONFIG[0] : getWeaponConfig();
-  const baseDmg = Math.round(10 * (baseCfg?.[2] ?? 1));
-  const dmg = Math.max(1, Math.round(baseDmg * 1.8));
+    // Slash damage uses the same damage pipeline as player projectiles
+  // (base level damage + dmg upgrades + weapon tier multiplier + Double Damage effect).
+  // Slash remains a bit stronger than a single projectile by design.
+  const slashBase = Math.max(1, getBulletDamage());
+  const dmg = Math.max(1, Math.round(slashBase * 1.8));
   _spinDamage(px, pz, range, dmg);
   playSound('laser_sword', 0.72, 0.93 + Math.random() * 0.14);
 

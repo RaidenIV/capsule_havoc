@@ -6,7 +6,7 @@ import { PLAYER_MAX_HP, HEALTH_PICKUP_CHANCE, HEALTH_RESTORE } from './constants
 import { playerGroup, updateHealthBar } from './player.js';
 import { spawnHealNum } from './damageNumbers.js';
 import { playSound } from './audio.js';
-import { openChestReward } from './ui/chestOverlay.js';
+import { openChestReward } from './ui/upgrades.js';
 import { getCoinValueMultiplier } from './activeEffects.js';
 
 // ── Coin ──────────────────────────────────────────────────────────────────────
@@ -136,7 +136,6 @@ export function updatePickups(worldDelta, playerLevel, elapsed) {
     const hp = state.healthPickups[i];
     hp.life -= worldDelta;
     if (hp.life <= 0) { scene.remove(hp.mesh); hp.mat.dispose(); state.healthPickups.splice(i, 1); continue; }
-    if (hp.life < 2.0) { hp.mat.opacity = 1.0; hp.mat.transparent = false; }
 
     const dx = playerGroup.position.x - hp.mesh.position.x;
     const dz = playerGroup.position.z - hp.mesh.position.z;

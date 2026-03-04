@@ -20,6 +20,20 @@ export const playerMesh = new THREE.Mesh(playerGeo, playerMat);
 playerMesh.position.y = floorY(playerGeoParams);
 playerMesh.castShadow = true;
 playerGroup.add(playerMesh);
+// ── Shield active indicator (green bloom) ───────────────────────────────────
+// A subtle green halo on the bloom layer when shieldCharges > 0.
+const _shieldGlowGeo = new THREE.SphereGeometry(0.78, 16, 12);
+const _shieldGlowMat = new THREE.MeshBasicMaterial({
+  color: 0x42f578,
+  transparent: true,
+  opacity: 0.22,
+  depthWrite: false,
+});
+const shieldGlow = new THREE.Mesh(_shieldGlowGeo, _shieldGlowMat);
+shieldGlow.position.y = playerMesh.position.y;
+shieldGlow.layers.enable(1); // bloom
+shieldGlow.visible = false;
+playerGroup.add(shieldGlow);
 
 // ── Health bar (CSS2D) ────────────────────────────────────────────────────────
 const hbWrap = document.createElement('div');

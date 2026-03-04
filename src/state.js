@@ -75,6 +75,9 @@ export const state = {
   // ── Design-doc shop upgrades (tiers) ─────────────────────────────────────
   upg: {
     // Weapons
+    laserFire: 0,     // 0..5 (unlocks / tiers player lasers)
+    orbit: 0,         // 0..5 (orbit weapon tiers)
+
     dmg: 0,           // 0..5
     fireRate: 0,      // 0..5
     projSpeed: 0,     // 0..4
