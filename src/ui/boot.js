@@ -32,13 +32,38 @@ function fmtInfo(msg){
   return `[ .. ] ${msg}`;
 }
 
+const ASCII_TITLE = String.raw`
+  ██████╗ █████╗ ██████╗ ███████╗██╗   ██╗██╗     ███████╗
+ ██╔════╝██╔══██╗██╔══██╗██╔════╝██║   ██║██║     ██╔════╝
+ ██║     ███████║██████╔╝███████╗██║   ██║██║     █████╗  
+ ██║     ██╔══██║██╔═══╝ ╚════██║██║   ██║██║     ██╔══╝  
+ ╚██████╗██║  ██║██║     ███████║╚██████╔╝███████╗███████╗
+  ╚═════╝╚═╝  ╚═╝╚═╝     ╚══════╝ ╚═════╝ ╚══════╝╚══════╝
+
+   ██╗  ██╗ █████╗ ██╗   ██╗ ██████╗  ██████╗
+   ██║  ██║██╔══██╗██║   ██║██╔═══██╗██╔════╝
+   ███████║███████║██║   ██║██║   ██║██║     
+   ██╔══██║██╔══██║╚██╗ ██╔╝██║   ██║██║     
+   ██║  ██║██║  ██║ ╚████╔╝ ╚██████╔╝╚██████╗
+   ╚═╝  ╚═╝╚═╝  ╚═╝  ╚═══╝   ╚═════╝  ╚═════╝
+`;
+
+function setProgress(pct){
+  const clamped = Math.max(0, Math.min(100, pct));
+  const width = 36;
+  const filled = Math.round((clamped/100) * width);
+  const bar = '#'.repeat(filled) + '-'.repeat(width - filled);
+  return `[${bar}] ${String(Math.round(clamped)).padStart(3,' ')}%`;
+}
+
 export function initBootUI({ onStart }){
   const boot = document.getElementById('boot-screen');
   const term = document.getElementById('boot-terminal');
+  const progress = document.getElementById('boot-progress');
   const startWrap = document.getElementById('boot-start-wrap');
   const startBtn = document.getElementById('boot-start');
 
-  if (!boot || !term || !startWrap || !startBtn) {
+  if (!boot || !term || !progress || !startWrap || !startBtn) {
     // If markup is missing, fall back immediately.
     onStart?.();
     return { destroy(){} };
@@ -54,39 +79,66 @@ export function initBootUI({ onStart }){
   }
 
   async function run(){
-    append('C.HAVOC // BOOTSTRAP');
-    append('SECURE MODE: ENABLED');
-    append('INITIALIZING RUNTIME…');
-    await sleep(250);
+  // Title + initial status
+  append(ASCII_TITLE.trimEnd());
+  append('');
+  append('C.HAVOC // LOADER');
+  append('MODE............. TERMINAL');
+  append('SECURITY......... ENABLED');
+  append('SESSION.......... ' + Math.random().toString(16).slice(2,10).toUpperCase());
+  append('');
 
-    // Print module loads one-by-one
-    for (let i=0; i<MODULES.length && !destroyed; i++){
-      const name = MODULES[i];
-      append(fmtInfo(`loading ${name}`));
-      await sleep(110);
+  const extraSteps = 2; // asset verify + combat link
+  const totalSteps = MODULES.length + extraSteps;
+  let done = 0;
 
-      append(fmtOk(name));
-      await sleep(70);
-    }
-
-    if (destroyed) return;
-
-    append('');
-    append(fmtInfo('verifying asset bundles…'));
-    await sleep(160);
-    append('[ OK ] assets verified');
-    await sleep(120);
-
-    append(fmtInfo('establishing combat link…'));
-    await sleep(160);
-    append('[ OK ] combat link established');
-
-    append('');
-    append('READY.');
-    ready = true;
-    startWrap.hidden = false;
-    startBtn.focus();
+  function step(label){
+    // label unused but helpful for debugging if needed
+    done++;
+    const pct = (done / totalSteps) * 100;
+    progress.textContent = setProgress(pct);
   }
+
+  // start at 0%
+  progress.textContent = setProgress(0);
+
+  append(fmtInfo('initializing runtime…'));
+  await sleep(220);
+
+  // Print module loads one-by-one
+  for (let i=0; i<MODULES.length && !destroyed; i++){
+    const name = MODULES[i];
+    append(fmtInfo(`loading ${name}`));
+    await sleep(95);
+
+    append(fmtOk(name));
+    step(name);
+    await sleep(55);
+  }
+
+  if (destroyed) return;
+
+  append('');
+  append(fmtInfo('verifying asset bundles…'));
+  await sleep(160);
+  append('[ OK ] assets verified');
+  step('assets');
+  await sleep(90);
+
+  append(fmtInfo('establishing combat link…'));
+  await sleep(160);
+  append('[ OK ] combat link established');
+  step('link');
+
+  append('');
+  append('READY.');
+  ready = true;
+
+  // Only reveal PRESS START once the full sequence is complete.
+  startWrap.hidden = false;
+  startBtn.focus();
+}
+
 
   function handleStart(){
     if (!ready) return;
