@@ -18,10 +18,6 @@ const TABS = [
   {
     id: 'weapons', label: 'Weapons',
     upgrades: [
-      { key: 'weapon',    name: 'Laser Fire',         costs: [250, 800, 2500, 7500, 20000],
-        desc: t => (t === 1
-          ? 'Unlocks laser projectiles (auto-fire)'
-          : `Improves laser tier (Tier ${t})`) },
       { key: 'dmg',       name: 'Damage',            costs: [50, 150, 400, 1000, 2500],
         desc: t => `+15% weapon damage (Tier ${t})` },
       { key: 'fireRate',  name: 'Fire Rate',          costs: [75, 200, 500, 1200, 3000],
@@ -87,12 +83,6 @@ function applyUpgradeEffect(key, newTier) {
       if (newTier >= 1) state.hasDash = true;
       break;
 
-    case 'weapon':
-      // Laser projectiles are gated by weaponTier; Tier 1 unlocks firing.
-      state.weaponTier = Math.max(state.weaponTier || 0, newTier);
-      try { syncOrbitBullets(); } catch {}
-      break;
-
     case 'luck':
       try { recomputeLuck(); } catch {}
       break;
@@ -150,73 +140,220 @@ function ensureShopStyles() {
   const style = document.createElement('style');
   style.id = 'shop-dynamic-styles';
   style.textContent = `
-    #shopTabs { display:flex; gap:6px; margin-bottom:14px; flex-wrap:wrap; position:sticky; top:0; z-index:10; background:rgba(10,12,18,0.95); backdrop-filter:blur(8px); padding:6px 0 8px; margin-left:-2px; margin-right:-2px; }
-    .shop-tab-btn {
-      flex:1; min-width:80px; padding:7px 10px;
-      background:rgba(255,255,255,0.07); border:1px solid rgba(255,255,255,0.15);
-      border-radius:8px; color:#aaa; font-size:12px; font-weight:700;
-      text-transform:uppercase; letter-spacing:.05em; cursor:pointer;
-      transition:background .15s,color .15s,border-color .15s;
+    /* ── Upgrade Shop (improved UI) ─────────────────────────────────────── */
+    #shopTabs{
+      display:flex;
+      gap:8px;
+      margin: 0 0 14px;
+      padding: 8px;
+      border-radius: 14px;
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      background: rgba(10,12,18,0.55);
+      border: 1px solid rgba(255,255,255,0.10);
+      backdrop-filter: blur(14px);
+      box-shadow: 0 10px 30px rgba(0,0,0,0.30), inset 0 1px 0 rgba(255,255,255,0.10);
     }
-    .shop-tab-btn:hover  { background:rgba(0,229,255,0.12); color:#00e5ff; border-color:#00e5ff44; }
-    .shop-tab-btn.active { background:rgba(0,229,255,0.18); color:#00e5ff; border-color:#00e5ff; }
-    .shop-tab-content    { display:none; }
-    .shop-tab-content.active { display:block; }
-    .upg-section-label {
-      font-size:10px; font-weight:700; letter-spacing:.12em; text-transform:uppercase;
-      color:#555; margin:14px 0 6px; padding-bottom:4px;
-      border-bottom:1px solid rgba(255,255,255,0.07);
+
+    .shop-tab-btn{
+      flex: 1;
+      min-width: 110px;
+      padding: 10px 12px;
+      border-radius: 12px;
+      border: 1px solid rgba(255,255,255,0.14);
+      background: rgba(255,255,255,0.06);
+      color: rgba(255,255,255,0.78);
+      font-size: 12px;
+      font-weight: 800;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+      cursor: pointer;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      gap:8px;
+      transition: transform .12s ease, background .12s ease, border-color .12s ease, color .12s ease;
+      user-select:none;
     }
-    .upgrade-row {
-      display:flex; align-items:center; justify-content:space-between;
-      padding:9px 10px; border-radius:8px; margin-bottom:5px;
-      background:rgba(255,255,255,0.04); gap:10px;
+    .shop-tab-btn:hover{
+      transform: translateY(-1px);
+      background: rgba(0,229,255,0.10);
+      border-color: rgba(0,229,255,0.35);
+      color: rgba(0,229,255,0.95);
     }
-    .upgrade-row:hover { background:rgba(255,255,255,0.07); }
-    .upg-name  { font-size:13px; font-weight:700; color:#ddd; margin-bottom:2px; }
-    .upg-meta  { font-size:11px; color:#777; }
-    .upg-tier  { font-size:11px; color:#00e5ff88; margin-left:4px; }
-    .upg-buy {
-      display:flex; align-items:center; gap:6px;
-      padding:6px 12px; border-radius:6px; border:1px solid rgba(0,229,255,0.3);
-      background:rgba(0,229,255,0.1); color:#00e5ff; font-size:12px; font-weight:700;
-      cursor:pointer; white-space:nowrap; transition:background .12s, opacity .12s;
-      flex-shrink:0;
+    .shop-tab-btn:active{ transform: translateY(0px); }
+
+    .shop-tab-btn.active{
+      background: linear-gradient(180deg, rgba(0,229,255,0.22), rgba(0,229,255,0.10));
+      border-color: rgba(0,229,255,0.60);
+      color: rgba(0,229,255,0.98);
+      box-shadow: 0 10px 24px rgba(0,229,255,0.12);
     }
-    .upg-buy:hover:not(:disabled) { background:rgba(0,229,255,0.22); }
-    .upg-buy:disabled { opacity:0.38; cursor:not-allowed; }
-    .upg-buy.owned { border-color:rgba(0,255,102,0.3); background:rgba(0,255,102,0.08); color:#00ff66; }
-    .upgrade-coins { display:flex; align-items:center; gap:3px; font-size:11px; }
-    .upgrade-coins .coin-icon {
-      display:inline-block; width:8px; height:8px; border-radius:50%;
-      background:#ffe566; box-shadow:0 0 4px #f0a80088;
+
+    .shop-tab-ico{
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      width: 18px;
+      height: 18px;
+      border-radius: 8px;
+      background: rgba(255,255,255,0.08);
+      border: 1px solid rgba(255,255,255,0.10);
+      box-shadow: inset 0 1px 0 rgba(255,255,255,0.10);
+      font-size: 12px;
+      line-height: 1;
     }
-    /* Chest overlay */
-    #chestOverlay {
-      display:none; position:fixed; inset:0; z-index:120;
-      background:rgba(0,0,0,0.82); align-items:center; justify-content:center;
+
+    .upgrade-row{
+      display:flex;
+      align-items: stretch;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 12px 12px;
+      border-radius: 14px;
+      background: linear-gradient(180deg, rgba(255,255,255,0.08), rgba(255,255,255,0.04));
+      border: 1px solid rgba(255,255,255,0.12);
+      box-shadow: 0 10px 24px rgba(0,0,0,0.25), inset 0 1px 0 rgba(255,255,255,0.10);
     }
-    #chestOverlay.show { display:flex; }
-    #chestOverlay .chest-box {
-      background:#0e0e18; border:1px solid rgba(255,255,255,0.12); border-radius:16px;
-      padding:28px 32px; min-width:340px; max-width:520px; width:90%;
-      display:flex; flex-direction:column; gap:14px;
+
+    .upgrade-row:hover{
+      border-color: rgba(255,255,255,0.18);
+      background: linear-gradient(180deg, rgba(255,255,255,0.10), rgba(255,255,255,0.05));
     }
-    #chestOverlay h2 { font-size:20px; font-weight:800; color:#ffe566; margin:0; text-align:center; }
-    #chestOverlay .chest-sub { font-size:12px; color:#666; text-align:center; margin-top:-8px; }
-    #chestOverlay .chest-items { display:flex; flex-direction:column; gap:8px; }
-    #chestOverlay .chest-item {
-      padding:10px 14px; border-radius:8px;
-      background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1);
-      cursor:pointer; transition:background .12s, border-color .12s;
+
+    .upgrade-row.maxed{
+      border-color: rgba(0,255,102,0.22);
+      box-shadow: 0 10px 24px rgba(0,0,0,0.25), 0 0 0 1px rgba(0,255,102,0.16), inset 0 1px 0 rgba(255,255,255,0.10);
     }
-    #chestOverlay .chest-item:hover { background:rgba(0,229,255,0.12); border-color:#00e5ff44; }
-    #chestOverlay .chest-item .ci-name { font-size:13px; font-weight:700; color:#ddd; }
-    #chestOverlay .chest-item .ci-desc { font-size:11px; color:#777; margin-top:2px; }
-    #chestOverlay .chest-close { font-size:12px; color:#555; text-align:center; cursor:pointer; }
-    #chestOverlay .chest-close:hover { color:#aaa; }
-    .curse-warning { color:#ff8844; font-size:10px; margin-top:2px; }
-  `;
+
+    .upg-left{ flex:1; min-width: 0; }
+
+    .upg-name{
+      font-size: 14px;
+      font-weight: 900;
+      color: rgba(255,255,255,0.94);
+      letter-spacing: .04em;
+      display:flex;
+      align-items:center;
+      gap:8px;
+      margin-bottom: 4px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .upg-tier{
+      font-size: 11px;
+      font-weight: 800;
+      color: rgba(0,229,255,0.70);
+      padding: 3px 8px;
+      border-radius: 999px;
+      border: 1px solid rgba(0,229,255,0.22);
+      background: rgba(0,229,255,0.08);
+      letter-spacing: .06em;
+      flex-shrink: 0;
+    }
+
+    .upg-meta{
+      font-size: 12px;
+      color: rgba(255,255,255,0.64);
+      line-height: 1.25;
+    }
+
+    .curse-warning{
+      margin-top: 8px;
+      padding: 8px 10px;
+      border-radius: 12px;
+      background: rgba(255, 60, 60, 0.10);
+      border: 1px solid rgba(255, 60, 60, 0.22);
+      color: rgba(255, 160, 160, 0.92);
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: .03em;
+    }
+
+    .upg-buy{
+      display:flex;
+      flex-direction: column;
+      align-items: stretch;
+      justify-content: center;
+      gap: 6px;
+      padding: 10px 12px;
+      border-radius: 14px;
+      border: 1px solid rgba(0,229,255,0.35);
+      background: linear-gradient(180deg, rgba(0,229,255,0.18), rgba(0,229,255,0.08));
+      color: rgba(0,229,255,0.96);
+      font-size: 12px;
+      font-weight: 900;
+      letter-spacing: .10em;
+      text-transform: uppercase;
+      cursor:pointer;
+      min-width: 120px;
+      box-shadow: 0 12px 22px rgba(0,229,255,0.10);
+      transition: transform .12s ease, background .12s ease, opacity .12s ease, box-shadow .12s ease;
+    }
+
+    .upg-buy:hover:not(:disabled){
+      transform: translateY(-1px);
+      background: linear-gradient(180deg, rgba(0,229,255,0.26), rgba(0,229,255,0.10));
+      box-shadow: 0 18px 26px rgba(0,229,255,0.14);
+    }
+
+    .upg-buy:disabled{
+      opacity: 0.38;
+      cursor: not-allowed;
+      transform: none;
+      box-shadow: none;
+    }
+
+    .upg-buy.owned{
+      border-color: rgba(0,255,102,0.30);
+      background: linear-gradient(180deg, rgba(0,255,102,0.16), rgba(0,255,102,0.06));
+      color: rgba(0,255,102,0.95);
+      box-shadow: 0 12px 22px rgba(0,255,102,0.08);
+    }
+
+    .upg-buy .buy-label{
+      display:flex;
+      align-items:center;
+      justify-content:center;
+    }
+
+    .upg-buy .cost-pill{
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      gap:6px;
+      padding: 6px 10px;
+      border-radius: 999px;
+      border: 1px solid rgba(255,255,255,0.14);
+      background: rgba(0,0,0,0.22);
+      color: rgba(255,255,255,0.90);
+      font-weight: 800;
+      letter-spacing: .02em;
+      text-transform: none;
+      font-size: 12px;
+    }
+
+    .cost-pill .coin-icon{
+      display:inline-block;
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: #ffe566;
+      box-shadow: 0 0 6px #f0a80088, inset 0 1px 0 rgba(255,255,255,0.30);
+    }
+
+    @media (max-width: 520px){
+      .shop-tab-btn{ min-width: 90px; padding: 9px 10px; }
+      .upg-buy{ min-width: 108px; padding: 9px 10px; }
+      .upg-name{ font-size: 13px; }
+      .upg-meta{ font-size: 11px; }
+    }
+
+    /* Chest overlay stays handled below (existing rules) */
+    `;
   document.head.appendChild(style);
 }
 
@@ -227,6 +364,8 @@ function ensureTabBar(overlay) {
   if (overlay.querySelector('#shopTabs')) return;
 
   // Insert tab bar before upgradeList
+  const TAB_ICONS = { weapon: '⚡', movement: '🏃', abilities: '✨', powerups: '💠' };
+
   const tabBar = document.createElement('div');
   tabBar.id = 'shopTabs';
 
@@ -234,7 +373,13 @@ function ensureTabBar(overlay) {
     const btn = document.createElement('button');
     btn.className = 'shop-tab-btn' + (tab.id === _activeTab ? ' active' : '');
     btn.dataset.tab = tab.id;
-    btn.textContent = tab.label;
+    const ico = document.createElement('span');
+    ico.className = 'shop-tab-ico';
+    ico.textContent = TAB_ICONS[tab.id] || '•';
+    const label = document.createElement('span');
+    label.textContent = tab.label;
+    btn.appendChild(ico);
+    btn.appendChild(label);
     btn.addEventListener('click', () => {
       _activeTab = tab.id;
       renderShop();
@@ -282,11 +427,11 @@ function renderShop() {
     const canAfford   = coins >= nextCost;
 
     const row = document.createElement('div');
-    row.className = 'upgrade-row';
+    row.className = 'upgrade-row' + (isMaxed ? ' maxed' : '');
 
     // Left side
     const left = document.createElement('div');
-    left.style.flex = '1';
+    left.className = 'upg-left';
 
     const nameEl = document.createElement('div');
     nameEl.className = 'upg-name';
@@ -327,10 +472,11 @@ function renderShop() {
       btn.textContent = 'MAXED';
     } else {
       const label = document.createElement('span');
+      label.className = 'buy-label';
       label.textContent = canAfford ? 'BUY' : 'NEED';
 
       const pill = document.createElement('span');
-      pill.className = 'upgrade-coins';
+      pill.className = 'cost-pill';
       const coinDot = document.createElement('span');
       coinDot.className = 'coin-icon';
       const costEl = document.createElement('span');
