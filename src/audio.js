@@ -92,7 +92,10 @@ export async function initAudio() {
     pickup_armor:         './assets/sfx/heal.wav',
     pickup_clock:         './assets/sfx/levelup.wav',
     pickup_black_hole:    './assets/sfx/levelup.wav',
-    pickup_expire:        './assets/sfx/menu_select.wav',
+    // NOTE: pickup_expire fires whenever any timed effect ends; mapping this to
+    // menu_select.wav makes it feel like a random UI click during gameplay.
+    // Use a subtle in-world cue instead.
+    pickup_expire:        './assets/sfx/coin.wav',
     chest_open:           './assets/sfx/levelup.wav',
     chest_item_select:    './assets/sfx/menu_select.wav',
     armor_hit:            './assets/sfx/player_hit.wav',
@@ -136,6 +139,7 @@ const soundVolumes = {
   explode:      1.0,
   explodeElite: 1.0,
   coin:         1.0,
+  pickup_expire: 0.22,
   heal:         1.0,
   levelup:      1.0,
   dash:         1.0,

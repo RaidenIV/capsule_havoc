@@ -240,8 +240,10 @@ export function tick() {
     const bz = playerGroup.position.z + Math.sin(ang) * dist;
     const bhGeo = new THREE.SphereGeometry(1.2, 16, 16);
     const bhMat = new THREE.MeshStandardMaterial({
-      color: 0x000000, emissive: 0x6600ff, emissiveIntensity: 3.0,
-      transparent: true, opacity: 0.92, metalness: 0.0, roughness: 0.5,
+      // Black hole should read as a BLACK sphere (no purple). We keep a subtle dark
+      // emissive so bloom adds presence without tinting the core.
+      color: 0x000000, emissive: 0x111111, emissiveIntensity: 2.4,
+      transparent: true, opacity: 0.92, metalness: 0.0, roughness: 0.35,
     });
     const bhMesh = new THREE.Mesh(bhGeo, bhMat);
     bhMesh.position.set(bx, 1.2, bz);
@@ -279,11 +281,18 @@ export function tick() {
           e.dead = true;
           state.kills++;
           const _ke = document.getElementById('kills-value'); if (_ke) _ke.textContent = state.kills;
-          // Drop loot — same coin value as a normal kill
+          // Drop loot — same coin value as a normal kill.
           import('./leveling.js').then(lev => {
             const tier = lev.getCoinTierForEnemy?.(e.enemyType) ?? { value: 1, color: null };
             import('./pickups.js').then(m => {
               if (m.dropLoot) m.dropLoot(e.grp.position, tier.value, e.coinMult || 1, tier.color ?? null);
+              // If the black hole consumes a boss, the chest drop MUST still occur.
+              // (Doc tiering: Standard <40, Rare 40–69, Epic 70+.)
+              if ((e.isBoss || e.enemyType === 'BOSS') && m.spawnChest) {
+                const lvl = state.playerLevel || 1;
+                const chestTier = (lvl < 40) ? 'standard' : (lvl < 70 ? 'rare' : 'epic');
+                m.spawnChest(e.grp.position, chestTier);
+              }
             }).catch(()=>{});
           }).catch(()=>{});
           state.enemies.splice(j, 1);

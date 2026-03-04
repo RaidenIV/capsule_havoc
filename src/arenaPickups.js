@@ -25,13 +25,16 @@ const PICKUP_TYPES = [
 
 const geo = new THREE.IcosahedronGeometry(0.45, 0);
 const mats = {
-  doubleDamage: new THREE.MeshStandardMaterial({ color: 0xff3355, emissive: 0xff0022, emissiveIntensity: 1.1, metalness: 0.4, roughness: 0.25 }),
-  invincibility: new THREE.MeshStandardMaterial({ color: 0xffffff, emissive: 0x88ffff, emissiveIntensity: 1.1, metalness: 0.25, roughness: 0.2 }),
-  coinValue2x: new THREE.MeshStandardMaterial({ color: 0xffe566, emissive: 0xffcc55, emissiveIntensity: 1.0, metalness: 0.6, roughness: 0.25 }),
-  xp2x: new THREE.MeshStandardMaterial({ color: 0x55ccff, emissive: 0x55ccff, emissiveIntensity: 1.0, metalness: 0.35, roughness: 0.22 }),
-  armor: new THREE.MeshStandardMaterial({ color: 0x66ff99, emissive: 0x00ff66, emissiveIntensity: 0.95, metalness: 0.4, roughness: 0.25 }),
-  clock: new THREE.MeshStandardMaterial({ color: 0xbbccff, emissive: 0x88aaff, emissiveIntensity: 0.95, metalness: 0.35, roughness: 0.25 }),
-  blackHole: new THREE.MeshStandardMaterial({ color: 0x111111, emissive: 0x6600ff, emissiveIntensity: 1.2, metalness: 0.2, roughness: 0.35 }),
+  // All arena powerups should read as "glowing" in-world (bloom layer + emissive).
+  doubleDamage: new THREE.MeshStandardMaterial({ color: 0xff3355, emissive: 0xff0022, emissiveIntensity: 1.6, metalness: 0.4, roughness: 0.25 }),
+  invincibility: new THREE.MeshStandardMaterial({ color: 0xffffff, emissive: 0xcfffff, emissiveIntensity: 1.6, metalness: 0.25, roughness: 0.2 }),
+  coinValue2x: new THREE.MeshStandardMaterial({ color: 0xffe566, emissive: 0xffcc55, emissiveIntensity: 1.5, metalness: 0.6, roughness: 0.25 }),
+  xp2x: new THREE.MeshStandardMaterial({ color: 0x55ccff, emissive: 0x55ccff, emissiveIntensity: 1.5, metalness: 0.35, roughness: 0.22 }),
+  armor: new THREE.MeshStandardMaterial({ color: 0x66ff99, emissive: 0x00ff66, emissiveIntensity: 1.5, metalness: 0.4, roughness: 0.25 }),
+  clock: new THREE.MeshStandardMaterial({ color: 0xbbccff, emissive: 0x88aaff, emissiveIntensity: 1.5, metalness: 0.35, roughness: 0.25 }),
+  // Black hole pickup should be BLACK (no purple tint). We keep a subtle dark emissive
+  // so bloom adds an aura without shifting the core color.
+  blackHole: new THREE.MeshStandardMaterial({ color: 0x000000, emissive: 0x111111, emissiveIntensity: 2.0, metalness: 0.0, roughness: 0.18 }),
 };
 
 let _spawnTimer = 0;
