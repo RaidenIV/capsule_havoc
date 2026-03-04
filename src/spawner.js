@@ -1,284 +1,373 @@
 // ─── spawner.js ────────────────────────────────────────────────────────────
-// Design doc Section 12 — Enemy Spawn System
-// Owns:
-//  - Per-type spawn timers / quotas
-//  - Enemy cap progression enforcement
-//  - Level-range scaling + curse modifiers
-//  - Special spawn events (Surge / Reinforcement / Interrupt)
+// Enemy spawn system (game_design_doc.md Section 12)
+//
+// Implements:
+// - Per-type independent timers (base intervals/quotas)
+// - Level-range scaling multipliers + Curse modifiers (stacking)
+// - Enemy cap progression by level range (boss excluded from cap)
+// - Special spawn events: Swarmer Surge, Elite Reinforcement, Ultra Elite Interrupt
+// - Deterministic, testable level-transition summary logs
+//
+// NOTE: We keep the authoritative tables in this module to avoid hard ESM
+// import failures across patches. If you later want them centralized, move the
+// tables into constants.js and keep the export names stable.
 
+import * as THREE from 'three';
 import { state } from './state.js';
 import { camera } from './renderer.js';
 import { playerGroup } from './player.js';
-import {
-  ENEMY_TYPE,
-  getActiveEnemyTypesForLevel,
-  getEnemyCapForLevel,
-  SPAWN_BASE,
-  SPAWN_LEVEL_SCALING,
-  CURSE_SPAWN,
-  isBossLevel,
-} from './constants.js';
+import { ENEMY_TYPE, getActiveEnemyTypesForLevel } from './constants.js';
 import { spawnEnemyAtPosition } from './enemies.js';
-import { getLuck } from './luck.js';
 
-function clamp(v,a,b){ return Math.max(a, Math.min(b, v)); }
-function rand(){ return Math.random(); }
-function randInt(a,b){ return a + Math.floor(Math.random() * (b - a + 1)); }
+// ── Tables (from design doc) ──────────────────────────────────────────────────
+const SPAWN_BASE = Object.freeze({
+  // Rushers/Swarmers are treated as "group spawn" (8–12) on each spawn tick.
+  [ENEMY_TYPE.RUSHER]:     { quotaMin: 8, quotaMax: 12, intervalSec: 3,  groupSpawn: true },
 
-function getLevelScaling(level){
-  const L = Math.max(1, Math.floor(level||1));
+  [ENEMY_TYPE.ORBITER]:    { quotaMin: 3, quotaMax: 5,  intervalSec: 5,  groupSpawn: false },
+  [ENEMY_TYPE.TANKER]:     { quotaMin: 2, quotaMax: 3,  intervalSec: 8,  groupSpawn: false },
+  [ENEMY_TYPE.SNIPER]:     { quotaMin: 2, quotaMax: 3,  intervalSec: 8,  groupSpawn: false },
+  [ENEMY_TYPE.TELEPORTER]: { quotaMin: 2, quotaMax: 2,  intervalSec: 10, groupSpawn: false },
+  [ENEMY_TYPE.SHIELDED]:   { quotaMin: 2, quotaMax: 3,  intervalSec: 9,  groupSpawn: false },
+  // In your codebase, "SPLITTER" maps to the Ultra Elite behavior.
+  [ENEMY_TYPE.SPLITTER]:   { quotaMin: 1, quotaMax: 1,  intervalSec: 15, groupSpawn: false },
+
+  // Boss respawns every 10 seconds on boss levels (10,20,30,...). Boss excluded from cap.
+  [ENEMY_TYPE.BOSS]:       { quotaMin: 1, quotaMax: 1,  intervalSec: 10, groupSpawn: false, boss: true },
+});
+
+const SPAWN_LEVEL_SCALING = Object.freeze([
+  { min: 1,  max: 19,  quotaMul: 1.0,  intervalMul: 1.0  },
+  { min: 20, max: 39,  quotaMul: 1.2,  intervalMul: 0.85 },
+  { min: 40, max: 59,  quotaMul: 1.5,  intervalMul: 0.70 },
+  { min: 60, max: 69,  quotaMul: 1.75, intervalMul: 0.60 },
+  { min: 70, max: 999, quotaMul: 2.0,  intervalMul: 0.50 },
+]);
+
+const CURSE_SPAWN = Object.freeze({
+  0: { quotaMul: 1.00, intervalMul: 1.00 },
+  1: { quotaMul: 1.10, intervalMul: 0.95 },
+  2: { quotaMul: 1.20, intervalMul: 0.90 },
+  3: { quotaMul: 1.35, intervalMul: 0.80 },
+});
+
+const ENEMY_CAP_BY_LEVEL_RANGE = Object.freeze([
+  { min: 1,  max: 5,   cap: 20 },
+  { min: 6,  max: 10,  cap: 25 },
+  { min: 11, max: 20,  cap: 30 },
+  { min: 21, max: 40,  cap: 35 },
+  { min: 41, max: 50,  cap: 40 },
+  { min: 51, max: 60,  cap: 45 },
+  { min: 61, max: 999, cap: 50 },
+]);
+
+// ── Utilities ────────────────────────────────────────────────────────────────
+function randInt(a, b) { return a + Math.floor(Math.random() * (b - a + 1)); }
+
+function clamp(v, a, b) { return Math.max(a, Math.min(b, v)); }
+
+function getLevelScaling(level) {
+  const L = clamp(Math.floor(level || 1), 1, 999);
   for (const r of SPAWN_LEVEL_SCALING) {
-    if (L >= r.min && L <= r.max) return r;
+    if (L >= r.min && L <= r.max) return { quotaMul: r.quotaMul, intervalMul: r.intervalMul };
   }
-  return SPAWN_LEVEL_SCALING[0];
+  return { quotaMul: 1.0, intervalMul: 1.0 };
 }
 
-function getCurseScaling(){
-  const tier = clamp(state.upg?.curse ?? 0, 0, 3);
-  return CURSE_SPAWN[tier] || CURSE_SPAWN[0];
+function getCurseScaling() {
+  const tier = clamp(Math.floor(state.curseTier || 0), 0, 3);
+  return { tier, ...CURSE_SPAWN[tier] };
 }
 
-function countAliveNonBoss(){
+function getEnemyCapForLevel(level) {
+  const L = clamp(Math.floor(level || 1), 1, 999);
+  for (const r of ENEMY_CAP_BY_LEVEL_RANGE) {
+    if (L >= r.min && L <= r.max) return r.cap;
+  }
+  return 50;
+}
+
+function countRegularEnemies() {
+  // Boss does not count toward cap per design doc.
   let n = 0;
-  for (const e of state.enemies) if (e && !e.dead && !e.isBoss && e.enemyType !== ENEMY_TYPE.BOSS) n++;
+  for (let i = 0; i < state.enemies.length; i++) {
+    const e = state.enemies[i];
+    if (!e || e.dead) continue;
+    if (e.isBoss) continue;
+    n++;
+  }
   return n;
 }
 
-function countType(type){
+function countType(type) {
   let n = 0;
-  for (const e of state.enemies) if (e && !e.dead && !e.isBoss && e.enemyType === type) n++;
+  for (let i = 0; i < state.enemies.length; i++) {
+    const e = state.enemies[i];
+    if (!e || e.dead) continue;
+    if (type === ENEMY_TYPE.BOSS) { if (e.isBoss) n++; }
+    else if (e.type === type) { n++; }
+  }
   return n;
 }
 
-function availableSlots(level){
+function availableSlots(level) {
   const cap = getEnemyCapForLevel(level);
-  return Math.max(0, cap - countAliveNonBoss());
+  const regularCount = countRegularEnemies();
+  return Math.max(0, cap - regularCount);
 }
 
-function effectiveQuota(type, level){
+function getEffectiveQuota(type, level) {
   const base = SPAWN_BASE[type];
   if (!base) return 0;
+
   const { quotaMul } = getLevelScaling(level);
   const curse = getCurseScaling();
 
-  const qMin = Math.max(1, Math.round(base.quotaMin * quotaMul * curse.quotaMul));
-  const qMax = Math.max(qMin, Math.round(base.quotaMax * quotaMul * curse.quotaMul));
+  const qMin = Math.max(0, Math.floor(base.quotaMin * quotaMul * curse.quotaMul));
+  const qMax = Math.max(qMin, Math.floor(base.quotaMax * quotaMul * curse.quotaMul));
+
   return randInt(qMin, qMax);
 }
 
-function effectiveInterval(type, level){
+function getEffectiveIntervalSec(type, level) {
   const base = SPAWN_BASE[type];
-  if (!base) return 9999;
+  if (!base) return 999;
+
   const { intervalMul } = getLevelScaling(level);
   const curse = getCurseScaling();
-  // Clamp so we never hit the old "0.5s for everything" behaviour.
-  return Math.max(0.55, base.intervalSec * intervalMul * curse.intervalMul);
+
+  // Clamp to avoid pathological 0 intervals.
+  return Math.max(0.15, base.intervalSec * intervalMul * curse.intervalMul);
 }
 
-export function initSpawner(){
-  state.spawn = {
-    timers: {},
-    quotas: {},
-    lastLevel: 0,
-    bossCooldown: 0,
-    // Special events
-    nextEventTimer: 8.0,
-    pendingEvent: null,
-  };
-}
-
-function ensureState(level){
-  if (!state.spawn) initSpawner();
-  const types = getActiveEnemyTypesForLevel(level);
-  for (const t of types) {
-    if (state.spawn.timers[t] == null) state.spawn.timers[t] = 0;
-    if (state.spawn.quotas[t] == null) state.spawn.quotas[t] = effectiveQuota(t, level);
-  }
-}
-
-function logLevelSummary(level){
-  try {
-    const cap = getEnemyCapForLevel(level);
-    const luck = getLuck();
-    const { quotaMul, intervalMul } = getLevelScaling(level);
-    const curseTier = clamp(state.upg?.curse ?? 0, 0, 3);
-    const curse = getCurseScaling();
-    const types = getActiveEnemyTypesForLevel(level);
-    const per = {};
-    for (const t of types) {
-      per[t] = {
-        quotaTarget: state.spawn.quotas[t],
-        intervalSec: Number(effectiveInterval(t, level).toFixed(2)),
-      };
-    }
-    // Deterministic + testable summary on each level transition.
-    console.log('[Spawner] Level', level, {
-      cap,
-      luck,
-      quotaMul,
-      intervalMul,
-      curseTier,
-      curseQuotaMul: curse.quotaMul,
-      curseIntervalMul: curse.intervalMul,
-      perType: per,
-    });
-  } catch {}
-}
-
-export function getSpawnPosition(isBoss = false){
-  // Spawn in an oval ring just outside the viewport bounds.
-  const cam = camera;
+// ── Spawn ring (off-screen) ──────────────────────────────────────────────────
+function getSpawnPosition(isBoss) {
   const px = playerGroup.position.x;
   const pz = playerGroup.position.z;
+  const cam = camera;
 
-  const angle = Math.random() * Math.PI * 2;
+  // Try to bias spawns slightly toward camera-forward direction (more readable),
+  // but keep randomness.
+  const toCam = new THREE.Vector3(cam.position.x - px, 0, cam.position.z - pz).normalize();
+  const baseAngle = Math.atan2(toCam.z, toCam.x);
+  const angle = baseAngle + (Math.random() - 0.5) * Math.PI * 1.6;
 
+  // Oval radii scale with camera distance (iso camera).
   const camDist = Math.hypot(cam.position.x - px, cam.position.z - pz);
-  const baseA = camDist * 0.95;
-  const baseB = camDist * 0.70;
+  const baseA = camDist * 0.95;  // major axis
+  const baseB = camDist * 0.70;  // minor axis
   const pad   = isBoss ? 6.0 : 3.5;
-  const x = px + Math.cos(angle) * (baseA + pad);
-  const z = pz + Math.sin(angle) * (baseB + pad);
+
+  const a = baseA + pad;
+  const b = baseB + pad;
+
+  const x = px + Math.cos(angle) * a;
+  const z = pz + Math.sin(angle) * b;
+
   return { x, z };
 }
 
-function spawnOne(type){
-  const p = getSpawnPosition(false);
+function spawnOne(type, level, isBoss = false) {
+  if (!isBoss) {
+    const slots = availableSlots(level);
+    if (slots <= 0) return false;
+  }
+  const p = getSpawnPosition(isBoss);
   spawnEnemyAtPosition(p.x, p.z, type);
+  return true;
 }
 
-function spawnBatch(type, count, level){
-  const slots = availableSlots(level);
-  const n = Math.min(count, slots);
-  for (let i = 0; i < n; i++) spawnOne(type);
-}
-
-function updateBoss(delta, level){
-  if (!isBossLevel(level)) return;
-  if (state.bossAlive) return;
-
-  state.spawn.bossCooldown = (state.spawn.bossCooldown ?? 0) - delta;
-  if (state.spawn.bossCooldown > 0) return;
-
-  const p = getSpawnPosition(true);
-  spawnEnemyAtPosition(p.x, p.z, ENEMY_TYPE.BOSS);
-  state.bossAlive = true;
-}
-
-// ── Special events (doc Section 12.4) ───────────────────────────────────────
-
-function rollSpecialEvent(level){
-  // Events should be occasional, not constant. Keep behaviour deterministic
-  // via logged choices at level transitions.
-  const L = Math.max(1, Math.floor(level||1));
-  const luck = getLuck();
-
-  // Luck 20+ suppresses swarmer surge (doc Section 11 → ties to 12.4)
-  const suppressSurge = luck >= 20;
-
-  // Base chances scale mildly with level.
-  const t = clamp((L - 10) / 70, 0, 1);
-  let surgeP = 0.10 + 0.10 * t; // 10% → 20%
-  let reinfP = 0.06 + 0.06 * t; // 6%  → 12%
-  let interruptP = 0.03 + 0.05 * t; // 3% → 8%
-
-  // Luck makes events rarer overall.
-  const luckMul = clamp(1.0 - (luck / 120), 0.35, 1.0);
-  surgeP *= luckMul;
-  reinfP *= luckMul;
-  interruptP *= luckMul;
-
-  if (suppressSurge) surgeP = 0;
-
-  const r = rand();
-  const sum = surgeP + reinfP + interruptP;
-  if (sum <= 0) return null;
-  const x = r * sum;
-  if (x < surgeP) return 'swarmerSurge';
-  if (x < surgeP + reinfP) return 'eliteReinforcement';
-  return 'ultraInterrupt';
-}
-
-function scheduleNextEvent(){
-  // Base ~25–40s between checks.
-  const luck = getLuck();
-  const luckMul = clamp(1.0 + (luck / 80), 1.0, 1.75);
-  state.spawn.nextEventTimer = (25 + rand() * 15) * luckMul;
-}
-
-function runEvent(kind, level){
-  if (!kind) return;
-  const slots = availableSlots(level);
-  if (slots <= 0) return;
-
-  if (kind === 'swarmerSurge') {
-    // Burst of rushers.
-    spawnBatch(ENEMY_TYPE.RUSHER, Math.min(20, slots), level);
-    console.log('[Spawner] Event: Swarmer Surge');
-    return;
+function spawnBatch(type, count, level) {
+  let spawned = 0;
+  const isBoss = (type === ENEMY_TYPE.BOSS);
+  for (let i = 0; i < count; i++) {
+    if (!spawnOne(type, level, isBoss)) break;
+    spawned++;
   }
-  if (kind === 'eliteReinforcement') {
-    // A few elites appropriate to current level.
-    const pool = [ENEMY_TYPE.TANKER, ENEMY_TYPE.SNIPER, ENEMY_TYPE.SHIELDED, ENEMY_TYPE.TELEPORTER]
-      .filter(t => getActiveEnemyTypesForLevel(level).includes(t));
-    if (!pool.length) return;
-    const n = Math.min(3, slots);
-    for (let i = 0; i < n; i++) {
-      spawnBatch(pool[Math.floor(Math.random()*pool.length)], 1, level);
+  return spawned;
+}
+
+// ── Special spawn events (doc) ───────────────────────────────────────────────
+function shouldSuppressSwarmerSurge() {
+  return (state.luck || 0) >= 20;
+}
+
+function eventChanceMultiplierFromLuck() {
+  // Luck reduces frequency; keep simple and monotonic.
+  // Every 5 luck reduces chance by ~10% (min 35% of base).
+  const L = Math.max(0, Math.floor(state.luck || 0));
+  return Math.max(0.35, 1.0 - 0.10 * Math.floor(L / 5));
+}
+
+function maybeTriggerSpecialEvents(level) {
+  // Only one event per level by default (keeps it readable).
+  if (state.spawn.eventFiredThisLevel) return;
+
+  const luckMul = eventChanceMultiplierFromLuck();
+
+  // Swarmer Surge: any level, but suppressed at Luck >= 20.
+  if (!shouldSuppressSwarmerSurge()) {
+    const surgeChance = 0.055 * luckMul; // base ~5.5% per level
+    if (Math.random() < surgeChance) {
+      const extra = randInt(15, 20);
+      const spawned = spawnBatch(ENEMY_TYPE.RUSHER, extra, level);
+      state.spawn.eventFiredThisLevel = true;
+      console.log('[SPAWN_EVENT] SwarmerSurge', { level, requested: extra, spawned });
+      return;
     }
-    console.log('[Spawner] Event: Elite Reinforcement');
-    return;
   }
-  if (kind === 'ultraInterrupt') {
-    // Spawn an Ultra Elite if unlocked.
-    if (getActiveEnemyTypesForLevel(level).includes(ENEMY_TYPE.SPLITTER)) {
-      spawnBatch(ENEMY_TYPE.SPLITTER, 1, level);
-      console.log('[Spawner] Event: Ultra Elite Interrupt');
+
+  // Elite Reinforcement: 30+
+  if (level >= 30) {
+    const reinChance = 0.045 * luckMul;
+    if (Math.random() < reinChance) {
+      const extra = randInt(2, 3);
+      // Choose from elite-ish pool that is active this level.
+      const active = getActiveEnemyTypesForLevel(level);
+      const elitePool = active.filter(t => (
+        t === ENEMY_TYPE.ORBITER ||
+        t === ENEMY_TYPE.TANKER ||
+        t === ENEMY_TYPE.SNIPER ||
+        t === ENEMY_TYPE.TELEPORTER ||
+        t === ENEMY_TYPE.SHIELDED
+      ));
+      const pick = elitePool.length ? elitePool[randInt(0, elitePool.length - 1)] : ENEMY_TYPE.ORBITER;
+      const spawned = spawnBatch(pick, extra, level);
+      state.spawn.eventFiredThisLevel = true;
+      console.log('[SPAWN_EVENT] EliteReinforcement', { level, type: pick, requested: extra, spawned });
+      return;
+    }
+  }
+
+  // Ultra Elite Interrupt: 51+ rare
+  if (level >= 51) {
+    const ultraChance = 0.018 * luckMul;
+    if (Math.random() < ultraChance) {
+      const spawned = spawnBatch(ENEMY_TYPE.SPLITTER, 1, level);
+      if (spawned > 0) {
+        state.spawn.eventFiredThisLevel = true;
+        console.log('[SPAWN_EVENT] UltraEliteInterrupt', { level, spawned });
+      }
+      return;
     }
   }
 }
 
-export function updateSpawner(delta){
-  if (state.gameOver || state.paused) return;
-  const level = Math.max(1, Math.floor(state.playerLevel || 1));
-  ensureState(level);
+// ── Level transition logging ─────────────────────────────────────────────────
+function logSpawnSummary(level) {
+  const cap = getEnemyCapForLevel(level);
+  const lv = getLevelScaling(level);
+  const curse = getCurseScaling();
+  const active = getActiveEnemyTypesForLevel(level);
+
+  const perType = {};
+  for (const t of active) {
+    const b = SPAWN_BASE[t];
+    if (!b) continue;
+    const effInterval = getEffectiveIntervalSec(t, level);
+    // For summary, show scaled min/max before RNG:
+    const qMin = Math.floor(b.quotaMin * lv.quotaMul * curse.quotaMul);
+    const qMax = Math.floor(b.quotaMax * lv.quotaMul * curse.quotaMul);
+    perType[t] = { quotaRange: [qMin, qMax], intervalSec: Number(effInterval.toFixed(3)) };
+  }
+
+  console.log('[SPAWN_SUMMARY]', {
+    level,
+    cap,
+    levelScale: lv,
+    curseScale: { tier: curse.tier, quotaMul: curse.quotaMul, intervalMul: curse.intervalMul },
+    activeTypes: active,
+    perType,
+  });
+}
+
+// ── Public API ───────────────────────────────────────────────────────────────
+export function initSpawner() {
+  // Create a single namespace in state for spawner runtime fields.
+  state.spawn = {
+    timers: {},          // per-type timer accumulator
+    quotas: {},          // per-type target quota (randomized within range)
+    bossCooldown: 0,     // boss respawn cooldown
+    lastLevel: -1,
+    eventFiredThisLevel: false,
+  };
+}
+
+function ensureSpawnState(level) {
+  if (!state.spawn) initSpawner();
 
   if (state.spawn.lastLevel !== level) {
     state.spawn.lastLevel = level;
-    // Refresh quotas on transition so changes are visible immediately.
-    for (const t of getActiveEnemyTypesForLevel(level)) state.spawn.quotas[t] = effectiveQuota(t, level);
-    logLevelSummary(level);
-  }
+    state.spawn.eventFiredThisLevel = false;
 
+    // refresh quotas for this level
+    const types = getActiveEnemyTypesForLevel(level);
+    for (const t of types) {
+      if (!(t in state.spawn.timers)) state.spawn.timers[t] = 0;
+      state.spawn.quotas[t] = getEffectiveQuota(t, level);
+    }
+
+    // Boss cooldown reset on boss levels.
+    state.spawn.bossCooldown = 0;
+
+    logSpawnSummary(level);
+  }
+}
+
+function updateBoss(delta, level) {
+  const isBossLevel = (level >= 10) && (level % 10 === 0);
+  if (!isBossLevel) return;
+
+  if (state.bossAlive) return;
+
+  state.spawn.bossCooldown -= delta;
+  if (state.spawn.bossCooldown > 0) return;
+
+  // Boss can always spawn (does not count toward cap).
+  const p = getSpawnPosition(true);
+  spawnEnemyAtPosition(p.x, p.z, ENEMY_TYPE.BOSS);
+  state.bossAlive = true;
+
+  // respawn timer per doc (10s)
+  state.spawn.bossCooldown = SPAWN_BASE[ENEMY_TYPE.BOSS].intervalSec;
+}
+
+export function updateSpawner(delta) {
+  if (state.gameOver || state.paused) return;
+
+  const level = clamp(Math.floor(state.playerLevel || 1), 1, 999);
+  ensureSpawnState(level);
+
+  // boss first
   updateBoss(delta, level);
 
-  // Special event scheduler
-  state.spawn.nextEventTimer -= delta;
-  if (state.spawn.nextEventTimer <= 0) {
-    const ev = rollSpecialEvent(level);
-    runEvent(ev, level);
-    scheduleNextEvent();
-  }
+  // maybe run one special event per level
+  maybeTriggerSpecialEvents(level);
 
   const types = getActiveEnemyTypesForLevel(level);
   for (const t of types) {
-    const interval = effectiveInterval(t, level);
-    state.spawn.timers[t] = (state.spawn.timers[t] ?? 0) + delta;
+    const base = SPAWN_BASE[t];
+    if (!base || base.boss) continue;
+
+    const interval = getEffectiveIntervalSec(t, level);
+    state.spawn.timers[t] = (state.spawn.timers[t] || 0) + delta;
     if (state.spawn.timers[t] < interval) continue;
     state.spawn.timers[t] = 0;
 
-    // Slight quota refresh chance for variety; deterministic targets are logged on level-up.
-    if (rand() < 0.12) state.spawn.quotas[t] = effectiveQuota(t, level);
+    // Occasionally refresh quota (keeps variance), but deterministically per tick.
+    if (Math.random() < 0.10) state.spawn.quotas[t] = getEffectiveQuota(t, level);
 
-    const q = state.spawn.quotas[t] ?? effectiveQuota(t, level);
+    const target = state.spawn.quotas[t] ?? getEffectiveQuota(t, level);
     const have = countType(t);
-    if (have >= q) continue;
+    if (have >= target) continue;
 
-    const need = q - have;
-    if (SPAWN_BASE[t]?.groupSpawn) {
-      // "Group" meaning: spawn a small burst to feel like a swarm.
-      const group = randInt(6, 10);
-      spawnBatch(t, Math.min(need * group, 18), level);
+    const need = target - have;
+
+    if (base.groupSpawn) {
+      // Spawn a group (8–12), but keep it subject to cap.
+      const groupSize = randInt(8, 12);
+      // If need is large, allow multiple groups over time; here we spawn at most one group per tick.
+      spawnBatch(t, Math.max(groupSize, Math.min(groupSize * need, 20)), level);
     } else {
       spawnBatch(t, need, level);
     }
