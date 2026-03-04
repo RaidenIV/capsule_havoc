@@ -6,7 +6,7 @@ import { PLAYER_MAX_HP, HEALTH_PICKUP_CHANCE, HEALTH_RESTORE } from './constants
 import { playerGroup, updateHealthBar } from './player.js';
 import { spawnHealNum } from './damageNumbers.js';
 import { playSound } from './audio.js';
-import { openChestReward } from './ui/upgrades.js';
+import { openChestReward } from './ui/chestOverlay.js';
 import { getCoinValueMultiplier } from './activeEffects.js';
 
 // ── Coin ──────────────────────────────────────────────────────────────────────
