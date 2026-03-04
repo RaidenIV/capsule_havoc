@@ -6,6 +6,9 @@ import { getArmorHits, ARMOR_MAX_PIPS } from './armor.js';
 
 const host = document.getElementById('hud-effects');
 
+let _toastHost = null;
+let _toastSeq = 0;
+
 const EFFECT_META = {
   doubleDamage:  { label: 'DMG',  icon: '✦' },
   invincibility: { label: 'INV',  icon: '⛨' },
@@ -38,8 +41,91 @@ function ensureStyles(){
       background: rgba(255,255,255,0.10); }
     .hudfx-pip.on{ background: rgba(255,255,255,0.85); }
     .hudfx-life{ margin-left: 8px; font-size: 14px; opacity: 0.9; }
+
+    /* Glassmorphic pickup notification */
+    #hud-toast-host{ position:absolute; left:50%; top:18%; transform: translateX(-50%);
+      display:flex; flex-direction:column; gap:10px; align-items:center; z-index: 20; pointer-events:none; }
+    .hudtoast{ min-width: 260px; max-width: 520px;
+      padding: 12px 16px; border-radius: 16px;
+      background: rgba(0,0,0,0.34);
+      border: 1px solid rgba(255,255,255,0.14);
+      backdrop-filter: blur(10px);
+      box-shadow: 0 12px 32px rgba(0,0,0,0.35);
+      font-family: Rajdhani, system-ui, sans-serif;
+      color: rgba(255,255,255,0.94);
+      display:flex; align-items:center; gap: 12px;
+      letter-spacing: 0.3px;
+      opacity: 0;
+      transform: translateY(-8px) scale(0.98);
+      animation: hudtoastInOut 2400ms ease forwards;
+    }
+    .hudtoast-ic{ width: 28px; height: 28px; border-radius: 12px;
+      display:flex; align-items:center; justify-content:center;
+      background: rgba(255,255,255,0.10);
+      border: 1px solid rgba(255,255,255,0.12);
+      font-size: 14px;
+    }
+    .hudtoast-txt{ display:flex; flex-direction:column; line-height: 1.05; }
+    .hudtoast-k{ font-size: 12px; opacity: 0.82; font-weight: 600; }
+    .hudtoast-v{ font-size: 18px; font-weight: 700; }
+    @keyframes hudtoastInOut{
+      0%   { opacity: 0; transform: translateY(-8px) scale(0.98); }
+      12%  { opacity: 1; transform: translateY(0px) scale(1.0); }
+      82%  { opacity: 1; transform: translateY(0px) scale(1.0); }
+      100% { opacity: 0; transform: translateY(10px) scale(0.98); }
+    }
   `;
   document.head.appendChild(s);
+}
+
+function ensureToastHost(){
+  ensureStyles();
+  if (_toastHost && _toastHost.isConnected) return _toastHost;
+  _toastHost = document.getElementById('hud-toast-host');
+  if (_toastHost) return _toastHost;
+  _toastHost = document.createElement('div');
+  _toastHost.id = 'hud-toast-host';
+  document.body.appendChild(_toastHost);
+  return _toastHost;
+}
+
+/**
+ * Glassmorphic on-screen notification for powerups.
+ * @param {{ title: string, kind?: string, icon?: string }} arg
+ */
+export function notifyPowerup(arg){
+  if (!arg || !arg.title) return;
+  const h = ensureToastHost();
+  const id = (++_toastSeq);
+
+  const toast = document.createElement('div');
+  toast.className = 'hudtoast';
+  toast.dataset.toastId = String(id);
+
+  const ic = document.createElement('div');
+  ic.className = 'hudtoast-ic';
+  ic.textContent = arg.icon ?? '✦';
+
+  const txt = document.createElement('div');
+  txt.className = 'hudtoast-txt';
+  const k = document.createElement('div');
+  k.className = 'hudtoast-k';
+  k.textContent = (arg.kind ?? 'POWERUP').toUpperCase();
+  const v = document.createElement('div');
+  v.className = 'hudtoast-v';
+  v.textContent = arg.title;
+  txt.appendChild(k);
+  txt.appendChild(v);
+
+  toast.appendChild(ic);
+  toast.appendChild(txt);
+
+  while (h.children.length >= 3) h.removeChild(h.firstChild);
+  h.appendChild(toast);
+
+  toast.addEventListener('animationend', () => {
+    if (toast.parentNode) toast.parentNode.removeChild(toast);
+  }, { once: true });
 }
 
 function fmt(t){ return Math.max(0, t).toFixed(0); }

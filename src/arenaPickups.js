@@ -16,6 +16,7 @@ import { spawnHealNum } from './damageNumbers.js';
 import { collectAllCoins } from './coins.js';
 import { ARMOR_MAX_PIPS, addArmorPip } from './armor.js';
 import { getLuck } from './luck.js';
+import { notifyPowerup } from './hudEffects.js';
 
 function clamp(v,a,b){ return Math.max(a, Math.min(b, v)); }
 function rand(){ return Math.random(); }
@@ -143,10 +144,13 @@ function spawn(type){
 }
 
 function applyPickup(type){
+  const toast = (title, icon) => notifyPowerup({ title, icon, kind: 'Powerup' });
+
   if (type === 'armor') {
     // Armor pip (no timer effect)
     addArmorPip();
     playSound('armor', 0.75, 1.0);
+    toast('Armor', '⛨');
     return;
   }
 
@@ -157,9 +161,11 @@ function applyPickup(type){
       const c = document.getElementById('coin-count');
       if (c) c.textContent = state.coins;
       playSound('coin', 0.7, 1.05);
+      toast('Extra Life → Coins', '❤');
     } else {
       state.extraLives = 1;
       playSound('life', 0.8, 1.0);
+      toast('Extra Life', '❤');
     }
     return;
   }
@@ -173,11 +179,13 @@ function applyPickup(type){
       updateHealthBar();
       spawnHealNum(playerGroup.position, amt);
       playSound('heal', 0.85, 1.0);
+      toast('Red Cross Heal', '✚');
     } else {
       state.coins += 150;
       const c = document.getElementById('coin-count');
       if (c) c.textContent = state.coins;
       playSound('coin', 0.75, 1.02);
+      toast('Red Cross → Coins', '✚');
     }
     return;
   }
@@ -188,6 +196,7 @@ function applyPickup(type){
     const gained = collectAllCoins();
     console.log('[Pickups] Black Hole sweep: collected coins', gained);
     playSound('blackhole', 0.8, 0.95);
+    toast('Black Hole', '◉');
     return;
   }
 
@@ -195,6 +204,13 @@ function applyPickup(type){
   const dur = EFFECT_DUR[type] ?? 8;
   applyEffect(type, dur);
   playSound('powerup', 0.7, 1.0);
+
+  // Toast label mapping
+  if (type === 'doubleDamage')      toast('Double Damage', '✦');
+  else if (type === 'invincibility')toast('Invincibility', '⛨');
+  else if (type === 'coinValue')   toast('Coin Value', '⛁');
+  else if (type === 'xpBoost')     toast('XP Boost', '⬆');
+  else if (type === 'clockSlow')   toast('Time Slow', '⏱');
 }
 
 export function updateArenaPickups(dt, elapsed){

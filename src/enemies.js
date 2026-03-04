@@ -111,14 +111,18 @@ export function spawnEnemy(x, z, eliteTypeOrCfg = null) {
     : (eliteType ? (ELITE_FIRE_RATE[eliteType.minLevel] ?? 2.0) : null);
 
   let eliteBarFill = null;
-  if (eliteType) {
+  const isBoss = !!(cfg && cfg.isBoss) || enemyType === ENEMY_TYPE.BOSS;
+  if (eliteType || isBoss) {
     const bWrap = document.createElement('div');
     bWrap.className = 'elite-bar-wrap';
-    bWrap.style.width = Math.round(40 + scaleMult * 30) + 'px';
+    bWrap.style.width = Math.round((isBoss ? 90 : 40) + scaleMult * (isBoss ? 40 : 30)) + 'px';
     const bFill = document.createElement('div');
     bFill.className = 'elite-bar-fill';
     bFill.style.width = '100%';
-    bFill.style.background = 'linear-gradient(to right,#880000,#ff2222)';
+    // Bosses always use a red health bar.
+    bFill.style.background = isBoss
+      ? 'linear-gradient(to right,#550000,#ff0000)'
+      : 'linear-gradient(to right,#880000,#ff2222)';
     bWrap.appendChild(bFill);
     const bObj = new CSS2DObject(bWrap);
     bObj.position.set(0, (enemyGeoParams.radius + enemyGeoParams.length/2) * scaleMult * 2 + 0.5, 0);
@@ -128,7 +132,7 @@ export function spawnEnemy(x, z, eliteTypeOrCfg = null) {
 
   state.enemies.push({
     grp, mesh, mat, hp, maxHp: hp, dead: false,
-    isBoss: !!(cfg && cfg.isBoss),
+    isBoss,
     scaleMult, expMult, coinMult, eliteType, eliteBarFill,
     fireRate, shootTimer: fireRate ? Math.random() * fireRate : 0,
     staggerTimer: 0, baseColor: new THREE.Color(color),
