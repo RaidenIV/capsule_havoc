@@ -37,7 +37,7 @@ playerGroup.add(shieldGlow);
 
 // ── Armor active indicator (green bloom) ────────────────────────────────────
 // A green halo on the bloom layer when armorHits > 0.
-const _armorGlowGeo = new THREE.SphereGeometry(0.86, 18, 14);
+const _armorGlowGeo = new THREE.SphereGeometry(0.94, 18, 14);
 const _armorGlowMat = new THREE.MeshBasicMaterial({
   color: 0x42f578,
   transparent: true,
@@ -51,19 +51,8 @@ armorGlow.visible = false;
 playerGroup.add(armorGlow);
 
 // ── Invincibility indicator (white bloom) ───────────────────────────────────
-// A white halo on the bloom layer when the invincibility powerup is active.
-const _invGlowGeo = new THREE.SphereGeometry(0.92, 18, 14);
-const _invGlowMat = new THREE.MeshBasicMaterial({
-  color: 0xffffff,
-  transparent: true,
-  opacity: 0.16,
-  depthWrite: false,
-});
-const invGlow = new THREE.Mesh(_invGlowGeo, _invGlowMat);
-invGlow.position.y = playerMesh.position.y;
-invGlow.layers.enable(1); // bloom
-invGlow.visible = false;
-playerGroup.add(invGlow);
+// Instead of a visible sphere, we drive bloom from the player mesh itself by
+// temporarily enabling the bloom layer and boosting emissive to white.
 
 
 // ── Health bar (CSS2D) ────────────────────────────────────────────────────────
@@ -217,9 +206,15 @@ export function updatePlayer(delta, worldScale) {
 
   // Invincibility indicator: ONLY the invincibility powerup (not dash iframes).
   const invOn = (state.effects?.invincibility || 0) > 0;
-  invGlow.visible = invOn;
   if (invOn) {
-    invGlow.material.opacity = 0.14 + Math.sin(_glowTime * 10.0) * 0.03;
+    playerMesh.layers.enable(1); // drive bloom from the player mesh
+    const pulse = 1.0 + Math.sin(_glowTime * 10.0) * 0.15;
+    playerMat.emissive.set(0xffffff);
+    playerMat.emissiveIntensity = 1.6 * pulse;
+  } else {
+    playerMesh.layers.disable(1);
+    playerMat.emissive.setRGB(0, 0, 0);
+    playerMat.emissiveIntensity = 1.0;
   }
 
 }
