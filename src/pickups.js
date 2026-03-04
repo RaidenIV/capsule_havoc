@@ -12,8 +12,11 @@ import { getCoinValueMultiplier } from './activeEffects.js';
 // ── Coin ──────────────────────────────────────────────────────────────────────
 const coinGeo     = new THREE.CylinderGeometry(0.22, 0.22, 0.08, 12);
 const coinMatBase = new THREE.MeshStandardMaterial({
-  color: 0xffe566, emissive: 0xf0a800, emissiveIntensity: 0.6,
-  metalness: 0.9, roughness: 0.2,
+  color: 0xffffff,
+  emissive: 0x111111,
+  emissiveIntensity: 0.25,
+  metalness: 0.95,
+  roughness: 0.18,
 });
 const coinCountEl = document.getElementById('coin-count');
 
@@ -22,8 +25,9 @@ export function spawnCoins(pos, count, value = 1, colorHex = null) {
     const mat   = coinMatBase.clone();
     if (colorHex != null) {
       mat.color.setHex(colorHex);
+      // Keep emissive subtler so metal reads correctly; brighten slightly for visibility.
       mat.emissive.setHex(colorHex);
-      mat.emissiveIntensity = 0.55;
+      mat.emissiveIntensity = 0.30;
     }
     const mesh  = new THREE.Mesh(coinGeo, mat);
     const angle = Math.random() * Math.PI * 2;

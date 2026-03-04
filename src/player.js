@@ -35,6 +35,37 @@ shieldGlow.layers.enable(1); // bloom
 shieldGlow.visible = false;
 playerGroup.add(shieldGlow);
 
+// ── Armor active indicator (green bloom) ────────────────────────────────────
+// A green halo on the bloom layer when armorHits > 0.
+const _armorGlowGeo = new THREE.SphereGeometry(0.86, 18, 14);
+const _armorGlowMat = new THREE.MeshBasicMaterial({
+  color: 0x42f578,
+  transparent: true,
+  opacity: 0.18,
+  depthWrite: false,
+});
+const armorGlow = new THREE.Mesh(_armorGlowGeo, _armorGlowMat);
+armorGlow.position.y = playerMesh.position.y;
+armorGlow.layers.enable(1); // bloom
+armorGlow.visible = false;
+playerGroup.add(armorGlow);
+
+// ── Invincibility indicator (white bloom) ───────────────────────────────────
+// A white halo on the bloom layer when the invincibility powerup is active.
+const _invGlowGeo = new THREE.SphereGeometry(0.92, 18, 14);
+const _invGlowMat = new THREE.MeshBasicMaterial({
+  color: 0xffffff,
+  transparent: true,
+  opacity: 0.16,
+  depthWrite: false,
+});
+const invGlow = new THREE.Mesh(_invGlowGeo, _invGlowMat);
+invGlow.position.y = playerMesh.position.y;
+invGlow.layers.enable(1); // bloom
+invGlow.visible = false;
+playerGroup.add(invGlow);
+
+
 // ── Health bar (CSS2D) ────────────────────────────────────────────────────────
 const hbWrap = document.createElement('div');
 hbWrap.className = 'health-bar-wrap';
@@ -101,8 +132,10 @@ export function stampDashGhost() {
 
 // ── Per-frame player update ───────────────────────────────────────────────────
 const _v  = new THREE.Vector3();
+let _glowTime = 0;
 
 export function updatePlayer(delta, worldScale) {
+  _glowTime += delta;
   const slowTarget = state.slowTimer > 0 ? (state.slowScale || 0.5) : 1.0;
   const wsTarget = state.dashTimer > 0 ? Math.min(DASH_SLOW_SCALE, slowTarget) : slowTarget;
   const wsRate   = wsTarget < worldScale ? SLOW_SNAP_RATE : SLOW_RECOVER_RATE;
@@ -167,6 +200,28 @@ export function updatePlayer(delta, worldScale) {
       playerMesh.rotation.z += (0 - playerMesh.rotation.z) * 12 * delta;
     }
   }
+  // ── Player status glows (bloom layer) ─────────────────────────────────────
+  // Shield indicator: shield charges from the shop ability.
+  const shieldOn = (state.shieldCharges || 0) > 0;
+  shieldGlow.visible = shieldOn;
+  if (shieldOn) {
+    shieldGlow.material.opacity = 0.18 + Math.sin(_glowTime * 8.0) * 0.04;
+  }
+
+  // Armor indicator: armor powerup grants hits.
+  const armorOn = (state.armorHits || 0) > 0;
+  armorGlow.visible = armorOn;
+  if (armorOn) {
+    armorGlow.material.opacity = 0.14 + Math.sin(_glowTime * 6.0) * 0.04;
+  }
+
+  // Invincibility indicator: ONLY the invincibility powerup (not dash iframes).
+  const invOn = (state.effects?.invincibility || 0) > 0;
+  invGlow.visible = invOn;
+  if (invOn) {
+    invGlow.material.opacity = 0.14 + Math.sin(_glowTime * 10.0) * 0.03;
+  }
+
 }
 
 // ── Update dash afterimage ghosts ────────────────────────────────────────────

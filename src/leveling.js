@@ -97,17 +97,25 @@ export function getCoinTierForEnemy(enemyType) {
   // Silver (5): Elite (Tanker, Sniper, Teleporter, Shielded)
   // Gold (20): Ultra Elite (Splitter)
   // Boss Coin (100): Boss
+  //
+  // IMPORTANT: coin COLOR should match tier name (copper/silver/gold/white).
+  const COPPER = 0xb87333;
+  const SILVER = 0xc0c0c0;
+  const GOLD   = 0xffd700;
+  const WHITE  = 0xffffff;
+
   switch (enemyType) {
     case ENEMY_TYPE.TANKER:
     case ENEMY_TYPE.SNIPER:
     case ENEMY_TYPE.TELEPORTER:
     case ENEMY_TYPE.SHIELDED:
-      return { value: 5, color: 0x2cff7a }; // green
+      return { value: 5, color: SILVER };
     case ENEMY_TYPE.SPLITTER:
-      return { value: 20, color: 0xff3b3b }; // red
+      return { value: 20, color: GOLD };
     case ENEMY_TYPE.BOSS:
-      return { value: 100, color: 0xffffff }; // white
+      return { value: 100, color: WHITE };
     default:
-      return { value: 1, color: 0x3b7bff }; // blue (copper tier in doc)
+      return { value: 1, color: COPPER };
   }
 }
+
