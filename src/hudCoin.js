@@ -5,11 +5,16 @@
 
 import * as THREE from 'three';
 
-export function initHudCoin() {
-  const canvas = document.getElementById('coin-canvas');
-  if (!canvas) return;
+const _coinRenderers = new Map();
 
-  const W = 56, H = 56; // internal resolution (2× for crispness)
+export function initHudCoin(canvasId = 'coin-canvas') {
+  const canvas = document.getElementById(canvasId);
+  if (!canvas) return;
+  if (_coinRenderers.has(canvasId)) return;
+
+  const baseW = Number(canvas.getAttribute('width')) || 28;
+  const baseH = Number(canvas.getAttribute('height')) || 28;
+  const W = baseW * 2, H = baseH * 2; // internal resolution (2× for crispness)
   canvas.width  = W;
   canvas.height = H;
 
@@ -56,4 +61,7 @@ export function initHudCoin() {
     renderer.render(scene, camera);
   }
   animate();
+
+  _coinRenderers.set(canvasId, { renderer, scene, camera, coin });
+
 }

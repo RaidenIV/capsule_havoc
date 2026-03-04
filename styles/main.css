@@ -599,6 +599,12 @@ input[type=color]::-webkit-color-swatch { border: none; border-radius: 3px; }
   pointer-events: none; z-index: 10; width: 180px;
   transition: right 0.3s ease;
 }
+body.is-paused #xp-hud,
+body.is-shop   #xp-hud{
+  filter: blur(6px);
+  opacity: 0.45;
+}
+
 #ui.po ~ #xp-hud, #xp-hud.po { right: calc(var(--pw) + 24px); }
 #xp-level-row {
   display: flex; justify-content: space-between; align-items: baseline;
@@ -988,7 +994,7 @@ body.mode-playing #menu-screen { display: none !important; }
   font-size: 14px;
   font-weight: 700;
   letter-spacing: 0.05em;
-  color: rgba(255,255,255,0.9);
+  color: #fff;
   line-height: 1.2;
 }
 .upg-meta {
@@ -999,6 +1005,10 @@ body.mode-playing #menu-screen { display: none !important; }
   font-family: var(--mono);
 }
 
+
+.upgrade-row:not(.is-maxed) .upg-meta{
+  color: rgba(255,255,255,0.82);
+}
 .upg-buy {
   display: inline-flex;
   align-items: center;

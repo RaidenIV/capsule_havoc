@@ -197,6 +197,7 @@ export function updatePauseBtn() {
 export function togglePause() {
   state.paused = !state.paused;
   pauseEl?.classList.toggle('show', state.paused);
+  try { document.body.classList.toggle('is-paused', state.paused); } catch {}
   if (!state.paused) { clock.getDelta(); resumeMusic(); syncPauseMenuFromEngine(); }
   else { pauseMusic(); syncPauseMenuFromEngine(); }
   updatePauseBtn();

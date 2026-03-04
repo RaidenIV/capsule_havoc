@@ -8,6 +8,7 @@ import { playSound }       from '../audio.js';
 import { syncOrbitBullets } from '../weapons.js';
 import { getFireInterval, getWaveBullets, getBulletDamage } from '../xp.js';
 import { updateHealthBar } from '../player.js';
+import { initHudCoin }     from '../hudCoin.js';
 import { recomputeLuck }   from '../luck.js';
 import { getPlayerMaxHPForLevel } from '../constants.js';
 
@@ -515,14 +516,10 @@ function renderShop() {
 
       const pill = document.createElement('span');
       pill.className = 'upgrade-coins';
-      const coinDot = document.createElement('span');
-      coinDot.className = 'coin-icon';
       const costEl = document.createElement('span');
       costEl.textContent = String(nextCost);
-      pill.appendChild(coinDot);
       pill.appendChild(costEl);
-
-      btn.appendChild(label);
+btn.appendChild(label);
       btn.appendChild(pill);
     }
 
@@ -537,6 +534,8 @@ function renderShop() {
       applyUpgradeEffect(upg.key, currentTier + 1);
       playSound?.('purchase', 0.8);
 
+
+      try { updateStatsPanel(); } catch {}
       updateCoinsUI();
       renderShop();
   updateStatsPanel();
@@ -567,6 +566,10 @@ export function openUpgradeShop(level, onClose) {
   state.upgradeOpen = true;
   state.paused      = true;
 
+
+  try { document.body.classList.add('is-shop'); } catch {}
+  try { initHudCoin('upgrade-coin-canvas'); } catch {}
+
   updateCoinsUI();
   renderShop();
   updateStatsPanel();
@@ -595,6 +598,10 @@ export function closeUpgradeShopIfOpen() {
 
   state.upgradeOpen = false;
   state.paused      = false;
+
+  try { document.body.classList.remove('is-shop'); } catch {}
+
+  try { document.body.classList.remove('is-shop'); } catch {}
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -662,6 +669,8 @@ function closeChestOverlay() {
   if (el) el.classList.remove('show');
   state.upgradeOpen = false;
   state.paused      = false;
+
+  try { document.body.classList.remove('is-shop'); } catch {}
 }
 
 export function openChestReward(tier = 'standard') {
@@ -722,6 +731,8 @@ export function openChestReward(tier = 'standard') {
       state.upg[upg.key] = nextT;
       applyUpgradeEffect(upg.key, nextT);
       playSound?.('chest_item_select', 0.7);
+
+      try { updateStatsPanel(); } catch {}
       closeChestOverlay();
     });
 

@@ -142,13 +142,9 @@ function renderToast(label, secondsOrNull){
   const wrap = document.createElement('div');
   wrap.className = 'putoast putoast-in';
 
-  const ic = document.createElement('div');
-  ic.className = 'putoast-ic';
-  ic.textContent = 'PWR';
-
   const txt = document.createElement('div');
   txt.className = 'putoast-txt';
-  txt.textContent = `PWR • ${String(label || 'Power Up')}`;
+  txt.textContent = String(label || 'Power Up');
 
   const time = document.createElement('div');
   time.className = 'putoast-time';
@@ -157,8 +153,6 @@ function renderToast(label, secondsOrNull){
   } else {
     time.textContent = '';
   }
-
-  wrap.appendChild(ic);
   wrap.appendChild(txt);
   wrap.appendChild(time);
   host.appendChild(wrap);
