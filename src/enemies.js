@@ -17,8 +17,7 @@ import { playerGroup, updateHealthBar } from './player.js';
 import { steerAroundProps, pushOutOfProps, hasLineOfSight } from './terrain.js';
 import { spawnEnemyDamageNum, spawnPlayerDamageNum } from './damageNumbers.js';
 import { spawnExplosion } from './particles.js';
-import { dropLoot } from './coins.js';
-import { spawnChest, getChestTierForLevel } from './chests.js';
+import { dropLoot } from './pickups.js';
 import { updateXP } from './xp.js';
 import { getXPRewardForEnemy, getCoinTierForEnemy } from './leveling.js';
 import { playSound } from './audio.js';
@@ -110,18 +109,19 @@ export function spawnEnemy(x, z, eliteTypeOrCfg = null) {
     ? cfg.fireRate
     : (eliteType ? (ELITE_FIRE_RATE[eliteType.minLevel] ?? 2.0) : null);
 
+  const isBossBar = !!(cfg && cfg.isBoss) || (enemyType === ENEMY_TYPE.BOSS);
+
   let eliteBarFill = null;
-  const isBoss = !!(cfg && cfg.isBoss) || enemyType === ENEMY_TYPE.BOSS;
-  if (eliteType || isBoss) {
+  if (eliteType || isBossBar) {
     const bWrap = document.createElement('div');
     bWrap.className = 'elite-bar-wrap';
-    bWrap.style.width = Math.round((isBoss ? 90 : 40) + scaleMult * (isBoss ? 40 : 30)) + 'px';
+    bWrap.style.width = Math.round((isBossBar ? 84 : 40) + scaleMult * (isBossBar ? 44 : 30)) + 'px';
     const bFill = document.createElement('div');
     bFill.className = 'elite-bar-fill';
     bFill.style.width = '100%';
-    // Bosses always use a red health bar.
-    bFill.style.background = isBoss
-      ? 'linear-gradient(to right,#550000,#ff0000)'
+    // Boss bars are always red; elites keep their red gradient too.
+    bFill.style.background = isBossBar
+      ? 'linear-gradient(to right,#660000,#ff0000)'
       : 'linear-gradient(to right,#880000,#ff2222)';
     bWrap.appendChild(bFill);
     const bObj = new CSS2DObject(bWrap);
@@ -132,7 +132,7 @@ export function spawnEnemy(x, z, eliteTypeOrCfg = null) {
 
   state.enemies.push({
     grp, mesh, mat, hp, maxHp: hp, dead: false,
-    isBoss,
+    isBoss: isBossBar,
     scaleMult, expMult, coinMult, eliteType, eliteBarFill,
     fireRate, shootTimer: fireRate ? Math.random() * fireRate : 0,
     staggerTimer: 0, baseColor: new THREE.Color(color),
@@ -227,10 +227,10 @@ export function killEnemy(j) {
     }
 
     // Boss chest drop (design doc Section 10)
-    // Tier thresholds: Standard < 40, Rare 40–69, Epic 70+
-    const L = Math.max(1, Math.floor(state.playerLevel || 1));
-    const tier = getChestTierForLevel(L);
-    spawnChest({ x: e.grp.position.x, z: e.grp.position.z }, tier, L);
+    // Tier by level: 1-10 standard, 11-20 rare, 21+ epic.
+    const tier = (state.playerLevel <= 10) ? 'standard' : (state.playerLevel <= 20 ? 'rare' : 'epic');
+    // Lazy import to avoid circular deps
+    import('./pickups.js').then(m => m.spawnChest?.(e.grp.position, tier)).catch(()=>{});
 
     // Boss wave luck bonus: +5 at levels 10/20/30
     if (state.playerLevel === 10 || state.playerLevel === 20 || state.playerLevel === 30) {

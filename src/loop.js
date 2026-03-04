@@ -7,19 +7,17 @@ import {PLAYER_MAX_HP, getEnemyCapForLevel, getActiveEnemyTypesForLevel, isBossL
 import { updateSunPosition, updateOrbitLights } from './lighting.js';
 import { updateChunks } from './terrain.js';
 import { updatePlayer, updateDashStreaks, updateHealthBar } from './player.js';
-import { updateEnemies, removeCSS2DFromGroup, killEnemy } from './enemies.js';
+import { updateEnemies, removeCSS2DFromGroup, killEnemy, updateEliteBar } from './enemies.js';
 import { updateSpawner, initSpawner } from './spawner.js';
 import { shootBulletWave, updateBullets, updateEnemyBullets, updateOrbitBullets, performSlash, updateSlashEffects } from './weapons.js';
 import { updatePickups } from './pickups.js';
-import { updateCoins } from './coins.js';
-import { updateChests } from './chests.js';
 import { updateActiveEffects } from './activeEffects.js';
 import { updateArmorTimers } from './armor.js';
 import { initArenaPickups, updateArenaPickups } from './arenaPickups.js';
 import { updateHudEffects } from './hudEffects.js';
 import { updateHudLevel } from './hudLevel.js';
 import { updateParticles } from './particles.js';
-import { updateDamageNums } from './damageNumbers.js';
+import { updateDamageNums, spawnEnemyDamageNum } from './damageNumbers.js';
 import { getFireInterval } from './xp.js';
 import { triggerGameOver, formatTime } from './gameFlow.js';
 import { playSound } from './audio.js';
@@ -110,7 +108,7 @@ export function tick() {
   updatePlayer(delta, state.worldScale);
   const worldDelta = delta * state.worldScale;
   // enemyTimeScale: slows only enemy movement and bullets (Time Freeze pickup)
-  const clockActive = (state.effects?.clockSlow || 0) > 0;
+  const clockActive = (state.effects?.clock || 0) > 0;
   state.enemyTimeScale = clockActive ? 0.05 : 1.0; // nearly frozen during clock effect
 
   // Timed effects (arena pickups)
@@ -170,24 +168,47 @@ export function tick() {
     const tier = Math.max(0, state.upg?.burst || 0);
     if (tier > 0 && state.burstCooldown <= 0) {
       const baseRadius = 5.5;
-      const radius = tier >= 4 ? baseRadius * 2.0 : baseRadius;
-      const dmg = (tier >= 4) ? 180 : (70 + tier * 30);
-      // Apply damage to enemies in radius.
+      const radiusMul = tier >= 2 ? 1.25 : 1.0;
+      const radius = (tier >= 4 ? baseRadius * 2.0 : baseRadius) * radiusMul;
+
+      const dmgBase = 70 + tier * 30;
+      const dmg = (tier >= 4) ? Math.max(180, dmgBase) : dmgBase;
+
+      const knock = (tier >= 4) ? 1.6 : 0.0;
+
+      let hits = 0;
       for (let j = state.enemies.length - 1; j >= 0; j--) {
-        const e = state.enemies[j]; if (e.dead) continue;
-        const dx = e.grp.position.x - playerGroup.position.x;
-        const dz = e.grp.position.z - playerGroup.position.z;
-        if (dx*dx + dz*dz <= radius*radius) {
+        const e = state.enemies[j]; if (!e || e.dead) continue;
+        const ex = e.grp.position.x - playerGroup.position.x;
+        const ez = e.grp.position.z - playerGroup.position.z;
+        const d2 = ex*ex + ez*ez;
+        if (d2 <= radius*radius) {
+          hits++;
           e.hp -= dmg;
+          try { spawnEnemyDamageNum(dmg, e); } catch {}
+          try { updateEliteBar(e); } catch {}
+          if (knock > 0) {
+            const d = Math.sqrt(d2) || 1;
+            e.grp.position.x += (ex / d) * knock;
+            e.grp.position.z += (ez / d) * knock;
+          }
           if (e.hp <= 0) {
             killEnemy(j);
           }
         }
       }
-      state.burstCooldown = 8.0;
+
+      // Tier 3: -30% cooldown
+      const baseCD = 8.0;
+      const cd = tier >= 3 ? baseCD * 0.70 : baseCD;
+      state.burstCooldown = cd;
+
+      // Audible feedback even if nothing was in range
       playSound('burst', 0.7, 1.0);
+      if (hits === 0) playSound('standard_hit', 0.2, 1.25);
     }
   }
+
 
   // ── Level-driven spawn system (Option B) ───────────────────────────────────
   // Cap is driven by player level per design doc.
@@ -203,7 +224,7 @@ export function tick() {
   updateSpawner(worldDelta);
 
   // Timed arena pickups
-  updateArenaPickups(worldDelta, state.elapsed);
+  updateArenaPickups(worldDelta);
 
   // ── World ──────────────────────────────────────────────────────────────────
   updateChunks(playerGroup.position);
@@ -284,7 +305,7 @@ export function tick() {
           // Drop loot — same coin value as a normal kill
           import('./leveling.js').then(lev => {
             const tier = lev.getCoinTierForEnemy?.(e.enemyType) ?? { value: 1, color: null };
-            import('./coins.js').then(m => {
+            import('./pickups.js').then(m => {
               if (m.dropLoot) m.dropLoot(e.grp.position, tier.value, e.coinMult || 1, tier.color ?? null);
             }).catch(()=>{});
           }).catch(()=>{});
@@ -309,17 +330,14 @@ export function tick() {
   updateBullets(worldDelta);
   updateEnemyBullets(worldDelta * (state.enemyTimeScale ?? 1.0));
   updateOrbitBullets(worldDelta);
-  // Slash: timed by SLASH_INTERVAL, scaled by worldDelta so Time Slow affects it
-  state._slashTimer = (state._slashTimer || 0) - worldDelta;
+  // Slash: timed by SLASH_INTERVAL, NOT scaled by worldDelta (time slow shouldn't affect slash cadence)
+  state._slashTimer = (state._slashTimer || 0) - delta;
   if (state._slashTimer <= 0) {
     performSlash();
     state._slashTimer = SLASH_INTERVAL;
   }
 
-  // Coins + health pickups + chests
-  updateCoins(worldDelta);
   updatePickups(worldDelta, state.playerLevel, state.elapsed);
-  updateChests(worldDelta, state.elapsed);
   updateParticles(worldDelta);
   updateDamageNums(worldDelta);
   updateHudEffects();
