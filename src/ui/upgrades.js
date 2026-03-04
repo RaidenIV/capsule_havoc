@@ -18,6 +18,10 @@ const TABS = [
   {
     id: 'weapons', label: 'Weapons',
     upgrades: [
+      { key: 'weapon',    name: 'Laser Fire',         costs: [250, 800, 2500, 7500, 20000],
+        desc: t => (t === 1
+          ? 'Unlocks laser projectiles (auto-fire)'
+          : `Improves laser tier (Tier ${t})`) },
       { key: 'dmg',       name: 'Damage',            costs: [50, 150, 400, 1000, 2500],
         desc: t => `+15% weapon damage (Tier ${t})` },
       { key: 'fireRate',  name: 'Fire Rate',          costs: [75, 200, 500, 1200, 3000],
@@ -72,15 +76,21 @@ const TABS = [
 ];
 
 // Flat list of all upgrades (used by chest reward item picker)
-export const ALL_UPGRADES = TABS.flatMap(tab => tab.upgrades);
+const ALL_UPGRADES = TABS.flatMap(tab => tab.upgrades);
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Side-effects when an upgrade is purchased
 // ─────────────────────────────────────────────────────────────────────────────
-export function applyUpgradeEffect(key, newTier) {
+function applyUpgradeEffect(key, newTier) {
   switch (key) {
     case 'dash':
       if (newTier >= 1) state.hasDash = true;
+      break;
+
+    case 'weapon':
+      // Laser projectiles are gated by weaponTier; Tier 1 unlocks firing.
+      state.weaponTier = Math.max(state.weaponTier || 0, newTier);
+      try { syncOrbitBullets(); } catch {}
       break;
 
     case 'luck':
@@ -135,7 +145,7 @@ let _onClose   = null;
 // ─────────────────────────────────────────────────────────────────────────────
 // Inject minimal tab + shop CSS (idempotent)
 // ─────────────────────────────────────────────────────────────────────────────
-export function ensureShopStyles() {
+function ensureShopStyles() {
   if (document.getElementById('shop-dynamic-styles')) return;
   const style = document.createElement('style');
   style.id = 'shop-dynamic-styles';
@@ -396,4 +406,136 @@ export function closeUpgradeShopIfOpen() {
   state.paused      = false;
 }
 
-// Chest overlay moved to src/ui/chestOverlay.js (design doc Issue 10.5)
+// ─────────────────────────────────────────────────────────────────────────────
+// Chest reward overlay (Section 10)
+// ─────────────────────────────────────────────────────────────────────────────
+
+// Determine item count from Luck (design doc table)
+function rollChestItemCount() {
+  const luck = state.luck || 0;
+  // Probability tables for item counts 1, 3, 5
+  // Luck:  0      10     20     30
+  const p1 = luck <= 0  ? 0.70 : luck <= 10 ? 0.45 : luck <= 20 ? 0.20 : 0.00;
+  const p5 = luck <= 0  ? 0.05 : luck <= 10 ? 0.15 : luck <= 20 ? 0.25 : 0.368;
+  const r  = Math.random();
+  if (r < p5) return 5;
+  if (r < p5 + (1 - p1 - p5)) return 3;
+  return 1;
+}
+
+// Pick `count` upgrades from the pool that aren't yet maxed
+function pickChestItems(count, chestTier) {
+  // Max shop tier offered per chest tier (design doc Section 10)
+  const tierCap = { standard: 2, rare: 4, epic: 5 }[chestTier] || 2;
+
+  // Candidates: upgrades that have a next tier to purchase and are within the tier cap
+  const candidates = ALL_UPGRADES.filter(upg => {
+    const cur = state.upg?.[upg.key] || 0;
+    return cur < upg.costs.length && (cur + 1) <= tierCap;
+  });
+
+  if (!candidates.length) return []; // all maxed → coin payout handled by caller
+
+  // Shuffle
+  const pool = [...candidates];
+  for (let i = pool.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [pool[i], pool[j]] = [pool[j], pool[i]];
+  }
+
+  return pool.slice(0, Math.min(count, pool.length));
+}
+
+function ensureChestOverlay() {
+  if ($('chestOverlay')) return;
+
+  ensureShopStyles();
+
+  const el = document.createElement('div');
+  el.id = 'chestOverlay';
+  el.innerHTML = `
+    <div class="chest-box">
+      <h2 id="chestOverlayTitle">CHEST REWARD</h2>
+      <div class="chest-sub" id="chestOverlaySub">Choose one upgrade to keep</div>
+      <div class="chest-items" id="chestItems"></div>
+      <div class="chest-close" id="chestSkipBtn">Skip (discard all)</div>
+    </div>
+  `;
+  document.body.appendChild(el);
+
+  $('chestSkipBtn').addEventListener('click', closeChestOverlay);
+}
+
+function closeChestOverlay() {
+  const el = $('chestOverlay');
+  if (el) el.classList.remove('show');
+  state.upgradeOpen = false;
+  state.paused      = false;
+}
+
+export function openChestReward(tier = 'standard') {
+  ensureChestOverlay();
+  ensureShopStyles();
+
+  const count   = rollChestItemCount();
+  const items   = pickChestItems(count, tier);
+
+  const overlay = $('chestOverlay');
+  const title   = $('chestOverlayTitle');
+  const sub     = $('chestOverlaySub');
+  const list    = $('chestItems');
+
+  if (!overlay || !list) return;
+
+  // Coin payout if nothing available
+  if (!items.length) {
+    const payout = count * 50;
+    state.coins += payout;
+    const coinEl = document.getElementById('coin-count');
+    if (coinEl) coinEl.textContent = state.coins;
+    playSound?.('coin', 0.6, 1.0);
+    return;
+  }
+
+  const tierLabel = { standard: 'Standard Chest', rare: 'Rare Chest', epic: 'Epic Chest' }[tier] || 'Chest';
+  const tierColor = { standard: '#ffe566', rare: '#55ccff', epic: '#cc55ff' }[tier] || '#ffe566';
+
+  title.textContent   = tierLabel;
+  title.style.color   = tierColor;
+  sub.textContent     = `${items.length} item${items.length > 1 ? 's' : ''} found — choose one to keep`;
+
+  list.innerHTML = '';
+  state.upgradeOpen = true;
+  state.paused      = true;
+
+  items.forEach(upg => {
+    const cur     = state.upg?.[upg.key] || 0;
+    const nextT   = cur + 1;
+    const cost    = upg.costs[cur] || 0;
+
+    const div = document.createElement('div');
+    div.className = 'chest-item';
+
+    const nameEl = document.createElement('div');
+    nameEl.className = 'ci-name';
+    nameEl.textContent = `${upg.name}  →  Tier ${nextT}`;
+
+    const descEl = document.createElement('div');
+    descEl.className = 'ci-desc';
+    descEl.textContent = upg.desc(nextT) + `  (shop value: ${cost} coins)`;
+
+    div.appendChild(nameEl);
+    div.appendChild(descEl);
+
+    div.addEventListener('click', () => {
+      state.upg[upg.key] = nextT;
+      applyUpgradeEffect(upg.key, nextT);
+      playSound?.('chest_item_select', 0.7);
+      closeChestOverlay();
+    });
+
+    list.appendChild(div);
+  });
+
+  overlay.classList.add('show');
+}
