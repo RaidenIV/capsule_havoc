@@ -1191,108 +1191,55 @@ position: fixed;
 }
 
 
-/* ── BOOT SCREEN ── */
-.boot-hidden{ display:none !important; }
-
+/* ── Boot screen (technical terminal) ───────────────────────────────────────── */
 .boot-screen{
-  position: fixed; inset: 0;
-  z-index: 2000;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: radial-gradient(1200px 600px at 50% 35%, rgba(0,153,255,0.08), transparent 60%),
-              linear-gradient(180deg, #000 0%, #05070b 100%);
-  color: #eaf3ff;
-  font-family: 'Rajdhani', system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
-  opacity: 0;
-  animation: bootIn 0.6s ease forwards;
-}
-@keyframes bootIn{ from{opacity:0} to{opacity:1} }
-.boot-screen.fade-out{
-  animation: bootOut 0.45s ease forwards;
-}
-@keyframes bootOut{ from{opacity:1} to{opacity:0} }
-
-.boot-wrap{
-  width: min(880px, 92vw);
-  border-radius: 18px;
-  padding: 28px 28px 22px;
-  background: rgba(10, 12, 16, 0.55);
-  border: 1px solid rgba(255,255,255,0.10);
-  box-shadow:
-    0 18px 60px rgba(0,0,0,0.65),
-    inset 0 1px 0 rgba(255,255,255,0.06);
-  backdrop-filter: blur(10px);
-}
-
-.boot-title{
-  font-size: 14px;
-  letter-spacing: .18em;
-  text-transform: uppercase;
-  color: rgba(255,255,255,0.75);
-  margin-bottom: 16px;
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  background: #000;
+  color: #fff;
+  font-family: 'Courier New', monospace;
+  font-size: 12px;
+  line-height: 1.55;
+  padding: 22px 24px;
+  overflow: hidden;
 }
 
 .boot-terminal{
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
-  font-size: 12px;
-  line-height: 1.55;
-  min-height: 220px;
-  max-height: min(360px, 42vh);
-  overflow: hidden;
-  padding: 14px 14px;
-  border-radius: 14px;
-  background: rgba(0,0,0,0.55);
-  border: 1px solid rgba(255,255,255,0.10);
-  box-shadow: inset 0 1px 0 rgba(255,255,255,0.06);
-}
-
-.boot-line{
-  opacity: 0;
-  transform: translateX(-8px);
-  animation: bootLineIn .22s ease forwards;
+  margin: 0;
   white-space: pre-wrap;
+  word-break: break-word;
 }
-@keyframes bootLineIn{
-  to{ opacity:1; transform: translateX(0); }
-}
-.boot-prompt{ color: rgba(255,255,255,0.85); }
-.boot-ok{ color: rgba(66,245,120,0.95); }
-.boot-warn{ color: rgba(255,212,90,0.95); }
-.boot-err{ color: rgba(255,90,90,0.95); }
 
-.boot-start-btn{
-  margin-top: 18px;
-  width: 100%;
-  height: 54px;
-  border-radius: 16px;
-  border: 1px solid rgba(255,255,255,0.16);
-  background: linear-gradient(135deg, rgba(0,153,255,0.20), rgba(0,255,255,0.08));
-  color: rgba(255,255,255,0.92);
-  font-family: 'Rajdhani', sans-serif;
-  font-weight: 700;
-  letter-spacing: .12em;
+.boot-start-wrap{
+  position: absolute;
+  left: 24px;
+  right: 24px;
+  bottom: 26px;
+  display: flex;
+  justify-content: center;
+}
+
+.boot-start{
+  font-family: 'Courier New', monospace;
+  font-size: 18px;
+  letter-spacing: 3px;
   text-transform: uppercase;
+  background: transparent;
+  border: none;
+  color: #fff;
+  padding: 10px 14px;
   cursor: pointer;
-  box-shadow: 0 14px 34px rgba(0,153,255,0.18);
-  opacity: 0.55;
-}
-.boot-start-btn:disabled{
-  cursor: not-allowed;
-}
-.boot-start-btn.ready{
-  opacity: 1.0;
-  animation: bootPulse 1.25s ease-in-out infinite;
-}
-@keyframes bootPulse{
-  0%,100%{ transform: translateY(0); filter: brightness(1.0); }
-  50%{ transform: translateY(-1px); filter: brightness(1.25); }
+  outline: none;
+  animation: bootBlink 1.0s steps(2, end) infinite;
 }
 
-.boot-hint{
-  margin-top: 10px;
-  text-align: center;
-  font-size: 12px;
-  letter-spacing: .08em;
-  color: rgba(255,255,255,0.55);
+.boot-start:focus{ text-decoration: underline; }
+
+@keyframes bootBlink{
+  0%{ opacity: 1; }
+  50%{ opacity: 0.15; }
+  100%{ opacity: 1; }
 }
+
+.boot-hidden{ display:none !important; }

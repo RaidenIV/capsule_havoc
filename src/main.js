@@ -14,8 +14,8 @@ import { tick }             from './loop.js';
 import { togglePanel, togglePause } from './panel/index.js';
 import { initAudio, resumeAudioContext, playSound, playSplashSound, stopMusic } from './audio.js';
 import { initMenuUI }       from './ui/menu.js';
+import { initBootUI }       from './ui/boot.js';
 import { initHudCoin }      from './hudCoin.js';
-import { runBootScreen }    from './ui/boot.js';
 
 // ── Wire cross-module callbacks (breaks enemies ↔ weapons circular deps) ──────
 setVictoryCallback(triggerVictory);
@@ -37,6 +37,9 @@ initInput({
   onFirstKey: resumeAudioContext, // satisfies browser autoplay policy
 });
 
+// Also unlock audio on the first pointer/touch gesture (many players never press a key on the menu).
+window.addEventListener('pointerdown', resumeAudioContext, { once: true, passive: true });
+
 // ── Expose restart globally for the HTML restart button onclick ───────────────
 window.restartGame = restartGame;
 
@@ -46,28 +49,61 @@ window.addEventListener('resize', () => {
   onBloomResize();
 });
 
-// ── Initial UI + state ────────────────────────────────────────────────────────
+// ── Menu-driven start ─────────────────────────────────────────────────────────
 updateHealthBar();
 updateXP(0);
 initHudCoin();
 
-// Defer game loop + spawns until Start is pressed.
-state.uiMode = 'boot';
+// Show menu first; defer tick()/spawns/countdown until Start is pressed.
+state.uiMode = 'menu';
 state.paused = true;
 
-// Keep menu + splash hidden until boot/start sequence runs
+// ── Boot → Splash → Menu sequence (audio-safe) ─────────────────────────────
 const menuScreenEl = document.getElementById('menu-screen');
 const splashEl     = document.getElementById('splash-screen');
+const bootEl       = document.getElementById('boot-screen');
 
-if (menuScreenEl) menuScreenEl.style.visibility = 'hidden';
-if (splashEl) {
-  splashEl.classList.add('boot-hidden');
+async function runBootSplashSequence(){
+  // Default: hide menu until we decide to show it
+  if (menuScreenEl) menuScreenEl.style.visibility = 'hidden';
+
+  // Hide splash until after PRESS START
+  if (splashEl) splashEl.style.visibility = 'hidden';
+
+  // If boot screen exists, run it. Otherwise, behave as if START was pressed.
+  await new Promise((resolve) => {
+    if (!bootEl) return resolve();
+
+    initBootUI({
+      onStart: () => resolve()
+    });
+  });
+
+  // User gesture happened (PRESS START). Initialize audio buffers now.
+  await initAudio();
+
+  // Show splash and play splash SFX reliably (audio now unlocked + buffers loaded)
+  if (splashEl) {
+    splashEl.style.visibility = '';
+    playSound('splash', 0.9);
+
+    setTimeout(() => {
+      splashEl.classList.add('fade-out');
+      splashEl.addEventListener('animationend', () => {
+        splashEl.remove();
+        if (menuScreenEl) menuScreenEl.style.visibility = '';
+      }, { once: true });
+    }, 2000);
+  } else {
+    if (menuScreenEl) menuScreenEl.style.visibility = '';
+  }
 }
 
-// Initialize menu UI (creates DOM wiring), but keep it hidden until after splash.
+runBootSplashSequence();
+
 const menuUI = initMenuUI({
   onStart: async () => {
-    // This is the "Start Game" from the menu, not the initial PRESS START flow.
+    // Switch screens
     menuUI.hideMenu();
     state.uiMode = 'playing';
 
@@ -85,42 +121,6 @@ const menuUI = initMenuUI({
 
     // Start countdown on next frames so UI/layout is stable
     requestAnimationFrame(() => requestAnimationFrame(() => startCountdown()));
-  }
-});
-
-// ── Boot → Splash → Menu flow (guarantees audio works) ─────────────────────────
-runBootScreen({
-  onStart: async () => {
-    // First user gesture: unlock audio deterministically and preload buffers.
-    resumeAudioContext();
-    await initAudio();
-
-    // Show logo splash + play SFX
-    if (splashEl) {
-      splashEl.classList.remove('boot-hidden');
-      // Force layout so splashIn animation reliably runs on show
-      void splashEl.offsetHeight;
-
-      playSplashSound();
-
-      // Hold for 2s, then fade out and reveal menu
-      setTimeout(() => {
-        splashEl.classList.add('fade-out');
-        splashEl.addEventListener('animationend', () => {
-          splashEl.remove();
-          if (menuScreenEl) menuScreenEl.style.visibility = '';
-          state.uiMode = 'menu';
-          state.paused = true;
-          menuUI.showMenu();
-        }, { once: true });
-      }, 2000);
-    } else {
-      // No splash element — just show menu
-      if (menuScreenEl) menuScreenEl.style.visibility = '';
-      state.uiMode = 'menu';
-      state.paused = true;
-      menuUI.showMenu();
-    }
   }
 });
 

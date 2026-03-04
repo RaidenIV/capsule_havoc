@@ -13,23 +13,21 @@
 
 
 
-<!-- ── Splash screen ── -->
 
+<!-- ── Boot / Loading screen ── -->
 <div id="boot-screen" class="boot-screen" aria-hidden="false">
-  <div class="boot-wrap">
-    <div class="boot-title">CAPSULE HAVOC :: SYSTEM INIT</div>
-    <div id="boot-terminal" class="boot-terminal" aria-label="Boot log"></div>
-    <button id="boot-start" class="boot-start-btn" type="button" aria-label="Press Start" disabled>
-      PRESS START
-    </button>
-    <div class="boot-hint">Click / Press Enter</div>
+  <pre id="boot-terminal" class="boot-terminal"></pre>
+  <div id="boot-start-wrap" class="boot-start-wrap" hidden>
+    <button id="boot-start" class="boot-start" type="button">PRESS START</button>
   </div>
 </div>
-<div id="splash-screen" class="splash-screen boot-hidden" aria-hidden="true">
+
+<!-- ── Splash screen ── -->
+<div id="splash-screen" class="splash-screen" aria-hidden="true">
   <img id="splash-logo" src="./assets/images/logo.PNG" alt="Logo" style="width: 450px; height: auto;">
 </div>
 
-<div id="menu-screen" class="menu-screen">
+<div id="menu-screen" class="menu-screen show">
 
   <!-- animated background layers -->
   <div class="menu-bg-grid"></div>

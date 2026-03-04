@@ -1,84 +1,121 @@
-// ─── ui/boot.js ──────────────────────────────────────────────────────────────
-// Boot / loading screen with terminal-style log + PRESS START gate.
-// Owns the first user gesture so audio can reliably unlock before splash SFX.
+// ─── ui/boot.js ─────────────────────────────────────────────────────────────
+// Technical boot/loader screen: pure terminal text (no panels/cards).
+// The screen prints "module load" lines one-by-one, then reveals PRESS START.
+// Audio is intentionally NOT played here; we only unlock/init audio on PRESS START.
 
 function sleep(ms){ return new Promise(r => setTimeout(r, ms)); }
 
-function mkLine(text, cls){
-  const div = document.createElement('div');
-  div.className = 'boot-line' + (cls ? ' ' + cls : '');
-  div.textContent = text;
-  return div;
+const MODULES = [
+  'core/state.js',
+  'core/constants.js',
+  'gfx/renderer.js',
+  'gfx/postfx/bloom.js',
+  'io/input.js',
+  'sim/spawner.js',
+  'sim/enemyAI.js',
+  'sim/weapons.js',
+  'sim/coins.js',
+  'sim/chests.js',
+  'sim/arenaPickups.js',
+  'ui/menu.js',
+  'ui/upgrades.js',
+  'ui/hudEffects.js',
+  'audio/audio.js',
+];
+
+function fmtOk(name){
+  // Keep it minimal, technical, and game-oriented.
+  return `[ OK ] ${name}`;
 }
 
-export async function runBootScreen({ onStart }){
+function fmtInfo(msg){
+  return `[ .. ] ${msg}`;
+}
+
+export function initBootUI({ onStart }){
   const boot = document.getElementById('boot-screen');
   const term = document.getElementById('boot-terminal');
-  const btn  = document.getElementById('boot-start');
+  const startWrap = document.getElementById('boot-start-wrap');
+  const startBtn = document.getElementById('boot-start');
 
-  if (!boot || !term || !btn){
-    // If boot screen isn't present, just start immediately.
+  if (!boot || !term || !startWrap || !startBtn) {
+    // If markup is missing, fall back immediately.
     onStart?.();
-    return;
+    return { destroy(){} };
   }
 
-  // Ensure initial state
-  boot.classList.remove('fade-out');
-  term.innerHTML = '';
-  btn.disabled = true;
-  btn.classList.remove('ready');
+  let destroyed = false;
+  let ready = false;
 
-  const lines = [
-    ['[BOOT] TACTICAL SYSTEMS INITIALIZING…', 'boot-prompt'],
-    ['OK   secure channel: ESTABLISHED', 'boot-ok'],
-    ['> verifying IFF transponder…', 'boot-prompt'],
-    ['OK   IFF: GREEN / FRIENDLY', 'boot-ok'],
-    ['> loading mission package: OPERATION HAVOC…', 'boot-prompt'],
-    ['OK   ROE profile loaded', 'boot-ok'],
-    ['> syncing sat-nav / arena grid…', 'boot-prompt'],
-    ['OK   grid lock acquired', 'boot-ok'],
-    ['> arming weapons matrix…', 'boot-prompt'],
-    ['OK   emitters online', 'boot-ok'],
-    ['> validating armor & shield protocols…', 'boot-prompt'],
-    ['OK   defensive systems nominal', 'boot-ok'],
-    ['> staging audio assets…', 'boot-prompt'],
-    ['WARN audio interlock: awaiting user input', 'boot-warn'],
-    ['> awaiting command…', 'boot-prompt'],
-  ];
-
-  for (let i=0; i<lines.length; i++){
-    const [t, cls] = lines[i];
-    term.appendChild(mkLine(t, cls));
-    // keep latest visible (even though overflow hidden; this prevents layout jumps)
-    term.scrollTop = term.scrollHeight;
-    await sleep(150 + (i%3)*30);
+  function append(line){
+    term.textContent += (term.textContent ? '\n' : '') + line;
+    // keep recent output visible; no scrolling UI, just jump to bottom
+    boot.scrollTop = boot.scrollHeight;
   }
 
-  // Enable start
-  btn.disabled = false;
-  btn.classList.add('ready');
+  async function run(){
+    append('C.HAVOC // BOOTSTRAP');
+    append('SECURE MODE: ENABLED');
+    append('INITIALIZING RUNTIME…');
+    await sleep(250);
 
-  const start = async () => {
-    if (btn.disabled) return;
-    btn.disabled = true;
-    btn.classList.remove('ready');
+    // Print module loads one-by-one
+    for (let i=0; i<MODULES.length && !destroyed; i++){
+      const name = MODULES[i];
+      append(fmtInfo(`loading ${name}`));
+      await sleep(110);
 
-    boot.classList.add('fade-out');
-    boot.addEventListener('animationend', () => {
-      boot.remove();
-    }, { once: true });
+      append(fmtOk(name));
+      await sleep(70);
+    }
 
-    await onStart?.();
-  };
+    if (destroyed) return;
 
-  btn.addEventListener('click', start, { once: true });
+    append('');
+    append(fmtInfo('verifying asset bundles…'));
+    await sleep(160);
+    append('[ OK ] assets verified');
+    await sleep(120);
 
-  // Keyboard start (Enter / Space)
-  const onKey = (e) => {
-    if (e.code === 'Enter' || e.code === 'Space'){
-      window.removeEventListener('keydown', onKey);
-      start();
+    append(fmtInfo('establishing combat link…'));
+    await sleep(160);
+    append('[ OK ] combat link established');
+
+    append('');
+    append('READY.');
+    ready = true;
+    startWrap.hidden = false;
+    startBtn.focus();
+  }
+
+  function handleStart(){
+    if (!ready) return;
+    if (destroyed) return;
+    destroyed = true;
+
+    startBtn.disabled = true;
+    startWrap.hidden = true;
+    boot.classList.add('boot-hidden');
+
+    onStart?.();
+  }
+
+  startBtn.addEventListener('click', handleStart);
+
+  function keyHandler(e){
+    if (e.code === 'Enter' || e.code === 'Space') {
+      e.preventDefault();
+      handleStart();
+    }
+  }
+  window.addEventListener('keydown', keyHandler);
+
+  run();
+
+  return {
+    destroy(){
+      destroyed = true;
+      window.removeEventListener('keydown', keyHandler);
     }
   };
-  window.addEventListener('keydown', onKey);
 }
