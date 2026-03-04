@@ -39,29 +39,50 @@ function badge(label, seconds){
   return el;
 }
 
+
 export function updateHudEffects(){
+  // Keep only persistent indicators (no timed-effect badges).
   const root = ensure();
   if (!root) return;
   root.innerHTML = '';
 
-  const e = state.effects || {};
-  const entries = [
-    ['⚔️ Double Damage', e.doubleDamage],
-    ['🛡️ Invincible', e.invincibility],
-    ['💰 Coins ×2', e.coinValue2x],
-    ['⭐ XP ×2', e.xp2x],
-    ['⏱️ Time Freeze', e.clock],
-    ['🕳️ Black Hole', e.blackHole],
-  ].filter(([,t]) => (t||0) > 0);
-
-  for (const [label, t] of entries) {
-    root.appendChild(badge(label, t));
+  // Armor as hit count remaining (pips)
+  const hits = (state.armorHits || 0);
+  if (hits > 0) {
+    const el = document.createElement('div');
+    el.style.display = 'flex';
+    el.style.gap = '6px';
+    el.style.alignItems = 'center';
+    el.style.padding = '6px 10px';
+    el.style.borderRadius = '12px';
+    el.style.background = 'rgba(0,0,0,0.45)';
+    el.style.border = '1px solid rgba(255,255,255,0.12)';
+    el.style.fontFamily = 'Rajdhani, system-ui, sans-serif';
+    el.style.color = '#fff';
+    el.style.fontWeight = '800';
+    el.style.fontSize = '14px';
+    el.textContent = '🪖 ';
+    for (let i = 0; i < Math.min(hits, 3); i++) {
+      const pip = document.createElement('span');
+      pip.textContent = '●';
+      pip.style.opacity = '0.95';
+      el.appendChild(pip);
+    }
+    root.appendChild(el);
   }
 
-  // Armor as hit count remaining
-  if ((state.armorHits || 0) > 0) {
-    const el = badge('🪖 Armor', state.armorHits);
-    el.textContent = `🪖 Armor ×${state.armorHits}`;
+  // Extra life icon if banked
+  if ((state.extraLife || 0) > 0) {
+    const el = document.createElement('div');
+    el.style.padding = '6px 10px';
+    el.style.borderRadius = '12px';
+    el.style.background = 'rgba(0,0,0,0.45)';
+    el.style.border = '1px solid rgba(255,255,255,0.12)';
+    el.style.color = '#fff';
+    el.style.fontFamily = 'Rajdhani, system-ui, sans-serif';
+    el.style.fontWeight = '800';
+    el.style.fontSize = '14px';
+    el.textContent = '➕ Extra Life';
     root.appendChild(el);
   }
 }

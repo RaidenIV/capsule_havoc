@@ -25,12 +25,12 @@ function makeOrbitMat(color) {
   });
 }
 
-function getOrbitRingDefs(level) {
+function getOrbitRingDefs(orbitTier) {
   const C  = WEAPON_CONFIG;
   const ring = (lv, flip = false) => ({
     count: C[lv][3], radius: C[lv][4], speed: C[lv][5] * (flip ? -1 : 1), color: C[lv][6],
   });
-  switch (level) {
+  switch (orbitTier) {
     case 0: case 1: return [];
     case 2: return [ring(2)];
     case 3: return [ring(3)];
@@ -41,7 +41,7 @@ function getOrbitRingDefs(level) {
     case 8:  return [ring(8),  ring(5, true)];
     case 9:  return [ring(9),  ring(6, true)];
     case 10: return [ring(10), ring(6, true)];
-    default: return [ring(Math.min(level, 10))];
+    default: return [ring(Math.min(orbitTier, 10))];
   }
 }
 
@@ -55,7 +55,7 @@ export function destroyOrbitBullets() {
 
 export function syncOrbitBullets() {
   destroyOrbitBullets();
-  for (const def of getOrbitRingDefs(state.playerLevel)) {
+  for (const def of getOrbitRingDefs(state.upg?.orbit || 0)) {
     const meshes = [];
     for (let i = 0; i < def.count; i++) {
       const mesh = new THREE.Mesh(bulletGeo, makeOrbitMat(def.color));

@@ -28,6 +28,11 @@ const TABS = [
         desc: t => `+1 enemy pierced per shot (Tier ${t})` },
       { key: 'multishot', name: 'Multishot',          costs: [500, 1500, 4000],
         desc: t => `+1 extra projectile per shot (Tier ${t})` },
+      { key: 'weapon',    name: 'Laser Fire',         costs: [10, 15, 20, 30, 45, 60, 80, 110, 150, 200],
+        desc: (t)=> t===0 ? 'Unlock auto-firing lasers.' : `Increase laser power (Tier ${t}/10).` },
+      { key: 'orbit',     name: 'Orbit Weapon',      costs: [12, 18, 26, 38, 55, 75, 100, 135, 180, 240],
+        desc: (t)=> t===0 ? 'Unlock orbiting blades.' : `More orbit blades + faster rings (Tier ${t}/10).` },
+
     ],
   },
   {
@@ -108,10 +113,15 @@ function applyUpgradeEffect(key, newTier) {
       if (newTier >= 3) state.shieldCharges = Math.max(state.shieldCharges, 2);
       break;
 
+    case 'weapon':
+      state.weaponTier = newTier;
+      // fallthrough to sync visuals/logic
     case 'dmg':
     case 'fireRate':
     case 'projSpeed':
     case 'multishot':
+    case 'weapon':
+    case 'orbit':
       // Weapon changes that affect orbit rings / bullet logic
       try { syncOrbitBullets(); } catch {}
       break;
