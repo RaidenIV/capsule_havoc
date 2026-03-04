@@ -933,11 +933,7 @@ body.mode-playing #menu-screen { display: none !important; }
   font-weight: 900;
   letter-spacing: 0.24em;
   text-transform: uppercase;
-  background: linear-gradient(90deg, #fff 0%, #00e5ff 60%, #ffe566 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-  filter: drop-shadow(0 0 10px rgba(0,229,255,0.4));
+  color: #fff;
 }
 .upgrade-body {
   padding: 14px 16px 10px;
