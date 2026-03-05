@@ -85,8 +85,20 @@ ctx.addEventListener('statechange', () => {
 
 // ── Load all SFX up front ─────────────────────────────────────────────────────
 export async function initAudio() {
+  // ── Load splash first so it plays the instant PRESS START is clicked ─────
+  // Fetching it alone before the bulk load means it's ready as soon as the
+  // AudioContext unlocks — no waiting for every other SFX file.
+  try {
+    const res = await fetch('./assets/sfx/splash.wav');
+    if (res.ok) sounds['splash'] = await ctx.decodeAudioData(await res.arrayBuffer());
+  } catch (e) {
+    console.warn('[audio] Could not load "splash":', e.message);
+  }
+  playSound('splash', 0.9);
+
+  // ── Load all remaining SFX in parallel ───────────────────────────────────
   const sfxFiles = {
-    splash:       './assets/sfx/splash.wav',
+    splash:       './assets/sfx/splash.wav', // already cached by browser; won't re-fetch
     menu:         './assets/sfx/menu.wav',
     menu_select:  './assets/sfx/menu_select.wav',
     countdown:    './assets/sfx/countdown.wav',
