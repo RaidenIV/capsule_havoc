@@ -3,68 +3,127 @@
 ## Folder Structure
 
 ```
-capsule_havoc/
-├── index.html                  # HTML shell + DOM overlays (HUD, menus, banners, shop)
-├── MAP.md                      # This file
+capsule_havoc-main/
+├── index.html
+│   # HTML shell + importmap + DOM overlays (HUD, menu, banners, shop, pause, etc.)
+├── MAP.md
+│   # Architecture / module responsibility notes (may lag behind newest boot/menu tweaks)
+│
 ├── styles/
-│   └── main.css                # All styling
+│   ├── main.css
+│   │   # Core styling for HUD, menus, overlays, control panel, etc.
+│   └── boot_terminal.css
+│       # Styling specifically for the boot/terminal loading screen
+│
 ├── assets/
 │   ├── images/
-│   ├── music/                  # theme.wav
-│   └── sfx/                    # All SFX (.wav) — see audio.js for full list
+│   │   └── logo.PNG
+│   ├── music/
+│   │   ├── menu_theme.wav
+│   │   # Menu-only music (should start when menu appears, stop on Start Game)
+│   │   └── theme.wav
+│   │       # In-game music (if/when used)
+│   └── sfx/
+│       # All SFX (.wav) referenced/loaded by src/audio.js
+│
 └── src/
-    ├── main.js                 # App bootstrap (menu → game, wiring, restarts)
-    ├── loop.js                 # Main game loop (update/render order, all per-frame calls)
-    ├── state.js                # Shared runtime state (single mutable object)
-    ├── input.js                # Keyboard bindings (WASD, Shift dash, E burst, Q slow, M mute)
-    ├── gameFlow.js             # Game lifecycle (countdown, game over/victory, restart)
-    ├── constants.js            # All tunables (speeds, HP, SLASH_INTERVAL=1.0s, WEAPON_CONFIG, etc.)
+    ├── main.js
+    │   # App bootstrap + screen flow wiring (boot/logo → menu → game), restart handling
+    ├── loop.js
+    │   # Main game loop (tick order, per-frame updates/render)
+    ├── state.js
+    │   # Shared runtime state object
+    ├── input.js
+    │   # Keyboard/mouse bindings + input state
+    ├── gameFlow.js
+    │   # Game lifecycle (countdown, pause, gameover, victory, transitions)
+    ├── constants.js
+    │   # Tunables (speeds, HP, thresholds, timers, etc.)
     │
-    ├── renderer.js             # Three.js renderer/scene/camera setup
-    ├── bloom.js                # 3-layer custom Gaussian bloom pipeline
-    ├── lighting.js             # Lights + per-tick orbit/sun updates
-    ├── materials.js            # Shared geometries, materials, cosmetics
-    ├── terrain.js              # Procedural chunks, prop colliders, LOS, steering
-    ├── particles.js            # Pooled explosion particles
-    ├── damageNumbers.js        # Floating damage/heal number sprites
+    ├── renderer.js
+    │   # Three.js renderer/scene/camera setup
+    ├── bloom.js
+    │   # Postprocessing/bloom pipeline
+    ├── lighting.js
+    │   # Scene lighting + time-based updates
+    ├── materials.js
+    │   # Shared geometry/material setup
+    ├── terrain.js
+    │   # Floor/props/chunks/colliders/placement
+    ├── particles.js
+    │   # Pooled particles (explosions, etc.)
+    ├── damageNumbers.js
+    │   # Floating damage/heal number sprites
     │
-    ├── player.js               # Player movement, dash, health/dash bars, lean
-    ├── enemies.js              # Enemy lifecycle: spawn, update, AI, death, loot drop
-    │                           #   Contact damage: discrete hit model (1 hit/sec,
-    │                           #   sound + damage number fire once per interval)
-    ├── enemyAI.js              # Decollision push system, despawn distance checks
-    ├── spawner.js              # Per-type spawn timers, quotas, screen cap, direction bias
-    ├── weapons.js              # Bullets, orbit rings, slash VFX/damage
-    │                           #   performSlash() — called by loop on SLASH_INTERVAL timer
-    ├── pickups.js              # Coins, health packs, chest proximity collection
-    ├── arenaPickups.js         # Timed arena pickups (double damage, clock, black hole, etc.)
-    ├── coins.js                # Re-export shim → pickups.js (spawnCoins, dropLoot)
-    ├── chests.js               # Re-export shim → pickups.js + ui/upgrades.js
-    ├── armor.js                # Armor charges, extra-life revive, applyPlayerDamage()
-    ├── activeEffects.js        # Timed effect state (doubleDamage, invincibility, clock, etc.)
-    ├── xp.js                   # XP award, level-up, weapon config accessors
-    │                           #   Damage formula: DMG(L) = 10 + floor((L-1)² / 50)
-    ├── leveling.js             # 3-phase XP formula, spike levels (20/40), XP rewards by class
-    ├── luck.js                 # Luck stat aggregation (shop + boss waves + curse)
-    ├── hudCoin.js              # Spinning 3D coin in HUD canvas
-    ├── hudEffects.js           # HUD badges for active timed effects + armor pips
-    ├── hudLevel.js             # Level number HUD element
-    ├── audio.js                # AudioContext, all SFX loading, music controls, volume
+    ├── player.js
+    │   # Player movement, dash, health, damage intake, etc.
+    ├── enemies.js
+    │   # Enemy spawn/update/death + loot hooks
+    ├── enemyAI.js
+    │   # Enemy steering/collision-avoidance, behavior helpers
+    ├── spawner.js
+    │   # Spawn cadence, caps, difficulty pacing
+    ├── weapons.js
+    │   # Player weapons (bullets/orbits/slash) + firing logic
+    ├── pickups.js
+    │   # Coins/health pickups/chests collection & spawn helpers
+    ├── arenaPickups.js
+    │   # Timed arena power pickups (if enabled)
+    ├── coins.js
+    │   # Compatibility shim / re-export helpers for coin drops
+    ├── chests.js
+    │   # Compatibility shim / re-export helpers for chest drops
+    ├── armor.js
+    │   # Armor charges / revive logic / damage mediation
+    ├── activeEffects.js
+    │   # Timed effect state (double damage, invincibility, etc.)
+    ├── xp.js
+    │   # XP award + level-up hooks / weapon config access
+    ├── leveling.js
+    │   # XP curve and level pacing
+    ├── luck.js
+    │   # Luck stat aggregation (shop + modifiers)
+    ├── hudCoin.js
+    │   # Spinning 3D coin HUD element
+    ├── hudEffects.js
+    │   # HUD effect badges + armor pips
+    ├── hudLevel.js
+    │   # HUD player level display
+    ├── audio.js
+    │   # AudioContext + music/SFX routing + volumes
     │
-    ├── upgrades.js             # Re-export shim → ui/upgrades.js
+    ├── highScores.js
+    │   # High score logic (may be bridged by src/ui/highScores.js)
+    ├── scores.js
+    │   # Score accumulation / display helpers (may be bridged by src/ui/scores.js)
+    ├── settings.js
+    │   # Settings data model (may be bridged by src/ui/settings.js)
+    ├── storage.js
+    │   # localStorage helpers (may be bridged by src/ui/storage.js)
+    ├── upgrades.js
+    │   # Re-export shim to UI upgrade shop module
+    │
     ├── panel/
-    │   └── index.js            # Dev/tuning control panel (Tab key)
+    │   └── index.js
+    │       # Dev/tuning control panel (Tab)
+    │
     └── ui/
-        ├── menu.js             # Main menu controller (start, scores, settings pages)
-        ├── scores.js           # High score list renderer
-        ├── highScores.js       # High score storage (localStorage, top 10)
-        ├── settings.js         # Audio settings UI (mute, music vol, sfx vol)
-        ├── storage.js          # localStorage JSON helpers (loadJSON, saveJSON)
-        ├── upgrades.js         # 4-tab upgrade shop + chest reward overlay
-        │                       #   Tabs: Weapons · Movement · Abilities · Power Ups
-        │                       #   Weapon lasers start LOCKED (weaponTier=0);
-        │                       #   first weapon upgrade purchased unlocks bullets
-        └── chestOverlay.js     # Re-export shim → ui/upgrades.js (openChestReward)
+        ├── boot.js
+        │   # Boot/terminal loading screen controller (progress → reveal Start at 100%)
+        ├── menu.js
+        │   # Main menu UI controller (Start, Scores, Settings; calls into audio for menu music)
+        ├── scores.js
+        │   # Scoreboard UI renderer/controller
+        ├── highScores.js
+        │   # High score list + persistence
+        ├── settings.js
+        │   # Audio settings UI (master/music/sfx sliders, mute, etc.)
+        ├── storage.js
+        │   # UI-facing storage wrappers/helpers
+        ├── upgrades.js
+        │   # Upgrade shop UI + purchase logic + chest reward overlay integration
+        └── chestOverlay.js
+            # Chest reward overlay UI (often tied to upgrades.js)
 ```
 
 ---
