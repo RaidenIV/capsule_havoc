@@ -1,0 +1,18 @@
+/* Boot terminal overrides: fixed-size module window, no scrollbar */
+#boot-screen .boot-shell{
+  /* Keep the whole terminal block stable */
+}
+
+#boot-screen .boot-terminal{
+  /* Fixed window so ASCII header never scrolls */
+  height: 22em;               /* ~14 lines @ 12px * 1.55 line-height */
+  max-height: 22em;
+  overflow: hidden !important; /* no scroll bar */
+  white-space: pre;            /* terminal-style */
+}
+
+#boot-screen .boot-progress{
+  width: 100%;
+  text-align: left;
+  margin-top: 10px;
+}
