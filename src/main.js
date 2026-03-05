@@ -67,8 +67,9 @@ async function runBootSplashSequence(){
   // Default: hide menu until we decide to show it
   if (menuScreenEl) menuScreenEl.style.visibility = 'hidden';
 
-  // Hide splash until after PRESS START
-  if (splashEl) splashEl.style.visibility = 'hidden';
+  // Hide splash with display:none so the splashIn CSS animation doesn't run
+  // on page load. We'll force it to replay when we actually show the element.
+  if (splashEl) splashEl.style.display = 'none';
 
   // If boot screen exists, run it. Otherwise, behave as if START was pressed.
   await new Promise((resolve) => {
@@ -91,7 +92,10 @@ async function runBootSplashSequence(){
   await new Promise(r => setTimeout(r, 1000));
 
   if (splashEl) {
-    splashEl.style.visibility = '';
+    // Restore display, then force a reflow so the browser registers the element
+    // as newly visible before the animation starts — this restarts splashIn cleanly.
+    splashEl.style.display = '';
+    void splashEl.offsetWidth; // reflow trigger
 
     setTimeout(() => {
       splashEl.classList.add('fade-out');
@@ -116,10 +120,8 @@ menuUI = initMenuUI({
   onStart: async () => {
     // Switch screens
     menuUI.hideMenu();
+    stopMusic(); // stop menu_theme before game audio takes over
     state.uiMode = 'playing';
-
-    // Ensure audio is ready before countdown ends
-    await initAudio();
 
     // Fresh run
     restartGame({ startCountdown: false, skipInitialSpawn: true });
