@@ -13,6 +13,25 @@ const MUSIC_URLS = {
   game: './assets/music/theme.wav',
   menu: './assets/music/menu_theme.wav',
 };
+
+function _setMusicKey(key) {
+  const next = MUSIC_URLS[key] ? key : 'game';
+  if (next === _musicKey) return;
+  _musicKey = next;
+
+  // If music element hasn't been created yet (initAudio not finished),
+  // just remember the key — initAudio will create the correct element.
+  if (!musicEl) return;
+
+  const shouldPlay = _musicWanted && !muted && ctx.state === 'running';
+  try { musicEl.pause(); } catch (_) {}
+  musicEl.src = MUSIC_URLS[_musicKey] || MUSIC_URLS.game;
+  musicEl.loop = true;
+  musicEl.volume = musicVolume;
+  musicEl.preload = 'auto';
+  musicEl.currentTime = 0;
+  if (shouldPlay) musicEl.play().catch(() => {});
+}
 let musicVolume  = 0.4;
 let sfxVolume    = 1.0;
 let muted        = false;

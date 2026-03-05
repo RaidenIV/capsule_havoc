@@ -101,7 +101,10 @@ async function runBootSplashSequence(){
 
 runBootSplashSequence();
 
-const menuUI = initMenuUI({
+// NOTE: menuUI must be declared before wiring callbacks to avoid TDZ issues
+// if initMenuUI triggers synchronous work before the const assignment completes.
+let menuUI;
+menuUI = initMenuUI({
   onStart: async () => {
     // Switch screens
     menuUI.hideMenu();
