@@ -239,7 +239,13 @@ export function tick() {
   // (Wave-based spawner removed; using spawner.js)
 
   // ── Enemies ───────────────────────────────────────────────────────────────
-  updateEnemies(delta, worldDelta * (state.enemyTimeScale ?? 1.0), state.elapsed);
+  const enemyUpdateResult = updateEnemies(delta, worldDelta * (state.enemyTimeScale ?? 1.0), state.elapsed);
+  if (enemyUpdateResult === 'DEAD') {
+    triggerGameOver();
+    renderBloom();
+    labelRenderer.render(scene, camera);
+    return;
+  }
 
   // ── Black Hole ─────────────────────────────────────────────────────────────
   // Spawned when the pickup is collected (see activeEffects.js applyEffect 'blackHole').
@@ -327,8 +333,21 @@ export function tick() {
     }
   }
   updateBullets(worldDelta);
-  updateEnemyBullets(worldDelta * (state.enemyTimeScale ?? 1.0));
+  const enemyBulletResult = updateEnemyBullets(worldDelta * (state.enemyTimeScale ?? 1.0));
+  if (enemyBulletResult === 'DEAD') {
+    triggerGameOver();
+    renderBloom();
+    labelRenderer.render(scene, camera);
+    return;
+  }
   updateOrbitBullets(worldDelta);
+
+  if (!state.gameOver && state.playerHP <= 0) {
+    triggerGameOver();
+    renderBloom();
+    labelRenderer.render(scene, camera);
+    return;
+  }
   // Slash: timed by SLASH_INTERVAL; NOT scaled by worldDelta so Time Slow/Clock do not affect slash cadence
   state._slashTimer = (state._slashTimer || 0) - delta;
   if (state._slashTimer <= 0) {
