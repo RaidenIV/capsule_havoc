@@ -70,10 +70,9 @@ export function initBootUI({ onStart }){
     return { destroy(){} };
   }
 
-  // ── Hide the start button RIGHT NOW, synchronously, before any async work.
-  // Doing this here (not inside run()) guarantees it is hidden before the first
-  // paint, even if the HTML/CSS has it visible by default or uses display:flex
-  // which would override the `hidden` attribute.
+  // Hide the start button synchronously, before the first await in run().
+  // This must be in the synchronous body of initBootUI — not inside async run() —
+  // so it takes effect before the browser paints, regardless of CSS.
   startWrap.hidden = true;
   startWrap.style.display = 'none';
   startBtn.dataset.ready = 'false';
@@ -147,7 +146,7 @@ export function initBootUI({ onStart }){
 
   // Hard-gate the start button: only reveal it once the progress reads 100%.
   progress.textContent = setProgress(100);
-  startWrap.style.display = ''; // clear the inline override; let CSS take over
+  startWrap.style.display = ''; // clear inline override; let CSS take over
   startWrap.hidden = false;
   startBtn.dataset.ready = 'true';
   startBtn.focus();
@@ -162,7 +161,15 @@ export function initBootUI({ onStart }){
 
     startBtn.disabled = true;
     startWrap.hidden = true;
+
+    // Remove the entire boot screen from the DOM so it can never render on top
+    // of later screens (splash, menu, countdown). A CSS class alone is not
+    // sufficient if the class only animates opacity/transform without display:none.
     boot.classList.add('boot-hidden');
+    // Belt-and-suspenders: force it off immediately, then remove from DOM once
+    // any CSS transition has had time to complete.
+    boot.style.display = 'none';
+    setTimeout(() => { if (boot.parentNode) boot.parentNode.removeChild(boot); }, 600);
 
     onStart?.();
   }
