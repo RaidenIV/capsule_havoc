@@ -14,7 +14,7 @@ import { tick }             from './loop.js';
 import { togglePanel, togglePause } from './panel/index.js';
 import { initAudio, resumeAudioContext, playSound, playSplashSound, stopMusic } from './audio.js';
 import { initMenuUI }       from './ui/menu.js';
-import { initBootUI }       from './ui/boot.js';
+import { runBootSequence }  from './ui/boot.js';
 import { initHudCoin }      from './hudCoin.js';
 
 // ── Wire cross-module callbacks (breaks enemies ↔ weapons circular deps) ──────
@@ -54,52 +54,48 @@ updateHealthBar();
 updateXP(0);
 initHudCoin();
 
-// Show menu first; defer tick()/spawns/countdown until Start is pressed.
+// Boot → Splash → Menu
 state.uiMode = 'menu';
 state.paused = true;
 
-// ── Boot → Splash → Menu sequence (audio-safe) ─────────────────────────────
+const bootEl       = document.getElementById('boot-screen');
 const menuScreenEl = document.getElementById('menu-screen');
 const splashEl     = document.getElementById('splash-screen');
-const bootEl       = document.getElementById('boot-screen');
 
-async function runBootSplashSequence(){
-  // Default: hide menu until we decide to show it
-  if (menuScreenEl) menuScreenEl.style.visibility = 'hidden';
-
-  // Hide splash until after PRESS START
-  if (splashEl) splashEl.style.visibility = 'hidden';
-
-  // If boot screen exists, run it. Otherwise, behave as if START was pressed.
-  await new Promise((resolve) => {
-    if (!bootEl) return resolve();
-
-    initBootUI({
-      onStart: () => resolve()
-    });
-  });
-
-  // User gesture happened (PRESS START). Initialize audio buffers now.
-  await initAudio();
-
-  // Show splash and play splash SFX reliably (audio now unlocked + buffers loaded)
-  if (splashEl) {
-    splashEl.style.visibility = '';
-    playSound('splash', 0.9);
-
-    setTimeout(() => {
-      splashEl.classList.add('fade-out');
-      splashEl.addEventListener('animationend', () => {
-        splashEl.remove();
-        if (menuScreenEl) menuScreenEl.style.visibility = '';
-      }, { once: true });
-    }, 2000);
-  } else {
-    if (menuScreenEl) menuScreenEl.style.visibility = '';
-  }
+// Hide menu & splash until boot/start is complete
+if (menuScreenEl) menuScreenEl.style.visibility = 'hidden';
+if (splashEl) {
+  splashEl.style.visibility = 'hidden';
+  splashEl.classList.remove('show','fade-out');
 }
 
-runBootSplashSequence();
+// Run terminal boot sequence. The PRESS START gesture unlocks audio.
+runBootSequence({
+  onStart: async () => {
+    // Unlock + init audio on the gesture that clicked PRESS START
+    await initAudio();
+    await resumeAudioContext();
+
+    // Show logo splash and play SFX
+    if (splashEl) {
+      splashEl.style.visibility = '';
+      splashEl.classList.add('show');
+      playSplashSound();
+
+      // 1s fade-in + 1s hold => start fade-out at t=2000ms, remove at 3000ms
+      window.setTimeout(() => splashEl.classList.add('fade-out'), 2000);
+      splashEl.addEventListener('animationend', (ev) => {
+        // only remove after fade-out completes
+        if (ev.animationName === 'splashOut') {
+          splashEl.remove();
+          if (menuScreenEl) menuScreenEl.style.visibility = '';
+        }
+      }, { once: true });
+    } else {
+      if (menuScreenEl) menuScreenEl.style.visibility = '';
+    }
+  }
+});
 
 const menuUI = initMenuUI({
   onStart: async () => {

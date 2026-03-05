@@ -8,27 +8,32 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;900&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="./styles/main.css">
-<link rel="stylesheet" href="./styles/boot_terminal.css">
 </head>
 <body class="mode-menu">
 
 
 
 
-<!-- ── Boot / Loading screen ── -->
+<!-- ── Boot / Loading screen (audio unlock happens on PRESS START) ── -->
 <div id="boot-screen" class="boot-screen" aria-hidden="false">
-  <div class="boot-shell" aria-hidden="false">
-    <pre id="boot-ascii" class="boot-ascii" aria-hidden="false"></pre>
-    <pre id="boot-terminal" class="boot-terminal" aria-hidden="false"></pre>
-    <div id="boot-progress" class="boot-progress" aria-hidden="false"></div>
-    <div id="boot-start-wrap" class="boot-start-wrap" hidden>
-      <button id="boot-start" class="boot-start" type="button">PRESS START</button>
-    </div>
-  </div>
-</div>
+  <div class="boot-wrap">
+    <pre id="boot-ascii" class="boot-ascii" aria-hidden="true">
+   ____    _    ____  ____  _   _ _     _____   _   _    ___     __
+  / ___|  / \  |  _ \/ ___|| | | | |   | ____| | | | |  / \ \   / /
+ | |     / _ \ | |_) \___ \| | | | |   |  _|   | |_| | / _ \ \ / / 
+ | |___ / ___ \|  __/ ___) | |_| | |___| |___  |  _  |/ ___ \ V /  
+  \____/_/   \_\_|   |____/ \___/|_____|_____| |_| |_|_/   \_\_/   
+    </pre>
 
-<div id="boot-start-wrap" class="boot-start-wrap" hidden>
-    <button id="boot-start" class="boot-start" type="button">PRESS START</button>
+    <pre id="boot-terminal" class="boot-terminal" aria-live="polite"></pre>
+
+    <div class="boot-progress" aria-hidden="true">
+      <div id="boot-progress-bar" class="boot-progress-bar"></div>
+    </div>
+
+    <button id="boot-start-btn" class="boot-start-btn" type="button" style="display:none" aria-hidden="true">
+      PRESS START
+    </button>
   </div>
 </div>
 
