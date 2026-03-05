@@ -1,116 +1,177 @@
 // ─── ui/boot.js ─────────────────────────────────────────────────────────────
-// Pure terminal-style boot screen (no scrolling). Prints module load lines,
-// advances a progress bar, then reveals PRESS START when progress reaches 100%.
+// Technical boot/loader screen: pure terminal text (no panels/cards).
+// The screen prints "module load" lines one-by-one, then reveals PRESS START.
+// Audio is intentionally NOT played here; we only unlock/init audio on PRESS START.
 
-function $(id){ return document.getElementById(id); }
+function sleep(ms){ return new Promise(r => setTimeout(r, ms)); }
 
 const MODULES = [
-  'core/renderer',
-  'core/bloom',
-  'core/postfx',
-  'core/input',
-  'core/audio',
-  'sim/state',
-  'sim/xp',
-  'sim/spawner',
-  'sim/enemies',
-  'sim/weapons',
-  'sim/pickups',
-  'sim/chests',
-  'sim/coins',
-  'ui/hud',
-  'ui/menu',
-  'ui/shop',
-  'ui/overlays',
-  'assets/textures',
-  'assets/sfx',
-  'assets/shaders',
-  'net/telemetry',
-  'integrity/check',
+  'core/state.js',
+  'core/constants.js',
+  'gfx/renderer.js',
+  'gfx/postfx/bloom.js',
+  'io/input.js',
+  'sim/spawner.js',
+  'sim/enemyAI.js',
+  'sim/weapons.js',
+  'sim/coins.js',
+  'sim/chests.js',
+  'sim/arenaPickups.js',
+  'ui/menu.js',
+  'ui/upgrades.js',
+  'ui/hudEffects.js',
+  'audio/audio.js',
 ];
 
-function fmtLine(name, i, total){
-  const pct = Math.floor(((i+1) / total) * 100);
-  const stamp = new Date().toISOString().split('T')[1].replace('Z','');
-  return `[${stamp}] LOAD ${name} ... OK  (${pct}%)`;
+function fmtOk(name){
+  // Keep it minimal, technical, and game-oriented.
+  return `[ OK ] ${name}`;
 }
 
-export function runBootSequence({ onStart } = {}){
-  const boot = $('boot-screen');
-  const term = $('boot-terminal');
-  const bar  = $('boot-progress-bar');
-  const btn  = $('boot-start-btn');
+function fmtInfo(msg){
+  return `[ .. ] ${msg}`;
+}
 
-  if (!boot || !term || !bar || !btn) {
-    // Nothing to do; fall back
+const ASCII_TITLE = String.raw`
+  ██████╗ █████╗ ██████╗ ███████╗██╗   ██╗██╗     ███████╗
+ ██╔════╝██╔══██╗██╔══██╗██╔════╝██║   ██║██║     ██╔════╝
+ ██║     ███████║██████╔╝███████╗██║   ██║██║     █████╗  
+ ██║     ██╔══██║██╔═══╝ ╚════██║██║   ██║██║     ██╔══╝  
+ ╚██████╗██║  ██║██║     ███████║╚██████╔╝███████╗███████╗
+  ╚═════╝╚═╝  ╚═╝╚═╝     ╚══════╝ ╚═════╝ ╚══════╝╚══════╝
+
+   ██╗  ██╗ █████╗ ██╗   ██╗ ██████╗  ██████╗
+   ██║  ██║██╔══██╗██║   ██║██╔═══██╗██╔════╝
+   ███████║███████║██║   ██║██║   ██║██║     
+   ██╔══██║██╔══██║╚██╗ ██╔╝██║   ██║██║     
+   ██║  ██║██║  ██║ ╚████╔╝ ╚██████╔╝╚██████╗
+   ╚═╝  ╚═╝╚═╝  ╚═╝  ╚═══╝   ╚═════╝  ╚═════╝
+`;
+
+function setProgress(pct){
+  const clamped = Math.max(0, Math.min(100, pct));
+  const width = 36;
+  const filled = Math.round((clamped/100) * width);
+  const bar = '#'.repeat(filled) + '-'.repeat(width - filled);
+  return `[${bar}] ${String(Math.round(clamped)).padStart(3,' ')}%`;
+}
+
+export function initBootUI({ onStart }){
+  const boot = document.getElementById('boot-screen');
+  const ascii = document.getElementById('boot-ascii');
+  const term = document.getElementById('boot-terminal');
+  const progress = document.getElementById('boot-progress');
+  const startWrap = document.getElementById('boot-start-wrap');
+  const startBtn = document.getElementById('boot-start');
+
+  if (!boot || !ascii || !term || !progress || !startWrap || !startBtn) {
+    // If markup is missing, fall back immediately.
     onStart?.();
-    return;
+    return { destroy(){} };
   }
 
-  // Fixed-size line buffer to prevent scrolling
-  const maxLines = 18;
+  let destroyed = false;
+  let ready = false;
+
+  const MAX_LINES = 14;
   const lines = [];
-  let i = 0;
-
-  // Ensure START is hidden until progress hits 100%
-  btn.style.display = 'none';
-  btn.setAttribute('aria-hidden','true');
-  btn.disabled = true;
-
-  const tick = () => {
-    if (i < MODULES.length) {
-      lines.push(fmtLine(MODULES[i], i, MODULES.length));
-      if (lines.length > maxLines) lines.shift();
-      term.textContent = lines.join('\n');
-
-      const pct = Math.floor(((i+1) / MODULES.length) * 100);
-      bar.style.width = `${pct}%`;
-      i++;
-
-      // Slightly variable cadence to feel “real”
-      const delay = 70 + Math.floor(Math.random() * 90);
-      window.setTimeout(tick, delay);
-      return;
-    }
-
-    // Completed: force 100%, then reveal START
-    bar.style.width = '100%';
-
-    // Add final line
-    lines.push('[OK] SYSTEM READY — AWAITING OPERATOR INPUT');
-    while (lines.length > maxLines) lines.shift();
+  function append(line){
+    lines.push(line);
+    while (lines.length > MAX_LINES) lines.shift(); // old lines disappear (no scroll)
     term.textContent = lines.join('\n');
+  }
 
-    btn.style.display = 'inline-block';
-    btn.removeAttribute('aria-hidden');
-    btn.disabled = false;
-    btn.focus();
+  async function run(){
+  // Title + initial status
+  ascii.textContent = ASCII_TITLE.trimEnd();
+  append('');
+  append('C.HAVOC // LOADER');
+  append('MODE............. TERMINAL');
+  append('SECURITY......... ENABLED');
+  append('SESSION.......... ' + Math.random().toString(16).slice(2,10).toUpperCase());
+  append('');
 
-    const start = async () => {
-      // prevent double fires + any “popping” during transitions
-      btn.disabled = true;
-      btn.style.display = 'none';
+  const extraSteps = 2; // asset verify + combat link
+  const totalSteps = MODULES.length + extraSteps;
+  let done = 0;
 
-      // hide boot immediately
-      boot.classList.add('boot-hidden');
+  function step(label){
+    // label unused but helpful for debugging if needed
+    done++;
+    const pct = (done / totalSteps) * 100;
+    progress.textContent = setProgress(pct);
+  }
 
-      // detach listeners
-      btn.removeEventListener('click', start);
-      window.removeEventListener('keydown', onKey);
+  // start at 0%
+  progress.textContent = setProgress(0);
 
-      onStart?.();
-    };
+  append(fmtInfo('initializing runtime…'));
+  await sleep(220);
 
-    const onKey = (e) => {
-      if (e.code === 'Enter' || e.code === 'Space') {
-        e.preventDefault();
-        start();
-      }
-    };
+  // Print module loads one-by-one
+  for (let i=0; i<MODULES.length && !destroyed; i++){
+    const name = MODULES[i];
+    append(fmtInfo(`loading ${name}`));
+    await sleep(95);
 
-    btn.addEventListener('click', start);
-    window.addEventListener('keydown', onKey);
+    append(fmtOk(name));
+    step(name);
+    await sleep(55);
+  }
+
+  if (destroyed) return;
+
+  append('');
+  append(fmtInfo('verifying asset bundles…'));
+  await sleep(160);
+  append('[ OK ] assets verified');
+  step('assets');
+  await sleep(90);
+
+  append(fmtInfo('establishing combat link…'));
+  await sleep(160);
+  append('[ OK ] combat link established');
+  step('link');
+
+  append('');
+  append('READY.');
+  ready = true;
+
+  // Only reveal PRESS START once the full sequence is complete.
+  startWrap.hidden = false;
+    startBtn.dataset.ready = 'true';
+  startBtn.focus();
+}
+
+
+  function handleStart(){
+    if (!ready) return;
+    if (destroyed) return;
+    destroyed = true;
+
+    startBtn.disabled = true;
+    startWrap.hidden = true;
+    boot.classList.add('boot-hidden');
+
+    onStart?.();
+  }
+
+  startBtn.addEventListener('click', handleStart);
+
+  function keyHandler(e){
+    if (e.code === 'Enter' || e.code === 'Space') {
+      e.preventDefault();
+      handleStart();
+    }
+  }
+  window.addEventListener('keydown', keyHandler);
+
+  run();
+
+  return {
+    destroy(){
+      destroyed = true;
+      window.removeEventListener('keydown', keyHandler);
+    }
   };
-
-  tick();
 }
