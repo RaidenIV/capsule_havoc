@@ -78,8 +78,7 @@ export function initBootUI({ onStart }){
   function append(line){
     lines.push(line);
     while (lines.length > MAX_LINES) lines.shift(); // old lines disappear (no scroll)
-    term.textContent = lines.join('
-');
+    term.textContent = lines.join('\n');
   }
 
   async function run(){
