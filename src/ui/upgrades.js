@@ -168,7 +168,8 @@ function ensureStatsPanel(){
   panel.id = 'upgradeStatsPanel';
   panel.style.cssText = `
     position:absolute;
-    right: 18px;
+    left: 18px;
+    right: auto;
     top: 92px;
     width: 260px;
     max-height: calc(100% - 140px);
@@ -312,6 +313,13 @@ function ensureShopStyles() {
     .upg-buy .upgrade-coins .coin-icon {
       width:8px; height:8px; border-radius:50%; flex-shrink:0;
       background:radial-gradient(circle at 35% 30%,#fff7c0,#ffd84a 50%,#c8860a);
+    }
+
+    .upgrade-hdr .upgrade-coins {
+      padding:0;
+      border:none;
+      background:none;
+      box-shadow:none;
     }
 
     /* ── Stats panel ── */
