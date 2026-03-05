@@ -82,6 +82,10 @@ export function initBootUI({ onStart }){
   }
 
   async function run(){
+  // Always keep start hidden until progress is 100%.
+  startWrap.hidden = true;
+  startBtn.dataset.ready = 'false';
+
   // Title + initial status
   ascii.textContent = ASCII_TITLE.trimEnd();
   append('');
@@ -137,15 +141,17 @@ export function initBootUI({ onStart }){
   append('READY.');
   ready = true;
 
-  // Only reveal PRESS START once the full sequence is complete.
+  // Hard-gate the start button: only reveal it once the progress reads 100%.
+  progress.textContent = setProgress(100);
   startWrap.hidden = false;
-    startBtn.dataset.ready = 'true';
+  startBtn.dataset.ready = 'true';
   startBtn.focus();
 }
 
 
   function handleStart(){
     if (!ready) return;
+    if ((progress?.textContent || '').includes('100%') === false) return;
     if (destroyed) return;
     destroyed = true;
 

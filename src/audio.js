@@ -8,6 +8,11 @@ const ctx = new AudioContext();
 const sounds = {};
 
 let musicEl = null;
+let _musicKey = 'game';
+const MUSIC_URLS = {
+  game: './assets/music/theme.wav',
+  menu: './assets/music/menu_theme.wav',
+};
 let musicVolume  = 0.4;
 let sfxVolume    = 1.0;
 let muted        = false;
@@ -117,7 +122,7 @@ export async function initAudio() {
   );
 
   // Set up music element
-  musicEl = new Audio('./assets/music/theme.wav');
+  musicEl = new Audio(MUSIC_URLS[_musicKey] || MUSIC_URLS.game);
   musicEl.loop    = true;
   musicEl.volume  = musicVolume;
   musicEl.preload = 'auto';
@@ -171,13 +176,16 @@ export function playSound(name, volume = 1.0, pitch = 1.0) {
 }
 
 // ── Music controls ────────────────────────────────────────────────────────────
-export function startMusic() {
-  if (!musicEl) return;
+export function startMusic(key = 'game') {
   _musicWanted = true;
-  if (!muted && !musicEl.paused) return; // already playing, don't restart
+  _setMusicKey(key);
+  if (!musicEl) return;
+  // If already playing this track, don't restart it.
+  if (!muted && !musicEl.paused) return;
   musicEl.currentTime = 0;
   if (!muted) musicEl.play().catch(() => {});
 }
+
 
 export function pauseMusic() {
   if (!musicEl) return;

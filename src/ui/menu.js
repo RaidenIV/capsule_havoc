@@ -4,7 +4,7 @@
 import { renderHighScores } from './scores.js';
 import { clearHighScores } from './highScores.js';
 import { bindAudioSettingsUI, applySavedAudioSettings } from './settings.js';
-import { playSound } from '../audio.js';
+import { playSound, startMusic } from '../audio.js';
 
 export function initMenuUI({ onStart }) {
   const menu = document.getElementById('menu-screen');
@@ -40,7 +40,10 @@ export function initMenuUI({ onStart }) {
     document.body.classList.remove('mode-playing');
     menu.classList.add('show');
     showPage('main');
+     // Play menu theme whenever we enter the main menu.
+    startMusic('menu');
   }
+
 
   function hideMenu() {
     // Pre-hide HUD elements inline before switching class, so there's
