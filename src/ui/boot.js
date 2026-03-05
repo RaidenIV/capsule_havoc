@@ -83,7 +83,10 @@ export function initBootUI({ onStart }){
 
   async function run(){
   // Always keep start hidden until progress is 100%.
+  // Use both the HTML `hidden` attribute AND an inline style so that CSS
+  // rules (e.g. `display: flex`) cannot accidentally reveal the button early.
   startWrap.hidden = true;
+  startWrap.style.display = 'none';
   startBtn.dataset.ready = 'false';
 
   // Title + initial status
@@ -143,6 +146,7 @@ export function initBootUI({ onStart }){
 
   // Hard-gate the start button: only reveal it once the progress reads 100%.
   progress.textContent = setProgress(100);
+  startWrap.style.display = ''; // remove the inline override, let CSS take over
   startWrap.hidden = false;
   startBtn.dataset.ready = 'true';
   startBtn.focus();
