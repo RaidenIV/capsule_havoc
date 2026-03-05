@@ -82,15 +82,14 @@ async function runBootSplashSequence(){
   // User gesture happened (PRESS START). Initialize audio buffers now.
   await initAudio();
 
-  // initMenuUI (called below) may have called startMusic('menu') during its
-  // synchronous init, which sets _musicWanted=true inside audio.js.  That flag
-  // causes audio.js to auto-play music the moment initAudio() creates the
-  // <audio> element — i.e. right now, during the splash screen.
-  // Cancel that eagerly by stopping music immediately after init; we'll start
-  // it ourselves once the menu is actually on screen.
+  // initMenuUI (called below) may have set _musicWanted=true inside audio.js.
+  // Silence it immediately so music doesn't auto-play during the splash screen.
   stopMusic();
 
-  // Show splash and play splash SFX reliably (audio now unlocked + buffers loaded)
+  // 1-second pause before the logo/splash appears.
+  await new Promise(r => setTimeout(r, 1000));
+
+  // Show splash and play splash SFX (audio is now unlocked and buffers loaded).
   if (splashEl) {
     splashEl.style.visibility = '';
     playSound('splash', 0.9);
@@ -100,12 +99,12 @@ async function runBootSplashSequence(){
       splashEl.addEventListener('animationend', () => {
         splashEl.remove();
         if (menuScreenEl) menuScreenEl.style.visibility = '';
-        startMusic('menu'); // ← menu is now visible; safe to start theme
+        startMusic('menu'); // menu is now visible — safe to start theme
       }, { once: true });
     }, 2000);
   } else {
     if (menuScreenEl) menuScreenEl.style.visibility = '';
-    startMusic('menu'); // ← no splash path; menu visible immediately
+    startMusic('menu'); // no splash path — menu visible immediately
   }
 }
 
@@ -116,7 +115,6 @@ runBootSplashSequence();
 let menuUI;
 menuUI = initMenuUI({
   onStart: async () => {
-    // Switch screens
     menuUI.hideMenu();
     stopMusic(); // stop menu_theme before game audio takes over
     state.uiMode = 'playing';
