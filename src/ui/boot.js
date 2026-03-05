@@ -73,10 +73,13 @@ export function initBootUI({ onStart }){
   let destroyed = false;
   let ready = false;
 
+  const MAX_LINES = 14;
+  const lines = [];
   function append(line){
-    term.textContent += (term.textContent ? '\n' : '') + line;
-    // keep recent output visible; no scrolling UI, just jump to bottom
-    term.scrollTop = term.scrollHeight;
+    lines.push(line);
+    while (lines.length > MAX_LINES) lines.shift(); // old lines disappear (no scroll)
+    term.textContent = lines.join('
+');
   }
 
   async function run(){

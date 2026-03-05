@@ -154,7 +154,7 @@ canvas { display: block; }
 
 .pause-menu-body {
   padding: 20px 24px 24px;
-  overflow-y: auto; flex: 1;
+  overflow-y: hidden; flex: 1;
   scrollbar-width: thin; scrollbar-color: rgba(0,229,255,0.2) transparent;
 }
 
@@ -396,7 +396,7 @@ canvas { display: block; }
 /* ── Top bar (pause + invincible) ── */
 .cp-top-bar {
   display: flex; align-items: center; gap: 10px;
-  padding: 10px 14px; background: var(--cp-card);
+  padding: 14px 22px; background: var(--cp-card);
   border-bottom: 1px solid var(--cp-border); flex-shrink: 0;
 }
 .pause-btn {
@@ -477,7 +477,7 @@ canvas { display: block; }
 
 /* ── Scrollable section area ── */
 #cp-scroll {
-  flex: 1 1 0; min-height: 0; overflow-y: auto; overflow-x: hidden;
+  flex: 1 1 0; min-height: 0; overflow-y: hidden; overflow-x: hidden;
   scrollbar-width: thin; scrollbar-color: var(--cp-border) transparent;
   padding: 12px 14px 24px; display: flex; flex-direction: column; gap: 8px;
 }
@@ -492,7 +492,7 @@ canvas { display: block; }
 }
 .sec-hdr {
   display: flex; align-items: center; justify-content: space-between;
-  padding: 10px 14px; cursor: pointer; user-select: none;
+  padding: 14px 22px; cursor: pointer; user-select: none;
   transition: background 0.1s;
 }
 .sec-hdr:hover { background: var(--cp-input); }
@@ -818,7 +818,7 @@ body.mode-playing #menu-screen { display: none !important; }
   background: #00e5ff; cursor: pointer; box-shadow: 0 0 8px rgba(0,229,255,0.6);
 }
 
-.scores-list { max-height: 280px; overflow-y: auto; padding-right: 4px; scrollbar-width: thin; scrollbar-color: rgba(0,229,255,0.2) transparent; margin-bottom: 4px; }
+.scores-list { max-height: 280px; overflow-y: hidden; padding-right: 4px; scrollbar-width: thin; scrollbar-color: rgba(0,229,255,0.2) transparent; margin-bottom: 4px; }
 .menu-muted { margin-top: 14px; text-align: center; font-size: 11px; color: rgba(233,247,255,0.35); }
 .score-row { display: flex; gap: 12px; padding: 10px 12px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.06); background: rgba(255,255,255,0.03); margin-bottom: 8px; transition: background 0.15s; }
 .score-row:hover { background: rgba(255,255,255,0.05); }
@@ -944,7 +944,7 @@ body.mode-playing #menu-screen { display: none !important; }
   flex-direction: column;
   gap: 4px;
   height: min(56vh, 480px);
-  overflow-y: auto;
+  overflow-y: hidden;
   overflow-x: hidden;
   scrollbar-width: thin;
   scrollbar-color: rgba(0,229,255,0.15) transparent;
@@ -1233,7 +1233,7 @@ position: fixed;
   max-height: 52vh;
   white-space: pre-wrap;
   word-break: break-word;
-  overflow-y: auto;
+  overflow-y: hidden;
   overflow-x: hidden;
   padding: 0;
 }
@@ -1255,13 +1255,13 @@ position: fixed;
 
 .boot-start{
   font-family: 'Courier New', monospace;
-  font-size: 16px;
+  font-size: 22px;
   letter-spacing: 2px;
   text-transform: uppercase;
   background: transparent;
-  border: 1px solid rgba(255,255,255,0.35);
+  border: 2px solid rgba(255,255,255,0.35);
   color: #fff;
-  padding: 10px 14px;
+  padding: 14px 22px;
   cursor: pointer;
   outline: none;
 }
