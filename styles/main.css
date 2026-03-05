@@ -1252,6 +1252,8 @@ position: fixed;
   justify-content: center;
   width: 100%;
 }
+/* Ensure the HTML `hidden` attribute wins over the display:flex rule above */
+.boot-start-wrap[hidden]{ display: none !important; }
 
 .boot-start{
   font-family: 'Courier New', monospace;
@@ -1286,4 +1288,3 @@ position: fixed;
 }
 
 .boot-hidden{ display:none !important; }
-
