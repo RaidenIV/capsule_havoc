@@ -84,7 +84,12 @@ ctx.addEventListener('statechange', () => {
 });
 
 // ── Load all SFX up front ─────────────────────────────────────────────────────
+let _audioInitialised = false;
+
 export async function initAudio() {
+  if (_audioInitialised) return; // idempotent — never recreate musicEl or replay splash
+  _audioInitialised = true;
+
   // ── Load splash first so it plays the instant PRESS START is clicked ─────
   // Fetching it alone before the bulk load means it's ready as soon as the
   // AudioContext unlocks — no waiting for every other SFX file.
