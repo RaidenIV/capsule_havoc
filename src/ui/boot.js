@@ -70,6 +70,14 @@ export function initBootUI({ onStart }){
     return { destroy(){} };
   }
 
+  // ── Hide the start button RIGHT NOW, synchronously, before any async work.
+  // Doing this here (not inside run()) guarantees it is hidden before the first
+  // paint, even if the HTML/CSS has it visible by default or uses display:flex
+  // which would override the `hidden` attribute.
+  startWrap.hidden = true;
+  startWrap.style.display = 'none';
+  startBtn.dataset.ready = 'false';
+
   let destroyed = false;
   let ready = false;
 
@@ -82,13 +90,6 @@ export function initBootUI({ onStart }){
   }
 
   async function run(){
-  // Always keep start hidden until progress is 100%.
-  // Use both the HTML `hidden` attribute AND an inline style so that CSS
-  // rules (e.g. `display: flex`) cannot accidentally reveal the button early.
-  startWrap.hidden = true;
-  startWrap.style.display = 'none';
-  startBtn.dataset.ready = 'false';
-
   // Title + initial status
   ascii.textContent = ASCII_TITLE.trimEnd();
   append('');
@@ -146,7 +147,7 @@ export function initBootUI({ onStart }){
 
   // Hard-gate the start button: only reveal it once the progress reads 100%.
   progress.textContent = setProgress(100);
-  startWrap.style.display = ''; // remove the inline override, let CSS take over
+  startWrap.style.display = ''; // clear the inline override; let CSS take over
   startWrap.hidden = false;
   startBtn.dataset.ready = 'true';
   startBtn.focus();
