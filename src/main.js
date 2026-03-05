@@ -12,7 +12,7 @@ import { triggerVictory, restartGame, startCountdown } from './gameFlow.js';
 import { initInput }        from './input.js';
 import { tick }             from './loop.js';
 import { togglePanel, togglePause } from './panel/index.js';
-import { initAudio, resumeAudioContext, playSound, playSplashSound, stopMusic } from './audio.js';
+import { initAudio, resumeAudioContext, playSound, playSplashSound, stopMusic, startMusic } from './audio.js';
 import { initMenuUI }       from './ui/menu.js';
 import { initBootUI }       from './ui/boot.js';
 import { initHudCoin }      from './hudCoin.js';
@@ -82,7 +82,14 @@ async function runBootSplashSequence(){
   // User gesture happened (PRESS START). Initialize audio buffers now.
   await initAudio(); // splash.wav loads and plays inside initAudio immediately
 
-  // Show splash / logo screen after a 1-second pause.
+  // initMenuUI sets _musicWanted=true, so audio.js auto-starts music the moment
+  // initAudio creates the <audio> element. Cancel that now — we start the menu
+  // theme ourselves only once the menu is actually on screen.
+  stopMusic();
+
+  // 1-second pause before the logo appears.
+  await new Promise(r => setTimeout(r, 1000));
+
   if (splashEl) {
     splashEl.style.visibility = '';
 
@@ -91,10 +98,12 @@ async function runBootSplashSequence(){
       splashEl.addEventListener('animationend', () => {
         splashEl.remove();
         if (menuScreenEl) menuScreenEl.style.visibility = '';
+        startMusic('menu'); // menu is now visible — safe to start theme
       }, { once: true });
     }, 2000);
   } else {
     if (menuScreenEl) menuScreenEl.style.visibility = '';
+    startMusic('menu');
   }
 }
 
