@@ -1230,7 +1230,10 @@ position: fixed;
 .boot-terminal{
   margin: 0;
   width: 100%;
-  max-height: 52vh;
+  /* Fixed height = MAX_LINES (14) × font-size (12px) × line-height (1.55).
+     Reserving this space upfront means the flex layout never reflows as lines
+     are appended, so the ASCII art above it stays perfectly still. */
+  height: 261px;
   white-space: pre-wrap;
   word-break: break-word;
   overflow-y: hidden;
@@ -1252,8 +1255,6 @@ position: fixed;
   justify-content: center;
   width: 100%;
 }
-/* Ensure the HTML `hidden` attribute wins over the display:flex rule above */
-.boot-start-wrap[hidden]{ display: none !important; }
 
 .boot-start{
   font-family: 'Courier New', monospace;
