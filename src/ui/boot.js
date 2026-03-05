@@ -58,12 +58,13 @@ function setProgress(pct){
 
 export function initBootUI({ onStart }){
   const boot = document.getElementById('boot-screen');
+  const ascii = document.getElementById('boot-ascii');
   const term = document.getElementById('boot-terminal');
   const progress = document.getElementById('boot-progress');
   const startWrap = document.getElementById('boot-start-wrap');
   const startBtn = document.getElementById('boot-start');
 
-  if (!boot || !term || !progress || !startWrap || !startBtn) {
+  if (!boot || !ascii || !term || !progress || !startWrap || !startBtn) {
     // If markup is missing, fall back immediately.
     onStart?.();
     return { destroy(){} };
@@ -75,12 +76,12 @@ export function initBootUI({ onStart }){
   function append(line){
     term.textContent += (term.textContent ? '\n' : '') + line;
     // keep recent output visible; no scrolling UI, just jump to bottom
-    boot.scrollTop = boot.scrollHeight;
+    term.scrollTop = term.scrollHeight;
   }
 
   async function run(){
   // Title + initial status
-  append(ASCII_TITLE.trimEnd());
+  ascii.textContent = ASCII_TITLE.trimEnd();
   append('');
   append('C.HAVOC // LOADER');
   append('MODE............. TERMINAL');
@@ -136,6 +137,7 @@ export function initBootUI({ onStart }){
 
   // Only reveal PRESS START once the full sequence is complete.
   startWrap.hidden = false;
+    startBtn.dataset.ready = 'true';
   startBtn.focus();
 }
 

@@ -1192,6 +1192,7 @@ position: fixed;
 
 
 /* ── Boot screen (technical terminal) ───────────────────────────────────────── */
+
 .boot-screen{
   position: fixed;
   inset: 0;
@@ -1202,57 +1203,87 @@ position: fixed;
   font-size: 12px;
   line-height: 1.55;
   display: flex;
-  flex-direction: column;
   align-items: center;
   justify-content: center;
   padding: 0;
   overflow: hidden;
 }
 
+.boot-shell{
+  width: min(980px, 92vw);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.boot-ascii{
+  margin: 0 0 10px 0;
+  width: 100%;
+  text-align: center;
+  white-space: pre;
+  line-height: 1.05;
+  overflow: hidden; /* never scroll the ASCII header */
+  user-select: none;
+}
+
 .boot-terminal{
   margin: 0;
-  width: min(980px, 92vw);
-  max-height: 62vh;
+  width: 100%;
+  max-height: 52vh;
   white-space: pre-wrap;
   word-break: break-word;
-  overflow: hidden;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 0;
 }
+
 .boot-progress{
-  width: min(980px, 92vw);
+  width: 100%;
   margin-top: 10px;
   text-align: left;
   letter-spacing: 0.5px;
   opacity: 0.95;
 }
 
-
 .boot-start-wrap{
   margin-top: 18px;
   display: flex;
   justify-content: center;
-  width: min(980px, 92vw);
+  width: 100%;
 }
 
 .boot-start{
   font-family: 'Courier New', monospace;
-  font-size: 18px;
-  letter-spacing: 3px;
+  font-size: 16px;
+  letter-spacing: 2px;
   text-transform: uppercase;
   background: transparent;
-  border: none;
+  border: 1px solid rgba(255,255,255,0.35);
   color: #fff;
   padding: 10px 14px;
   cursor: pointer;
   outline: none;
+}
+
+.boot-start:hover{
+  border-color: rgba(255,255,255,0.75);
+}
+
+.boot-start:focus{
+  outline: none;
+  border-color: #fff;
+}
+
+.boot-start[data-ready="true"]{
   animation: bootBlink 1.0s steps(2, end) infinite;
 }
 
-.boot-start:focus{ text-decoration: underline; }
-
 @keyframes bootBlink{
   0%{ opacity: 1; }
-  50%{ opacity: 0.15; }
+  50%{ opacity: 0.20; }
   100%{ opacity: 1; }
 }
 
 .boot-hidden{ display:none !important; }
+
