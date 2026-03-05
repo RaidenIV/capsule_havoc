@@ -12,7 +12,7 @@ import { triggerVictory, restartGame, startCountdown } from './gameFlow.js';
 import { initInput }        from './input.js';
 import { tick }             from './loop.js';
 import { togglePanel, togglePause } from './panel/index.js';
-import { initAudio, resumeAudioContext, playSound, playSplashSound, stopMusic } from './audio.js';
+import { initAudio, resumeAudioContext, playSound, playSplashSound, stopMusic, startMusic } from './audio.js';
 import { initMenuUI }       from './ui/menu.js';
 import { initBootUI }       from './ui/boot.js';
 import { initHudCoin }      from './hudCoin.js';
@@ -92,10 +92,12 @@ async function runBootSplashSequence(){
       splashEl.addEventListener('animationend', () => {
         splashEl.remove();
         if (menuScreenEl) menuScreenEl.style.visibility = '';
+        startMusic('menu'); // ← start menu theme only once the menu is actually visible
       }, { once: true });
     }, 2000);
   } else {
     if (menuScreenEl) menuScreenEl.style.visibility = '';
+    startMusic('menu'); // ← no splash path: start menu theme when menu appears
   }
 }
 
@@ -108,6 +110,7 @@ menuUI = initMenuUI({
   onStart: async () => {
     // Switch screens
     menuUI.hideMenu();
+    stopMusic(); // ← stop menu_theme before game music/countdown begins
     state.uiMode = 'playing';
 
     // Ensure audio is ready before countdown ends
