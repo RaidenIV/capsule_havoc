@@ -36,14 +36,14 @@ const balanceQuat = new THREE.Quaternion().setFromUnitVectors(
 const scratchLift = new THREE.Vector3();
 
 const mats = {
-  doubleDamage: new THREE.MeshPhysicalMaterial({ color: 0xff3355, emissive: 0xff2244, emissiveIntensity: 1.35, metalness: 1.0, roughness: 0.12, clearcoat: 1.0, clearcoatRoughness: 0.08, reflectivity: 1.0 }),
-  invincibility: new THREE.MeshPhysicalMaterial({ color: 0xffffff, emissive: 0xdfffff, emissiveIntensity: 1.25, metalness: 1.0, roughness: 0.08, clearcoat: 1.0, clearcoatRoughness: 0.04, reflectivity: 1.0 }),
-  coinValue2x: new THREE.MeshPhysicalMaterial({ color: 0xffe566, emissive: 0xffd24d, emissiveIntensity: 1.25, metalness: 1.0, roughness: 0.10, clearcoat: 1.0, clearcoatRoughness: 0.06, reflectivity: 1.0 }),
-  xp2x: new THREE.MeshPhysicalMaterial({ color: 0x55ccff, emissive: 0x55ccff, emissiveIntensity: 1.25, metalness: 1.0, roughness: 0.10, clearcoat: 1.0, clearcoatRoughness: 0.06, reflectivity: 1.0 }),
-  armor: new THREE.MeshPhysicalMaterial({ color: 0x66ff99, emissive: 0x22ff77, emissiveIntensity: 1.25, metalness: 1.0, roughness: 0.10, clearcoat: 1.0, clearcoatRoughness: 0.06, reflectivity: 1.0 }),
-  clock: new THREE.MeshPhysicalMaterial({ color: 0xbbccff, emissive: 0x9db6ff, emissiveIntensity: 1.20, metalness: 1.0, roughness: 0.10, clearcoat: 1.0, clearcoatRoughness: 0.06, reflectivity: 1.0 }),
+  doubleDamage: new THREE.MeshPhysicalMaterial({ color: 0xff3355, emissive: 0xff2244, emissiveIntensity: 0.675, metalness: 1.0, roughness: 0.12, clearcoat: 1.0, clearcoatRoughness: 0.08, reflectivity: 1.0 }),
+  invincibility: new THREE.MeshPhysicalMaterial({ color: 0xffffff, emissive: 0xdfffff, emissiveIntensity: 0.625, metalness: 1.0, roughness: 0.08, clearcoat: 1.0, clearcoatRoughness: 0.04, reflectivity: 1.0 }),
+  coinValue2x: new THREE.MeshPhysicalMaterial({ color: 0xffe566, emissive: 0xffd24d, emissiveIntensity: 0.625, metalness: 1.0, roughness: 0.10, clearcoat: 1.0, clearcoatRoughness: 0.06, reflectivity: 1.0 }),
+  xp2x: new THREE.MeshPhysicalMaterial({ color: 0x55ccff, emissive: 0x55ccff, emissiveIntensity: 0.625, metalness: 1.0, roughness: 0.10, clearcoat: 1.0, clearcoatRoughness: 0.06, reflectivity: 1.0 }),
+  armor: new THREE.MeshPhysicalMaterial({ color: 0x66ff99, emissive: 0x22ff77, emissiveIntensity: 0.625, metalness: 1.0, roughness: 0.10, clearcoat: 1.0, clearcoatRoughness: 0.06, reflectivity: 1.0 }),
+  clock: new THREE.MeshPhysicalMaterial({ color: 0xbbccff, emissive: 0x9db6ff, emissiveIntensity: 0.60, metalness: 1.0, roughness: 0.10, clearcoat: 1.0, clearcoatRoughness: 0.06, reflectivity: 1.0 }),
   // Black hole pickup should stay visually black while still carrying a dark aura.
-  blackHole: new THREE.MeshPhysicalMaterial({ color: 0x060606, emissive: 0x111111, emissiveIntensity: 1.35, metalness: 1.0, roughness: 0.14, clearcoat: 1.0, clearcoatRoughness: 0.08, reflectivity: 1.0 }),
+  blackHole: new THREE.MeshPhysicalMaterial({ color: 0x060606, emissive: 0x111111, emissiveIntensity: 0.675, metalness: 1.0, roughness: 0.14, clearcoat: 1.0, clearcoatRoughness: 0.08, reflectivity: 1.0 }),
 };
 
 let _spawnTimer = 0;

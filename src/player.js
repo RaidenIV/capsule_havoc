@@ -210,7 +210,7 @@ export function updatePlayer(delta, worldScale) {
     playerMesh.layers.enable(1); // drive bloom from the player mesh
     const pulse = 1.0 + Math.sin(_glowTime * 10.0) * 0.15;
     playerMat.emissive.set(0xffffff);
-    playerMat.emissiveIntensity = 1.6 * pulse;
+    playerMat.emissiveIntensity = 0.8 * pulse;
   } else {
     playerMesh.layers.disable(1);
     playerMat.emissive.setRGB(0, 0, 0);
