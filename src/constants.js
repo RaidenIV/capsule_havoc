@@ -234,12 +234,12 @@ export function getActiveEnemyTypesForLevel(level){
 // enemy defs: percent values are fractions of player max HP (e.g. 0.10 = 10%)
 export const ENEMY_DEFS = Object.freeze({
   [ENEMY_TYPE.RUSHER]:     { color: 0x888888, sizeMult: 0.75, hpPct: 0.08, contactPct: 0.10, shoot: false, metallic: false },
-    [ENEMY_TYPE.ORBITER]:    { color: 0xfbb237, sizeMult: 1.00, hpPct: 0.50, contactPct: 0.15, shoot: true,  bulletPct: 0.10, fireRate: 4.00, bulletSpeedMult: 1.00, metallic: true,  orbitR: 6.5 },
+    [ENEMY_TYPE.ORBITER]:    { color: 0xff5c00, sizeMult: 1.00, hpPct: 0.50, contactPct: 0.15, shoot: true,  bulletPct: 0.10, fireRate: 4.00, bulletSpeedMult: 1.00, metallic: true,  orbitR: 6.5 },
     [ENEMY_TYPE.TANKER]:     { color: 0x80fb37, sizeMult: 1.50, hpPct: 2.00, contactPct: 0.20, shoot: true,  bulletPct: 0.20, fireRate: 4.50, bulletSpeedMult: 0.85, metallic: true },
   [ENEMY_TYPE.SNIPER]:     { color: 0x9b30ff, sizeMult: 1.00, hpPct: 3.00, contactPct: 0.10, shoot: true,  bulletPct: 0.333, fireRate: 3.70, bulletSpeedMult: 1.35, metallic: false },
   [ENEMY_TYPE.TELEPORTER]: { color: 0xe0e0e0, sizeMult: 0.75, hpPct: 3.00, contactPct: 0.333, shoot: false, metallic: true,  teleportWhenBelow: 0.50 },
   [ENEMY_TYPE.SHIELDED]:   { color: 0x4aa3ff, sizeMult: 1.25, hpPct: 0.50, shieldPct: 1.50, contactPct: 0.20, shoot: false, metallic: false },
-    [ENEMY_TYPE.SPLITTER]:   { color: 0x00bb44, sizeMult: 2.00, hpPct: 3.00, contactPct: 0.30, shoot: true, bulletPct: 0.25, fireRate: 4.00, bulletSpeedMult: 1.20, metallic: true, splitCountMin: 2, splitCountMax: 3 },
+    [ENEMY_TYPE.SPLITTER]:   { color: 0x80FB37, sizeMult: 2.00, hpPct: 3.00, contactPct: 0.30, shoot: true, bulletPct: 0.25, fireRate: 4.00, bulletSpeedMult: 1.20, metallic: true, splitCountMin: 2, splitCountMax: 3 },
   [ENEMY_TYPE.BOSS]:       { color: 0x111111, sizeMult: 3.00, hpPct: 4.00, contactPct: 0.50, shoot: true,  bulletPct: 0.33, fireRate: 1.75, bulletSpeedMult: 1.10, metallic: true },
 });
 
