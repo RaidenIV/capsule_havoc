@@ -6,7 +6,7 @@
 <title>CAPSULE HAVOC</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;900&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;900&family=Orbitron:wght@700;900&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="./styles/main.css">
 <link rel="stylesheet" href="./styles/boot_terminal.css">
 </head>
@@ -34,34 +34,28 @@
 
 <div id="menu-screen" class="menu-screen show">
 
-  <!-- animated background layers -->
-  <div class="menu-bg-grid"></div>
+  <!-- background layers -->
   <div class="menu-bg-vignette"></div>
   <div class="menu-orb menu-orb-1"></div>
   <div class="menu-orb menu-orb-2"></div>
+  <div class="menu-scanlines"></div>
 
-  <div class="menu-layout">
+  <div class="menu-center">
 
-    <!-- LEFT — branding -->
+    <!-- Branding -->
     <div class="menu-brand">
-      <div class="menu-eyebrow">▶ BULLET HEAVEN</div>
+      <div class="menu-eyebrow">BULLET HEAVEN</div>
       <h1 class="menu-title">CAPSULE<br>HAVOC</h1>
       <div class="menu-tagline">Survive. Level up. Dominate.</div>
     </div>
 
-    <!-- RIGHT — pages -->
+    <!-- Pages -->
     <div class="menu-panel">
 
       <div class="menu-page active" data-page="main">
-        <button class="menu-btn primary" id="menu-start">
-          <span class="menu-btn-icon">▶</span> START GAME
-        </button>
-        <button class="menu-btn" id="menu-scores">
-          <span class="menu-btn-icon">◈</span> HIGH SCORES
-        </button>
-        <button class="menu-btn" id="menu-settings">
-          <span class="menu-btn-icon">◎</span> SETTINGS
-        </button>
+        <button class="menu-btn primary" id="menu-start">START GAME</button>
+        <button class="menu-btn" id="menu-scores">HIGH SCORES</button>
+        <button class="menu-btn" id="menu-settings">SETTINGS</button>
         <div class="menu-version">v0.3 · PROTOTYPE</div>
       </div>
 
@@ -110,7 +104,7 @@
       </div>
 
     </div><!-- /menu-panel -->
-  </div><!-- /menu-layout -->
+  </div><!-- /menu-center -->
 </div>
 
 
