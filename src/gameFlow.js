@@ -60,10 +60,10 @@ export function startCountdown(onDone) {
   // Hide enemies
   state.enemies.forEach(e => { e.grp.visible = false; });
   const steps = [
-    { text: '3',       size: '120px', color: '#00e5ff', shadow: '0 0 40px rgba(0,229,255,0.8)' },
-    { text: '2',       size: '120px', color: '#00e5ff', shadow: '0 0 40px rgba(0,229,255,0.8)' },
-    { text: '1',       size: '120px', color: '#00e5ff', shadow: '0 0 40px rgba(0,229,255,0.8)' },
-    { text: 'SURVIVE', size: '64px',  color: '#ff3535', shadow: '0 0 60px rgba(255,53,53,0.9)' },
+    { text: '3',       size: '180px', color: '#ffffff', shadow: '0 0 42px rgba(255,255,255,0.45)' },
+    { text: '2',       size: '180px', color: '#ffffff', shadow: '0 0 42px rgba(255,255,255,0.45)' },
+    { text: '1',       size: '180px', color: '#ffffff', shadow: '0 0 42px rgba(255,255,255,0.45)' },
+    { text: 'SURVIVE', size: '88px',  color: '#ff3535', shadow: '0 0 60px rgba(255,53,53,0.9)' },
   ];
   let idx = 0;
   countdownEl.classList.add('show');
