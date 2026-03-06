@@ -11,6 +11,7 @@ import { _particleMeshPool } from './particles.js';
 import { startMusic, stopMusic, pauseMusic, resumeMusic, playSound } from './audio.js';
 import { recordRun } from './ui/highScores.js';
 import { applyCosmetics } from './materials.js';
+import { resetPowerupNotifications } from './hudEffects.js';
 
 export { pauseMusic, resumeMusic }; // re-export so panel/index.js can use them
 
@@ -261,6 +262,8 @@ export function restartGame(opts = {}) {
   if (killsEl)     killsEl.textContent    = '0';
   if (timerEl)     timerEl.textContent    = '00:00';
   if (coinCountEl) coinCountEl.textContent = '0';
+
+  resetPowerupNotifications();
 
   gameOverEl.classList.remove('show');
   const h1 = document.querySelector('#game-over h1');

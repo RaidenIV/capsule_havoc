@@ -95,20 +95,32 @@ function ensureToastStyles(){
   if (_toastStyleEl) return;
   _toastStyleEl = document.createElement('style');
   _toastStyleEl.textContent = `
-    #powerup-toast{ position:absolute; left:50%; top:160px; transform: translateX(-50%); z-index: 30; pointer-events:none; }
-    .putoast{ display:flex; align-items:center; gap:10px; padding:10px 14px; border-radius: 16px;
-      background: rgba(0,0,0,0.35); border: 1px solid rgba(255,255,255,0.14);
-      box-shadow: 0 10px 30px rgba(0,0,0,0.35);
-      backdrop-filter: blur(10px);
-      font-family: Rajdhani, system-ui, sans-serif; color: rgba(255,255,255,0.95);
-      letter-spacing: 0.6px; }
-    .putoast-ic{ font-size: 16px; opacity: 0.95; }
-    .putoast-txt{ font-weight: 700; font-size: 15px; }
-    .putoast-time{ font-weight: 600; font-size: 14px; opacity: 0.88; margin-left: 2px; }
-    .putoast-in{ animation: putoastIn 140ms ease-out both; }
+    #powerup-toast{ position:absolute; left:50%; top:156px; transform: translateX(-50%); z-index: 30; pointer-events:none; }
+    .putoast{
+      display:flex; align-items:center; justify-content:center; gap:12px;
+      min-width: 260px;
+      padding: 16px 22px;
+      border-radius: 20px;
+      background:
+        linear-gradient(180deg, rgba(255,255,255,0.20), rgba(255,255,255,0.08)),
+        linear-gradient(135deg, rgba(255,255,255,0.12), rgba(255,255,255,0.03));
+      border: 1px solid rgba(255,255,255,0.22);
+      box-shadow:
+        0 18px 46px rgba(0,0,0,0.36),
+        inset 0 1px 0 rgba(255,255,255,0.18),
+        inset 0 -1px 0 rgba(255,255,255,0.05);
+      backdrop-filter: blur(18px) saturate(140%);
+      -webkit-backdrop-filter: blur(18px) saturate(140%);
+      font-family: Inter, system-ui, sans-serif;
+      color: rgba(255,255,255,0.97);
+      letter-spacing: 0.6px;
+    }
+    .putoast-txt{ font-weight: 800; font-size: 22px; line-height: 1; }
+    .putoast-time{ font-weight: 700; font-size: 18px; line-height: 1; opacity: 0.94; margin-left: 4px; }
+    .putoast-in{ animation: putoastIn 160ms ease-out both; }
     .putoast-out{ animation: putoastOut 180ms ease-in both; }
-    @keyframes putoastIn{ from{ opacity: 0; transform: translateY(-6px) scale(0.98);} to{ opacity: 1; transform: translateY(0) scale(1);} }
-    @keyframes putoastOut{ from{ opacity: 1; transform: translateY(0) scale(1);} to{ opacity: 0; transform: translateY(-6px) scale(0.98);} }
+    @keyframes putoastIn{ from{ opacity: 0; transform: translateY(-8px) scale(0.975);} to{ opacity: 1; transform: translateY(0) scale(1);} }
+    @keyframes putoastOut{ from{ opacity: 1; transform: translateY(0) scale(1);} to{ opacity: 0; transform: translateY(-8px) scale(0.975);} }
   `;
   document.head.appendChild(_toastStyleEl);
 }
@@ -198,4 +210,14 @@ export function notifyPowerup(label, seconds, effectKey){
     el.classList.add('putoast-out');
     setTimeout(() => { if (host) host.innerHTML = ''; }, 190);
   }, 1400);
+}
+
+export function resetPowerupNotifications(){
+  _toastPersist = null;
+  if (_toastTimer) {
+    clearTimeout(_toastTimer);
+    _toastTimer = null;
+  }
+  const host = ensureToastHost();
+  if (host) host.innerHTML = '';
 }
