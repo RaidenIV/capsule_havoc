@@ -12,16 +12,17 @@ import { playSound } from './audio.js';
 import { getLuckSpawnMultiplier } from './luck.js';
 import { notifyPowerup } from './hudEffects.js';
 
-const PICKUP_TYPES = [
-  'doubleDamage',
-  'invincibility',
-  'coinValue2x',
-  'xp2x',
-  'armor',
-  'clock',
-  'blackHole',
-  'coinMagnet',
+const PICKUP_WEIGHTS = [
+  ['doubleDamage', 6.25],
+  ['invincibility', 6.25],
+  ['coinValue2x', 25.0],
+  ['xp2x', 6.25],
+  ['armor', 25.0],
+  ['clock', 12.5],
+  ['blackHole', 6.25],
+  ['coinMagnet', 12.5],
 ];
+const TOTAL_PICKUP_WEIGHT = PICKUP_WEIGHTS.reduce((sum, [, w]) => sum + w, 0);
 
 const CUBE_SIZE = 0.72;
 const ORB_RADIUS = 0.42;
@@ -55,7 +56,12 @@ export function initArenaPickups(){
 }
 
 function randType(){
-  return PICKUP_TYPES[Math.floor(Math.random() * PICKUP_TYPES.length)];
+  let roll = Math.random() * TOTAL_PICKUP_WEIGHT;
+  for (const [type, weight] of PICKUP_WEIGHTS) {
+    roll -= weight;
+    if (roll <= 0) return type;
+  }
+  return PICKUP_WEIGHTS[PICKUP_WEIGHTS.length - 1][0];
 }
 
 function addBloom(mesh){

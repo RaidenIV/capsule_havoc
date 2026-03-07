@@ -69,7 +69,7 @@ const TABS = [
     id: 'abilities', label: 'Abilities',
     upgrades: [
       { key: 'shield',    name: 'Shield',             costs: [400, 1000, 2500],
-        desc: t => ['Rechargeable 1-hit shield', '-35% recharge time', '2-hit shield'][t-1] },
+        desc: t => ['Rechargeable bubble shield (1.2 radius, 1 hit)', '-35% recharge time', '2-hit bubble shield (1.2 radius)'][t-1] },
       { key: 'burst',     name: 'Area Burst [E]',     costs: [350, 900, 2200, 5500],
         desc: t => ['+Radial damage pulse', '+25% radius & damage', '-30% cooldown', '+Knockback on burst'][t-1] },
       { key: 'timeSlow',  name: 'Time Slow [Q]',      costs: [600, 1500, 3800],
@@ -284,7 +284,7 @@ function updateStatsPanel(){
   if (moveTier > 0) ownedRows.push(_statRow('Move Speed', `+${moveTier * 8}%`));
   if (dashTier > 0) ownedRows.push(_statRow('Dash CD', `${dashCd.toFixed(2)}s`));
   if (magnetTier > 0) ownedRows.push(_statRow('Magnet Radius', `+${(magnetTier * 1.25).toFixed(2)}`));
-  if (shieldTier > 0) ownedRows.push(_statRow('Shield', `${shieldCharges} hit • ${shieldRecharge.toFixed(1)}s recharge`));
+  if (shieldTier > 0) ownedRows.push(_statRow('Shield', `${shieldCharges} hit • 1.2 radius • ${shieldRecharge.toFixed(1)}s recharge`));
   if (timeSlowTier > 0) ownedRows.push(_statRow('Time Slow', `${(timeSlowScale * 100).toFixed(0)}% speed • ${timeSlowDuration.toFixed(0)}s`));
   if (maxHealthTier > 0) ownedRows.push(_statRow('Max HP Bonus', `+${maxHealthTier * 10}%`));
   if (regenTier > 0) ownedRows.push(_statRow('Regen', `${regenTier} HP/s`));

@@ -22,7 +22,9 @@ playerMesh.castShadow = true;
 playerGroup.add(playerMesh);
 // ── Shield active indicator (green bloom) ───────────────────────────────────
 // A subtle green halo on the bloom layer when shieldCharges > 0.
-const _shieldGlowGeo = new THREE.SphereGeometry(0.78, 16, 12);
+export const PLAYER_BODY_RADIUS = 0.6;
+export const SHIELD_RADIUS = 1.2;
+const _shieldGlowGeo = new THREE.SphereGeometry(SHIELD_RADIUS, 18, 14);
 const _shieldGlowMat = new THREE.MeshBasicMaterial({
   color: 0x42f578,
   transparent: true,
@@ -34,6 +36,10 @@ shieldGlow.position.y = playerMesh.position.y;
 shieldGlow.layers.enable(1); // bloom
 shieldGlow.visible = false;
 playerGroup.add(shieldGlow);
+
+export function hasShieldBubble() {
+  return (state.shieldCharges || 0) > 0;
+}
 
 // ── Armor active indicator (green bloom) ────────────────────────────────────
 // A green halo on the bloom layer when armorHits > 0.

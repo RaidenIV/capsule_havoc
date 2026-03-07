@@ -80,19 +80,17 @@ export function dropLoot(pos, coinValue, coinMult, coinColorHex = null) {
 }
 
 // ── Update ────────────────────────────────────────────────────────────────────
-const ATTRACT_DIST_COIN = [5.0,5.5,6.0,6.5,7.0,7.5,8.0,8.5,9.0,9.5,10.0];
+const ATTRACT_DIST_COIN_BASE = 0.0;
 const ATTRACT_SPD_COIN  = 4.5;
-const ATTRACT_DIST_HP   = ATTRACT_DIST_COIN; // same magnet range as coins
+const MAGNET_BURST_SPEED = 17.0;
+const ATTRACT_DIST_HP   = [5.0,5.5,6.0,6.5,7.0,7.5,8.0,8.5,9.0,9.5,10.0];
 const ATTRACT_SPD_HP    = ATTRACT_SPD_COIN;
 const COLLECT_COIN      = 0.7;
 const COLLECT_HP        = 0.8;
 
 export function updatePickups(worldDelta, playerLevel, elapsed) {
-  const baseAttract = ATTRACT_DIST_COIN[Math.min(playerLevel, 10)];
-  const bonus = Math.max(0, (state.upg?.magnet || 0)) * 1.25; // shop upgrade (design doc)
-  const coinMagnetActive = (state.effects?.coinMagnet || 0) > 0;
-  const attractDist = coinMagnetActive ? Infinity : (baseAttract + bonus);
-  const attractSpeed = coinMagnetActive ? 17.0 : ATTRACT_SPD_COIN;
+  const coinAttractDist = ATTRACT_DIST_COIN_BASE + Math.max(0, (state.upg?.magnet || 0)) * 1.25;
+  const healthAttractDist = ATTRACT_DIST_HP[Math.min(playerLevel, 10)];
   // Coin merge safety (performance): consolidate if too many coins are on the ground.
   if (state.coinPickups.length > 400) {
     let sum = 0;
@@ -103,7 +101,7 @@ export function updatePickups(worldDelta, playerLevel, elapsed) {
     const pz = playerGroup.position.z;
     const dx = (Math.random() < 0.5 ? -1 : 1);
     const dz = (Math.random() < 0.5 ? -1 : 1);
-    const far = attractDist * 3.25;
+    const far = Math.max(4.0, coinAttractDist || 0, healthAttractDist || 0) * 3.25;
     const pos = { x: px + dx * far, z: pz + dz * far };
     spawnCoins(pos, 1, sum, 0xffffff);
     if (state.coinPickups[0]) state.coinPickups[0].merged = true;
@@ -129,9 +127,12 @@ export function updatePickups(worldDelta, playerLevel, elapsed) {
       playSound('coin', 0.5, 0.95 + Math.random() * 0.15);
       continue;
     }
-    if (coinMagnetActive || dist < attractDist) cp.attracting = true;
+    if ((cp.magnetBurst || 0) > 0) cp.attracting = true;
+    if (coinAttractDist > 0 && dist < coinAttractDist) cp.attracting = true;
     if (cp.attracting && dist > 0.001) {
-      const spd = attractSpeed * worldDelta;
+      const burstActive = (cp.magnetBurst || 0) > 0;
+      if (burstActive) cp.magnetBurst = Math.max(0, cp.magnetBurst - worldDelta);
+      const spd = (burstActive ? MAGNET_BURST_SPEED : ATTRACT_SPD_COIN) * worldDelta;
       cp.mesh.position.x += (dx/dist) * Math.min(spd, dist);
       cp.mesh.position.z += (dz/dist) * Math.min(spd, dist);
     }
@@ -159,7 +160,7 @@ export function updatePickups(worldDelta, playerLevel, elapsed) {
       if (healed > 0) spawnHealNum(healed);
       continue;
     }
-    if (dist < attractDist) hp.attracting = true;
+    if (dist < healthAttractDist) hp.attracting = true;
     if (hp.attracting) {
       const spd = ATTRACT_SPD_HP * worldDelta;
       hp.mesh.position.x += (dx/dist) * Math.min(spd, dist);

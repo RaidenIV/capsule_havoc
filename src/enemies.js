@@ -13,7 +13,7 @@ import {
   enemyGeo, enemyMat, enemyGeoParams, bulletGeoParams,
   enemyBulletGeo, getEnemyBulletMat, floorY,
 } from './materials.js';
-import { playerGroup, updateHealthBar } from './player.js';
+import { playerGroup, updateHealthBar, hasShieldBubble, SHIELD_RADIUS, PLAYER_BODY_RADIUS } from './player.js';
 import { steerAroundProps, pushOutOfProps, hasLineOfSight } from './terrain.js';
 import { spawnEnemyDamageNum, spawnPlayerDamageNum } from './damageNumbers.js';
 import { spawnExplosion } from './particles.js';
@@ -430,9 +430,10 @@ export function updateEnemies(delta, worldDelta, elapsed) {
     e.grp.rotation.y   = Math.atan2(dx, dz);
 
     // Player contact damage
-    const pr = 0.4 * 1.02;
+    const pr = PLAYER_BODY_RADIUS * 1.02;
+    const shieldRadius = hasShieldBubble() ? SHIELD_RADIUS : pr;
     const er = enemyGeoParams.radius * (e.scaleMult || 1) * 1.02;
-    const minD = pr + er;
+    const minD = shieldRadius + er;
     if (dist < minD && dist > 1e-6) {
       contactThisFrame = true;
       const nx = dx/dist, nz = dz/dist;
@@ -447,17 +448,20 @@ export function updateEnemies(delta, worldDelta, elapsed) {
         state.contactDmgTimer = CONTACT_HIT_INTERVAL;
 
         if (!blackHoleSuppressed && !(state.invincible || state.dashInvincible || (state.effects?.invincibility || 0) > 0)) {
-          // Shield absorbs the hit as one discrete charge
-          if ((state.shieldCharges || 0) > 0 && (state.shieldHitCD || 0) <= 0) {
-            state.shieldCharges -= 1;
-            state.shieldHitCD = 0.6;
-            if (state.shieldCharges <= 0) {
-              const tier = Math.max(0, state.upg?.shield || 0);
-              const base = 12.0;
-              const rt = (tier >= 2) ? base * 0.65 : base;
-              state.shieldRecharge = rt;
+          if ((state.shieldCharges || 0) > 0) {
+            // Bubble shield blocks contact at its outer radius; only consume a hit
+            // when the shield's contact cooldown allows it.
+            if ((state.shieldHitCD || 0) <= 0) {
+              state.shieldCharges -= 1;
+              state.shieldHitCD = 0.6;
+              if (state.shieldCharges <= 0) {
+                const tier = Math.max(0, state.upg?.shield || 0);
+                const base = 12.0;
+                const rt = (tier >= 2) ? base * 0.65 : base;
+                state.shieldRecharge = rt;
+              }
+              playSound('shield_break', 0.65, 1.0);
             }
-            playSound('shield_break', 0.65, 1.0);
           } else {
             // Damage = DPS × interval so average damage rate stays the same
             const curseTier = Math.max(0, state.upg?.curse || 0);
