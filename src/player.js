@@ -3,6 +3,7 @@ import * as THREE from 'three';
 import { CSS2DObject } from 'three/addons/renderers/CSS2DRenderer.js';
 import { scene, ISO_FWD, ISO_RIGHT } from './renderer.js';
 import { state } from './state.js';
+import { getActiveWorldScale } from './activeEffects.js';
 import {
   PLAYER_SPEED, DASH_SPEED, DASH_DURATION, DASH_COOLDOWN,
   DASH_SLOW_SCALE, SLOW_SNAP_RATE, SLOW_RECOVER_RATE, PLAYER_MAX_HP,
@@ -24,7 +25,6 @@ playerGroup.add(playerMesh);
 // A subtle green halo on the bloom layer when shieldCharges > 0.
 export const PLAYER_BODY_RADIUS = 0.6;
 export const SHIELD_RADIUS = 1.5;
-export const ARMOR_RADIUS = SHIELD_RADIUS;
 const _shieldGlowGeo = new THREE.SphereGeometry(SHIELD_RADIUS, 18, 14);
 const _shieldGlowMat = new THREE.MeshBasicMaterial({
   color: 0x42f578,
@@ -42,13 +42,9 @@ export function hasShieldBubble() {
   return (state.shieldCharges || 0) > 0;
 }
 
-export function hasArmorBubble() {
-  return (state.armorHits || 0) > 0;
-}
-
 // ── Armor active indicator (green bloom) ────────────────────────────────────
 // A green halo on the bloom layer when armorHits > 0.
-const _armorGlowGeo = new THREE.SphereGeometry(ARMOR_RADIUS, 18, 14);
+const _armorGlowGeo = new THREE.SphereGeometry(0.94, 18, 14);
 const _armorGlowMat = new THREE.MeshBasicMaterial({
   color: 0x42f578,
   transparent: true,
@@ -136,8 +132,10 @@ let _glowTime = 0;
 
 export function updatePlayer(delta, worldScale) {
   _glowTime += delta;
-  const slowTarget = state.slowTimer > 0 ? (state.slowScale || 0.5) : 1.0;
-  const wsTarget = state.dashTimer > 0 ? Math.min(DASH_SLOW_SCALE, slowTarget) : slowTarget;
+  const abilitySlowTarget = state.slowTimer > 0 ? (state.slowScale || 0.5) : 1.0;
+  const pickupSlowTarget = getActiveWorldScale();
+  const combinedSlowTarget = Math.min(abilitySlowTarget, pickupSlowTarget);
+  const wsTarget = state.dashTimer > 0 ? Math.min(DASH_SLOW_SCALE, combinedSlowTarget) : combinedSlowTarget;
   const wsRate   = wsTarget < worldScale ? SLOW_SNAP_RATE : SLOW_RECOVER_RATE;
   state.worldScale += (wsTarget - state.worldScale) * Math.min(1, wsRate * delta);
 
