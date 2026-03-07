@@ -52,13 +52,8 @@ const CURSE_SPAWN = Object.freeze({
 });
 
 const ENEMY_CAP_BY_LEVEL_RANGE = Object.freeze([
-  { min: 1,  max: 5,   cap: 20 },
-  { min: 6,  max: 10,  cap: 25 },
-  { min: 11, max: 20,  cap: 30 },
-  { min: 21, max: 40,  cap: 35 },
-  { min: 41, max: 50,  cap: 40 },
-  { min: 51, max: 60,  cap: 45 },
-  { min: 61, max: 999, cap: 50 },
+  { min: 1, max: 2,   cap: 20 },
+  { min: 3, max: 999, cap: 50 },
 ]);
 
 // ── Utilities ────────────────────────────────────────────────────────────────
@@ -104,13 +99,12 @@ function countType(type) {
   for (let i = 0; i < state.enemies.length; i++) {
     const e = state.enemies[i];
     if (!e || e.dead) continue;
-
-    const liveType = e.enemyType ?? e.type ?? null;
     if (type === ENEMY_TYPE.BOSS) {
-      if (e.isBoss || liveType === ENEMY_TYPE.BOSS) n++;
-    } else if (!e.isBoss && liveType === type) {
-      n++;
+      if (e.isBoss) n++;
+      continue;
     }
+    const liveType = e.enemyType ?? e.type;
+    if (liveType === type && !e.isBoss) n++;
   }
   return n;
 }
@@ -349,8 +343,13 @@ export function updateSpawner(delta) {
   // maybe run one special event per level
   maybeTriggerSpecialEvents(level);
 
-  const types = getActiveEnemyTypesForLevel(level);
+  const activeTypes = getActiveEnemyTypesForLevel(level);
+  const nonRusherTypes = activeTypes.filter(t => t !== ENEMY_TYPE.RUSHER);
+  const types = [...nonRusherTypes, ENEMY_TYPE.RUSHER];
+
   for (const t of types) {
+    if (!activeTypes.includes(t)) continue;
+
     const base = SPAWN_BASE[t];
     if (!base || base.boss) continue;
 
@@ -362,17 +361,30 @@ export function updateSpawner(delta) {
     // Occasionally refresh quota (keeps variance), but deterministically per tick.
     if (Math.random() < 0.10) state.spawn.quotas[t] = getEffectiveQuota(t, level);
 
-    const target = state.spawn.quotas[t] ?? getEffectiveQuota(t, level);
+    const baseTarget = state.spawn.quotas[t] ?? getEffectiveQuota(t, level);
     const have = countType(t);
+    let target = baseTarget;
+
+    // Once the player reaches level 3, Rushers act as the filler type so the
+    // live non-boss population stays pushed toward 50 while elite quotas remain
+    // unchanged. Processing Rushers last preserves room for elite spawns first.
+    if (t === ENEMY_TYPE.RUSHER && level >= 3) {
+      const cap = getEnemyCapForLevel(level);
+      target = Math.max(baseTarget, cap - (countRegularEnemies() - have));
+    }
+
     if (have >= target) continue;
 
     const need = target - have;
 
     if (base.groupSpawn) {
-      // Spawn a group (8–12), but keep it subject to cap.
+      // Spawn a group (8–12), but keep it subject to cap. When Rushers are
+      // filling to cap, allow a larger burst so the field reaches 50 quickly.
       const groupSize = randInt(8, 12);
-      // If need is large, allow multiple groups over time; here we spawn at most one group per tick.
-      spawnBatch(t, Math.max(groupSize, Math.min(groupSize * need, 20)), level);
+      const requested = (t === ENEMY_TYPE.RUSHER && level >= 3)
+        ? Math.max(groupSize, Math.min(need, 20))
+        : Math.max(groupSize, Math.min(groupSize * need, 20));
+      spawnBatch(t, requested, level);
     } else {
       spawnBatch(t, need, level);
     }
