@@ -196,9 +196,8 @@ export function restartGame(opts = {}) {
   destroyOrbitBullets();
 
   playerGroup.position.set(0, 0, 0);
-  const charHpMult = Math.max(0.01, state.characterBaseHpMult || 1.0);
-  state.playerMaxHP = Math.round(PLAYER_MAX_HP * charHpMult);
-  state.playerHP    = state.playerMaxHP;
+  state.playerHP    = PLAYER_MAX_HP;
+  state.playerMaxHP = PLAYER_MAX_HP;
   state.kills       = 0;
   state.elapsed     = 0;
   state.shootTimer  = 0;
@@ -209,14 +208,14 @@ export function restartGame(opts = {}) {
   state.spawnTickTimer  = 0;
   state.playerXP    = 0;
   state.playerLevel = 1;
-  state.playerBaseDMG = 10;
   initSpawner();
   state.coins       = 0;
-  state.weaponTier  = state.characterPrimaryWeapon === 'laser' ? 1 : 0;
+  const isBlueLoadout = state.selectedCharacter === 'blue' || state.characterPrimaryWeapon === 'laser';
+  state.characterPrimaryWeapon = isBlueLoadout ? 'laser' : 'slash';
+  state.weaponTier  = isBlueLoadout ? 1 : 0;
   state.pickupRangeLvl = 0;
   state.upg = {
-    laserFire: state.characterPrimaryWeapon === 'laser' ? 1 : 0,
-    orbit:0,
+    laserFire: isBlueLoadout ? 1 : 0, orbit:0,
     dmg:0, fireRate:0, projSpeed:0, piercing:0, multishot:0,
     moveSpeed:0, dash:0, magnet:0,
     shield:0, burst:0, timeSlow:0,
@@ -251,7 +250,7 @@ export function restartGame(opts = {}) {
   state.bossAlive   = false;
   state.bossRespawnTimer = 0;
   state.spawnTimer  = 0;
-  if (state.cosmetic) state.cosmetic.playerColor = state.selectedCharacter === 'red' ? 'red' : 'default';
+  if (state.cosmetic) state.cosmetic.playerColor = 'default';
   state.upgradeOpen = false;
   state.wave        = 1;
   state.wavePhase   = null;

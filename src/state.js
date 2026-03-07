@@ -62,10 +62,8 @@ export const state = {
 
   // Cached base damage from level (Section 6)
   playerBaseDMG: 10,
-  selectedCharacter: 'blue',
-  characterBaseHpMult: 1.10,
-  characterBaseDamageMult: 1.0,
-  characterPrimaryWeapon: 'laser',
+  selectedCharacter: 'red',
+  characterPrimaryWeapon: 'slash',
 
   // ── Shoot timing ────────────────────────────────────────────────────────────
   shootTimer:      0,

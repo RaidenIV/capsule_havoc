@@ -9,7 +9,7 @@ import { syncOrbitBullets } from '../weapons.js';
 import { getFireInterval, getWaveBullets, getBulletDamage } from '../xp.js';
 import { updateHealthBar } from '../player.js';
 import { initHudCoin }     from '../hudCoin.js';
-import { recomputeLuck }   from '../luck.js';
+import { recomputeLuck, getFourthOptionChance, getLuck }   from '../luck.js';
 import { getPlayerMaxHPForLevel } from '../constants.js';
 
 
@@ -26,78 +26,88 @@ function meetsRequirement(upgDef){
 }
 // ─────────────────────────────────────────────────────────────────────────────
 // Shop definition (Section 9)
-// Each entry: { key, name, costs[], desc(tier) }
+// Flat upgrade pool used by the random-choice shop draft.
+// Each entry: { key, name, costs[], desc(tier), family? }
 // ─────────────────────────────────────────────────────────────────────────────
-const TABS = [
-  {
-    id: 'weapons', label: 'Weapons',
-    upgrades: [
-{ key: 'laserFire', name: 'Laser Fire',         costs: [ 250, 900, 2200, 5500, 12000],
-  desc: t => t === 1
-    ? 'Unlocks automatic laser fire'
-    : `Improves laser pattern (Tier ${t})` },
-{ key: 'orbit',     name: 'Orbit Weapon',       costs: [250, 750, 1800, 4200, 9000],
-  desc: t => t === 1
-    ? 'Unlocks orbiting bullets'
-    : `Adds orbit strength (Tier ${t})` },
-      { key: 'dmg',       name: 'Damage',            costs: [50, 150, 400, 1000, 2500],
-        desc: t => `+15% weapon damage (Tier ${t})` },
-      { key: 'fireRate',  name: 'Fire Rate',          requires: { key: 'laserFire', minTier: 1 },  costs: [75, 200, 500, 1200, 3000],
-        desc: t => `-10% shot cooldown (Tier ${t})` },
-      { key: 'projSpeed', name: 'Projectile Speed',   costs: [100, 300, 800, 2000],
-    requires: { key: 'laserFire', minTier: 1 },
-        desc: t => `+20% projectile speed (Tier ${t})` },
-      { key: 'piercing',  name: 'Piercing',           costs: [200, 600, 1500],
-        desc: t => `+1 enemy pierced per shot (Tier ${t})` },
-      { key: 'multishot', name: 'Multishot',          costs: [500, 1500, 4000],
-    requires: { key: 'laserFire', minTier: 1 },
-        desc: t => `+1 extra projectile per shot (Tier ${t})` },
-    ],
-  },
-  {
-    id: 'movement', label: 'Movement',
-    upgrades: [
-      { key: 'moveSpeed', name: 'Move Speed',         costs: [60, 180, 450, 1100, 2800],
-        desc: t => `+8% movement speed (Tier ${t})` },
-      { key: 'dash',      name: 'Dash',               costs: [300, 700, 1800],
-        desc: t => ['Unlocks dash (Shift key)', 'Reduces cooldown by 30%', 'Adds i-frames during dash'][t-1] },
-      { key: 'magnet',    name: 'Magnet Radius',      costs: [80, 250, 650, 1600],
-        desc: t => `+1.25 coin attraction range (Tier ${t})` },
-    ],
-  },
-  {
-    id: 'abilities', label: 'Abilities',
-    upgrades: [
-      { key: 'shield',    name: 'Shield',             costs: [400, 1000, 2500],
-        desc: t => ['Rechargeable bubble shield (1.5 radius, 1 hit)', '-35% recharge time', '2-hit bubble shield (1.5 radius)'][t-1] },
-      { key: 'burst',     name: 'Area Burst [E]',     costs: [350, 900, 2200, 5500],
-        desc: t => ['+Radial damage pulse', '+25% radius & damage', '-30% cooldown', '+Knockback on burst'][t-1] },
-      { key: 'timeSlow',  name: 'Time Slow [Q]',      costs: [600, 1500, 3800],
-        desc: t => ['50% slow for 3s on enemies', 'Extends duration to 5s', 'Deepens slow to 25% speed'][t-1] },
-    ],
-  },
-  {
-    id: 'powerups', label: 'Power Ups',
-    upgrades: [
-      { key: 'maxHealth', name: 'Max Health',         costs: [40, 120, 350, 900, 2200],
-        desc: t => `+10% max HP (Tier ${t})` },
-      { key: 'regen',     name: 'Health Regen',       costs: [100, 300, 750, 1800],
-        desc: t => `+${t} HP/sec regeneration` },
-      { key: 'xpGrowth',  name: 'XP Growth',          costs: [150, 400, 1000, 2500],
-        desc: t => `+15% XP from kills (Tier ${t})` },
-      { key: 'coinBonus', name: 'Coin Bonus',         costs: [200, 600, 1500],
-        desc: t => `+20% coins per kill (Tier ${t})` },
-      { key: 'curse',     name: 'Curse ⚠',           costs: [500, 1500, 4000],
-        desc: t => `Enemies +20% HP/DMG → +25% coins, +10% XP (Tier ${t})` },
-      { key: 'luck',      name: 'Luck',               costs: [250, 700, 1800],
-        desc: t => `+5 Luck — better chests & 4th level option (Tier ${t})` },
-    ],
-  },
+const UPGRADE_POOL = [
+  // Weapons
+  { key: 'laserFire', name: 'Laser Fire', costs: [250, 900, 2200, 5500, 12000], family: 'laser',
+    desc: t => t === 1 ? 'Unlocks automatic laser fire' : `Improves laser pattern (Tier ${t})` },
+  { key: 'orbit', name: 'Orbit Weapon', costs: [250, 750, 1800, 4200, 9000],
+    desc: t => t === 1 ? 'Unlocks orbiting bullets' : `Adds orbit strength (Tier ${t})` },
+  { key: 'dmg', name: 'Damage', costs: [50, 150, 400, 1000, 2500],
+    desc: t => `+15% weapon damage (Tier ${t})` },
+  { key: 'fireRate', name: 'Fire Rate', requires: { key: 'laserFire', minTier: 1 }, costs: [75, 200, 500, 1200, 3000], family: 'laser',
+    desc: t => `-10% shot cooldown (Tier ${t})` },
+  { key: 'projSpeed', name: 'Projectile Speed', requires: { key: 'laserFire', minTier: 1 }, costs: [100, 300, 800, 2000], family: 'laser',
+    desc: t => `+20% projectile speed (Tier ${t})` },
+  { key: 'piercing', name: 'Piercing', costs: [200, 600, 1500], family: 'laser',
+    desc: t => `+1 enemy pierced per shot (Tier ${t})` },
+  { key: 'multishot', name: 'Multishot', requires: { key: 'laserFire', minTier: 1 }, costs: [500, 1500, 4000], family: 'laser',
+    desc: t => `+1 extra projectile per shot (Tier ${t})` },
+
+  // Movement
+  { key: 'moveSpeed', name: 'Move Speed', costs: [60, 180, 450, 1100, 2800],
+    desc: t => `+8% movement speed (Tier ${t})` },
+  { key: 'dash', name: 'Dash', costs: [300, 700, 1800],
+    desc: t => ['Unlocks dash (Shift key)', 'Reduces cooldown by 30%', 'Adds i-frames during dash'][t-1] },
+  { key: 'magnet', name: 'Magnet Radius', costs: [80, 250, 650, 1600],
+    desc: t => `+1.25 coin attraction range (Tier ${t})` },
+
+  // Abilities
+  { key: 'shield', name: 'Shield', costs: [400, 1000, 2500],
+    desc: t => ['Rechargeable bubble shield (1.5 radius, 1 hit)', '-35% recharge time', '2-hit bubble shield (1.5 radius)'][t-1] },
+  { key: 'burst', name: 'Area Burst [E]', costs: [350, 900, 2200, 5500],
+    desc: t => ['+Radial damage pulse', '+25% radius & damage', '-30% cooldown', '+Knockback on burst'][t-1] },
+  { key: 'timeSlow', name: 'Time Slow [Q]', costs: [600, 1500, 3800],
+    desc: t => ['50% slow for 3s on enemies', 'Extends duration to 5s', 'Deepens slow to 25% speed'][t-1] },
+
+  // Power Ups
+  { key: 'maxHealth', name: 'Max Health', costs: [40, 120, 350, 900, 2200],
+    desc: t => `+10% max HP (Tier ${t})` },
+  { key: 'regen', name: 'Health Regen', costs: [100, 300, 750, 1800],
+    desc: t => `+${t} HP/sec regeneration` },
+  { key: 'xpGrowth', name: 'XP Growth', costs: [150, 400, 1000, 2500],
+    desc: t => `+15% XP from kills (Tier ${t})` },
+  { key: 'coinBonus', name: 'Coin Bonus', costs: [200, 600, 1500],
+    desc: t => `+20% coins per kill (Tier ${t})` },
+  { key: 'curse', name: 'Curse ⚠', costs: [500, 1500, 4000],
+    desc: t => `Enemies +20% HP/DMG → +25% coins, +10% XP (Tier ${t})` },
+  { key: 'luck', name: 'Luck', costs: [250, 700, 1800],
+    desc: t => `+5 Luck — better chests & 4th shop option chance (Tier ${t})` },
 ];
 
-// Flat list of all upgrades (used by chest reward item picker)
-const ALL_UPGRADES = TABS.flatMap(tab => tab.upgrades);
+const ALL_UPGRADES = UPGRADE_POOL;
 
+function getCharacterId(){
+  const selected = state.selectedCharacter;
+  if (selected === 'blue' || selected === 'red') return selected;
+  if (state.characterPrimaryWeapon === 'laser') return 'blue';
+  if (state.characterPrimaryWeapon === 'slash') return 'red';
+  return 'red';
+}
+
+function allowsUpgradeForCharacter(upgDef){
+  const family = upgDef?.family || '';
+  const characterId = getCharacterId();
+  if (characterId === 'blue' && family === 'slash') return false;
+  if (characterId === 'red'  && family === 'laser') return false;
+  return true;
+}
+
+function getCandidateUpgrades({ tierCap = Number.POSITIVE_INFINITY, excludeKeys = [] } = {}){
+  const blocked = new Set(excludeKeys);
+  return ALL_UPGRADES.filter(upg => {
+    const cur = Math.max(0, state.upg?.[upg.key] || 0);
+    return (
+      !blocked.has(upg.key) &&
+      cur < upg.costs.length &&
+      (cur + 1) <= tierCap &&
+      meetsRequirement(upg) &&
+      allowsUpgradeForCharacter(upg)
+    );
+  });
+}
 // ─────────────────────────────────────────────────────────────────────────────
 // Side-effects when an upgrade is purchased
 // ─────────────────────────────────────────────────────────────────────────────
@@ -113,8 +123,7 @@ function applyUpgradeEffect(key, newTier) {
 
     case 'maxHealth': {
       const base   = getPlayerMaxHPForLevel(state.playerLevel || 1);
-      const charHpMult = Math.max(0.01, state.characterBaseHpMult || 1.0);
-      const newMax = Math.round(base * charHpMult * (1 + 0.10 * newTier));
+      const newMax = Math.round(base * (1 + 0.10 * newTier));
       const pct    = (state.playerMaxHP || 100) > 0
         ? state.playerHP / state.playerMaxHP
         : 1;
@@ -308,80 +317,108 @@ function $(id) { return document.getElementById(id); }
 // ─────────────────────────────────────────────────────────────────────────────
 // Shop state
 // ─────────────────────────────────────────────────────────────────────────────
-let _activeTab = 'weapons';
-let _onClose   = null;
+let _onClose = null;
+let _shopDraft = [];
+let _bonusOptionChance = 0;
+let _bonusOptionGranted = false;
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Inject minimal tab + shop CSS (idempotent)
+// Inject minimal shop CSS (idempotent)
 // ─────────────────────────────────────────────────────────────────────────────
 function ensureShopStyles() {
   if (document.getElementById('shop-dynamic-styles')) return;
   const style = document.createElement('style');
   style.id = 'shop-dynamic-styles';
   style.textContent = `
-    /* ── Tab bar ── */
-    #shopTabs {
-      display:flex; gap:0; margin-bottom:12px; flex-wrap:nowrap;
-      position:sticky; top:0; z-index:10;
-      background:#06080f;
-      padding:10px 0 0;
-      border-bottom: 1px solid rgba(255,255,255,0.07);
+    .shop-draft-list {
+      display:flex;
+      flex-direction:column;
+      gap:12px;
+      min-height: 320px;
     }
-    .shop-tab-btn {
-      flex:1; padding:8px 10px 9px;
-      background:transparent; border:none; border-bottom:2px solid transparent;
-      color:rgba(255,255,255,0.3); font-family:var(--mono,monospace);
-      font-size:10px; font-weight:700; letter-spacing:.18em;
-      text-transform:uppercase; cursor:pointer;
-      transition:color .12s, border-color .12s;
-      margin-bottom:-1px;
+    .shop-draft-card {
+      display:flex;
+      gap:14px;
+      align-items:center;
+      justify-content:space-between;
+      padding:14px 16px;
+      border-radius:14px;
+      background:rgba(255,255,255,0.03);
+      border:1px solid rgba(255,255,255,0.08);
+      box-shadow:0 10px 24px rgba(0,0,0,0.22);
     }
-    .shop-tab-btn:hover  { color:rgba(255,255,255,0.65); }
-    .shop-tab-btn.active { color:#00e5ff; border-bottom-color:#00e5ff; }
-    .shop-tab-content    { display:none; }
-    .shop-tab-content.active { display:block; }
-
-    /* ── Tier badge inline ── */
-    .upg-tier {
-      font-family:var(--mono,monospace); font-size:9px;
-      color:rgba(0,229,255,0.4); margin-left:7px; letter-spacing:.08em;
+    .shop-draft-card.spent {
+      opacity:0.68;
+      border-color:rgba(0,229,255,0.10);
     }
-
-    /* ── Tier dots ── */
-    .upg-tiers { display:flex; gap:3px; margin-top:5px; align-items:center; }
-    .upg-pip {
-      width:14px; height:2px; border-radius:1px;
-      background:rgba(255,255,255,0.1);
+    .shop-draft-copy { flex:1; min-width:0; }
+    .shop-draft-head {
+      display:flex;
+      align-items:center;
+      gap:8px;
+      flex-wrap:wrap;
     }
-    .upg-pip.filled { background:rgba(0,229,255,0.7); }
-    .upg-pip.maxed  { background:rgba(255,255,255,0.2); }
-
-    /* ── Inline coin badge inside buy btn ── */
-    .upg-buy .upgrade-coins {
-      display:inline-flex; align-items:center; gap:4px;
-      padding:0; border:none; background:none;
+    .shop-draft-tier {
+      font-family:var(--mono,monospace);
+      font-size:10px;
+      letter-spacing:.14em;
+      text-transform:uppercase;
+      color:rgba(0,229,255,0.78);
     }
-    .upg-buy .upgrade-coins .coin-icon {
-      width:8px; height:8px; border-radius:50%; flex-shrink:0;
-      background:radial-gradient(circle at 35% 30%,#fff7c0,#ffd84a 50%,#c8860a);
+    .shop-draft-sub {
+      margin-top:4px;
+      font-family:var(--mono,monospace);
+      font-size:10px;
+      line-height:1.45;
+      color:rgba(255,255,255,0.46);
     }
-
-    .upgrade-hdr .upgrade-coins {
-      padding:0;
-      border:none;
-      background:none;
-      box-shadow:none;
+    .shop-draft-state {
+      margin-top:6px;
+      font-family:var(--mono,monospace);
+      font-size:10px;
+      letter-spacing:.12em;
+      text-transform:uppercase;
+      color:rgba(255,255,255,0.32);
     }
-
-    /* ── Stats panel ── */
+    .shop-draft-state.ok { color:rgba(0,255,140,0.72); }
+    .shop-draft-state.locked { color:rgba(255,190,90,0.72); }
+    .shop-draft-tiers {
+      display:flex;
+      gap:4px;
+      margin-top:8px;
+      align-items:center;
+    }
+    .shop-draft-pip {
+      width:16px;
+      height:3px;
+      border-radius:999px;
+      background:rgba(255,255,255,0.10);
+    }
+    .shop-draft-pip.filled { background:rgba(0,229,255,0.72); }
+    .shop-draft-pip.maxed { background:rgba(255,255,255,0.22); }
+    .shop-draft-footer {
+      margin-top:8px;
+      padding-top:10px;
+      border-top:1px solid rgba(255,255,255,0.07);
+      font-family:var(--mono,monospace);
+      font-size:10px;
+      line-height:1.5;
+      color:rgba(255,255,255,0.38);
+    }
+    .shop-draft-footer strong {
+      color:rgba(255,255,255,0.76);
+      font-weight:700;
+    }
+    .curse-warning {
+      font-family:var(--mono,monospace); color:rgba(255,120,60,0.8);
+      font-size:9px; margin-top:6px; letter-spacing:.06em;
+    }
     #upgradeStatsPanel {
       background:#06080f !important;
       border:1px solid rgba(0,229,255,0.12) !important;
       border-radius:8px !important;
       box-shadow:0 8px 30px rgba(0,0,0,0.6) !important;
     }
-
-    /* ── Chest overlay ── */
     #chestOverlay {
       display:none; position:fixed; inset:0; z-index:120;
       background:rgba(0,2,8,0.92); backdrop-filter:blur(10px);
@@ -431,130 +468,134 @@ function ensureShopStyles() {
       text-align:center; cursor:pointer; transition:color .12s;
     }
     #chestOverlay .chest-close:hover { color:rgba(255,80,80,0.6); }
-    .curse-warning {
-      font-family:var(--mono,monospace); color:rgba(255,120,60,0.8);
-      font-size:9px; margin-top:3px; letter-spacing:.06em;
-    }
   `;
   document.head.appendChild(style);
 }
-
 // ─────────────────────────────────────────────────────────────────────────────
-// Build or re-inject the tab bar into the overlay
+// Random shop draft helpers
 // ─────────────────────────────────────────────────────────────────────────────
-function ensureTabBar(overlay) {
-  if (overlay.querySelector('#shopTabs')) return;
-
-  // Insert tab bar before upgradeList
-  const tabBar = document.createElement('div');
-  tabBar.id = 'shopTabs';
-
-  TABS.forEach(tab => {
-    const btn = document.createElement('button');
-    btn.className = 'shop-tab-btn' + (tab.id === _activeTab ? ' active' : '');
-    btn.dataset.tab = tab.id;
-    btn.textContent = tab.label;
-    btn.addEventListener('click', () => {
-      _activeTab = tab.id;
-      renderShop();
-  updateStatsPanel();
-    });
-    tabBar.appendChild(btn);
-  });
-
-  const upgradeList = $('upgradeList');
-  if (upgradeList) {
-    upgradeList.parentNode.insertBefore(tabBar, upgradeList);
-  } else {
-    overlay.appendChild(tabBar);
+function shuffleInPlace(arr){
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [arr[i], arr[j]] = [arr[j], arr[i]];
   }
+  return arr;
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Main shop render
-// ─────────────────────────────────────────────────────────────────────────────
+function rollShopDraft(){
+  const chance = getFourthOptionChance();
+  const baseCount = 3;
+  const wantExtra = Math.random() < chance;
+  const count = baseCount + (wantExtra ? 1 : 0);
+  const pool = shuffleInPlace(getCandidateUpgrades());
+  _bonusOptionChance = chance;
+  _bonusOptionGranted = wantExtra && pool.length > baseCount;
+  _shopDraft = pool.slice(0, Math.min(count, pool.length)).map(upg => ({
+    key: upg.key,
+    offeredTier: Math.max(0, state.upg?.[upg.key] || 0) + 1,
+    purchased: false,
+  }));
+}
+
+function getUpgradeDef(key){
+  return ALL_UPGRADES.find(upg => upg.key === key) || null;
+}
+
 function renderShop() {
   const overlay = $('upgradeOverlay');
   if (!overlay) return;
 
   ensureShopStyles();
-  ensureTabBar(overlay);
-
-  // Update tab button states
-  overlay.querySelectorAll('.shop-tab-btn').forEach(btn => {
-    btn.classList.toggle('active', btn.dataset.tab === _activeTab);
-  });
 
   const list = $('upgradeList');
   if (!list) return;
   list.innerHTML = '';
+  list.classList.add('shop-draft-list');
 
-  const tabDef = TABS.find(t => t.id === _activeTab);
-  if (!tabDef) return;
+  const title = overlay.querySelector('.upgrade-title');
+  if (title) title.textContent = 'UPGRADE DRAFT';
 
   const coins = state.coins || 0;
 
-  const upgradesSorted = [...tabDef.upgrades].filter(meetsRequirement).sort((a, b) => {
-    const ta = Math.max(0, state.upg?.[a.key] || 0);
-    const tb = Math.max(0, state.upg?.[b.key] || 0);
-    const ma = a.costs.length;
-    const mb = b.costs.length;
-    const ca = ta >= ma ? Number.POSITIVE_INFINITY : (a.costs[ta] ?? Number.POSITIVE_INFINITY);
-    const cb = tb >= mb ? Number.POSITIVE_INFINITY : (b.costs[tb] ?? Number.POSITIVE_INFINITY);
-    if (ca !== cb) return ca - cb;
-    return (a.name || '').localeCompare(b.name || '');
-  });
+  if (!_shopDraft.length) {
+    const empty = document.createElement('div');
+    empty.className = 'shop-draft-card spent';
+    empty.innerHTML = `
+      <div class="shop-draft-copy">
+        <div class="upg-name">NO ELIGIBLE UPGRADES</div>
+        <div class="shop-draft-sub">Everything currently available is already maxed or locked by your current loadout.</div>
+      </div>`;
+    list.appendChild(empty);
+  }
 
-  upgradesSorted.forEach(upg => {
+  _shopDraft.forEach(entry => {
+    const upg = getUpgradeDef(entry.key);
+    if (!upg) return;
+
     const currentTier = Math.max(0, state.upg?.[upg.key] || 0);
-    const maxTier     = upg.costs.length;
-    const isMaxed     = currentTier >= maxTier;
-    const nextCost    = isMaxed ? 0 : upg.costs[currentTier];
-    const canAfford   = coins >= nextCost;
+    const maxTier = upg.costs.length;
+    const rolledTier = entry.offeredTier;
+    const nextCost = rolledTier <= maxTier ? (upg.costs[rolledTier - 1] ?? 0) : 0;
+    const canAfford = coins >= nextCost;
+    const isMaxed = currentTier >= maxTier;
+    const boughtThisShop = !!entry.purchased;
 
-    const row = document.createElement('div');
-    row.className = 'upgrade-row' +
-      (isMaxed ? ' is-maxed' : (!canAfford ? ' cannot-afford' : ''));
+    const card = document.createElement('div');
+    card.className = 'shop-draft-card' + (boughtThisShop ? ' spent' : '');
 
-    // Left side
     const left = document.createElement('div');
-    left.style.flex = '1';
+    left.className = 'shop-draft-copy';
+
+    const head = document.createElement('div');
+    head.className = 'shop-draft-head';
 
     const nameEl = document.createElement('div');
     nameEl.className = 'upg-name';
-    nameEl.innerHTML = upg.name;
-    if (currentTier > 0) {
-      const tierBadge = document.createElement('span');
-      tierBadge.className = 'upg-tier';
-      tierBadge.textContent = `[${currentTier}/${maxTier}]`;
-      nameEl.appendChild(tierBadge);
-    }
+    nameEl.textContent = upg.name;
+
+    const tierEl = document.createElement('div');
+    tierEl.className = 'shop-draft-tier';
+    tierEl.textContent = `Tier ${Math.min(rolledTier, maxTier)} / ${maxTier}`;
+
+    head.appendChild(nameEl);
+    head.appendChild(tierEl);
 
     const descEl = document.createElement('div');
-    descEl.className = 'upg-meta';
-    if (isMaxed) {
-      descEl.textContent = 'Maxed';
-      descEl.style.color = '#00ff66aa';
+    descEl.className = 'shop-draft-sub';
+    descEl.textContent = isMaxed ? 'Maxed' : upg.desc(Math.min(rolledTier, maxTier));
+
+    const stateEl = document.createElement('div');
+    stateEl.className = 'shop-draft-state';
+    if (boughtThisShop) {
+      stateEl.classList.add('ok');
+      stateEl.textContent = `Tier ${Math.min(rolledTier, maxTier)} acquired · next tier can appear in a future shop`;
+    } else if (isMaxed) {
+      stateEl.classList.add('ok');
+      stateEl.textContent = 'Already maxed';
+    } else if (!canAfford) {
+      stateEl.classList.add('locked');
+      stateEl.textContent = 'Not enough coins for this draft pick';
     } else {
-      descEl.textContent = upg.desc(currentTier + 1);
+      stateEl.textContent = 'Available this shop only';
     }
 
-    left.appendChild(nameEl);
+    left.appendChild(head);
     left.appendChild(descEl);
+    left.appendChild(stateEl);
 
-    // Tier pip track
     if (maxTier > 1) {
       const pips = document.createElement('div');
-      pips.className = 'upg-tiers';
+      pips.className = 'shop-draft-tiers';
       for (let i = 0; i < maxTier; i++) {
         const pip = document.createElement('div');
-        pip.className = 'upg-pip' + (i < currentTier ? (isMaxed ? ' maxed' : ' filled') : '');
+        let cls = 'shop-draft-pip';
+        if (i < currentTier) cls += isMaxed ? ' maxed' : ' filled';
+        pip.className = cls;
         pips.appendChild(pip);
       }
       left.appendChild(pips);
     }
 
-    // Curse warning
     if (upg.key === 'curse' && currentTier > 0) {
       const warn = document.createElement('div');
       warn.className = 'curse-warning';
@@ -562,48 +603,54 @@ function renderShop() {
       left.appendChild(warn);
     }
 
-    // Buy button
     const btn = document.createElement('button');
-    btn.className = 'upg-buy' + (isMaxed ? ' owned' : '');
-    btn.disabled  = isMaxed || !canAfford;
+    btn.className = 'upg-buy' + ((boughtThisShop || isMaxed) ? ' owned' : '');
+    btn.disabled = boughtThisShop || isMaxed || !canAfford;
 
-    if (isMaxed) {
+    if (boughtThisShop) {
+      btn.textContent = 'BOUGHT';
+    } else if (isMaxed) {
       btn.textContent = 'MAXED';
     } else {
       const label = document.createElement('span');
       label.textContent = canAfford ? 'BUY' : 'NEED';
-
       const pill = document.createElement('span');
       pill.className = 'upgrade-coins';
       const costEl = document.createElement('span');
       costEl.textContent = String(nextCost);
       pill.appendChild(costEl);
-btn.appendChild(label);
+      btn.appendChild(label);
       btn.appendChild(pill);
     }
 
     btn.addEventListener('click', () => {
-      if (btn.disabled) return;
-      const c = state.coins || 0;
-      if (c < nextCost) return;
+      if (btn.disabled || !upg) return;
+      if ((state.coins || 0) < nextCost) return;
 
       state.coins -= nextCost;
-      state.upg[upg.key] = currentTier + 1;
+      state.upg[upg.key] = Math.max(state.upg?.[upg.key] || 0, rolledTier);
+      entry.purchased = true;
 
-      applyUpgradeEffect(upg.key, currentTier + 1);
+      applyUpgradeEffect(upg.key, rolledTier);
       playSound?.('purchase', 0.8);
-
 
       try { updateStatsPanel(); } catch {}
       updateCoinsUI();
       renderShop();
-  updateStatsPanel();
     });
 
-    row.appendChild(left);
-    row.appendChild(btn);
-    list.appendChild(row);
+    card.appendChild(left);
+    card.appendChild(btn);
+    list.appendChild(card);
   });
+
+  const note = document.createElement('div');
+  note.className = 'shop-draft-footer';
+  const chancePct = Math.round((_bonusOptionChance || 0) * 100);
+  note.innerHTML = _bonusOptionGranted
+    ? `<strong>Luck revealed a 4th option in this shop.</strong> Future shop chance: ${chancePct}% (Luck: ${Math.round(getLuck())}).`
+    : `<strong>Luck can reveal a 4th option.</strong> Current chance: ${chancePct}% (Luck: ${Math.round(getLuck())}).`;
+  list.appendChild(note);
 
   try { updateStatsPanel(); } catch {}
 }
@@ -630,6 +677,7 @@ export function openUpgradeShop(level, onClose) {
   try { initHudCoin('upgrade-coin-canvas'); } catch {}
 
   updateCoinsUI();
+  rollShopDraft();
   renderShop();
   updateStatsPanel();
 
@@ -654,6 +702,7 @@ export function closeUpgradeShopIfOpen() {
 
   overlay.classList.remove('show');
   overlay.setAttribute('aria-hidden', 'true');
+  _shopDraft = [];
 
   state.upgradeOpen = false;
   state.paused      = false;
@@ -685,11 +734,8 @@ function pickChestItems(count, chestTier) {
   // Max shop tier offered per chest tier (design doc Section 10)
   const tierCap = { standard: 2, rare: 4, epic: 5 }[chestTier] || 2;
 
-  // Candidates: upgrades that have a next tier to purchase and are within the tier cap
-  const candidates = ALL_UPGRADES.filter(upg => {
-    const cur = state.upg?.[upg.key] || 0;
-    return cur < upg.costs.length && (cur + 1) <= tierCap;
-  });
+  // Candidates: upgrades that have a next tier to purchase, respect loadout filters, and are within the tier cap
+  const candidates = getCandidateUpgrades({ tierCap });
 
   if (!candidates.length) return []; // all maxed → coin payout handled by caller
 
