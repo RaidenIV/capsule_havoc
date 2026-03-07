@@ -78,17 +78,9 @@ export function updateActiveEffects(worldDelta){
   // Abilities (Time Slow) already use state.slowTimer/state.slowScale in loop.js.
   if ((e.clock || 0) > 0) {
     // 15% slow; if player uses Time Slow concurrently, the slower wins.
-    const clockScale = 0.85;
+    const clockScale = 0.15;
     state.worldScale = Math.min(state.worldScale || 1.0, clockScale);
   }
-}
-
-
-export function getActiveWorldScale(){
-  initActiveEffects();
-  const abilityScale = (state.slowTimer || 0) > 0 ? (state.slowScale || 0.5) : 1.0;
-  const clockScale = (state.effects?.clock || 0) > 0 ? 0.85 : 1.0;
-  return Math.min(abilityScale, clockScale);
 }
 
 export function getDamageMultiplier(){
@@ -109,4 +101,12 @@ export function getXPMultiplier(){
 export function isInvincible(){
   initActiveEffects();
   return (state.effects.invincibility || 0) > 0 || !!state.invincible || !!state.dashInvincible || (state.reviveIFrames || 0) > 0;
+}
+
+
+export function getActiveWorldScale(){
+  initActiveEffects();
+  const abilityScale = (state.slowTimer || 0) > 0 ? (state.slowScale || 0.5) : 1.0;
+  const clockScale = (state.effects?.clock || 0) > 0 ? 0.15 : 1.0;
+  return Math.min(abilityScale, clockScale);
 }

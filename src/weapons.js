@@ -3,7 +3,7 @@ import * as THREE from 'three';
 import { scene } from './renderer.js';
 import { state } from './state.js';
 import {
-  BULLET_SPEED, BULLET_LIFETIME, ENEMY_BULLET_DMG, WEAPON_CONFIG,
+  BULLET_SPEED, BULLET_LIFETIME, ENEMY_BULLET_DMG,
 } from './constants.js';
 import { bulletGeo, bulletMat, bulletGeoParams, floorY } from './materials.js';
 import { playerGroup, updateHealthBar, hasShieldBubble, SHIELD_RADIUS, PLAYER_BODY_RADIUS } from './player.js';
@@ -51,19 +51,12 @@ function _makeOrbitVisual(color) {
 }
 
 function getOrbitRingDefsFromTier(tier) {
-  const C  = WEAPON_CONFIG;
-  const ring = (lv, flip = false) => ({
-    count: C[lv][3], radius: C[lv][4], speed: C[lv][5] * (flip ? -1 : 1), color: C[lv][6],
-  });
-
   const t = Math.max(0, tier | 0);
   if (t <= 0) return [];
-  if (t === 1) return [ring(2)];
-  if (t === 2) return [ring(3)];
-  if (t === 3) return [ring(4)];
-  if (t === 4) return [ring(5), ring(3, true)];
-  // t >= 5
-  return [ring(6), ring(4, true)];
+  const count = [0, 2, 3, 4, 5, 6][Math.min(t, 5)] || 0;
+  const radius = 1.9 + Math.max(0, state.upg?.orbitRange || 0) * 0.22;
+  const speedBase = 1.7 + Math.max(0, state.upg?.orbitSpeed || 0) * 0.20;
+  return [{ count, radius, speed: speedBase, color: 0x00eeff }];
 }
 
 export function destroyOrbitBullets() {
@@ -134,31 +127,40 @@ function _makePlayerLaserVisual() {
 
 export function shootBulletWave() {
   const dirs = getWaveBullets();
+  if (dirs <= 0) return;
   const dmg  = getBulletDamage();
   const psTier = Math.max(0, state.upg?.projSpeed || 0);
   const speed  = BULLET_SPEED * (1 + 0.20 * psTier);
   const pierce = Math.max(0, state.upg?.piercing || 0);
-  const msTier = Math.max(0, (state.upg?.multishot ?? state.upg?.multiShot ?? state.upg?.multishots ?? 0)); // adds pellets per direction
-  const pellets = 1 + msTier;
-  playSound('shoot', 0.45, 0.92 + Math.random() * 0.16); // slight pitch variation
+  const msTier = Math.max(0, (state.upg?.multishot ?? 0));
+  const bursts = msTier >= 2 ? 3 : (msTier >= 1 ? 2 : 1);
+  const burstSpacing = 0.075;
+  const rangeTier = Math.max(0, state.upg?.laserRange || 0);
+  const bulletLife = BULLET_LIFETIME * (1 + 0.22 * rangeTier);
+  const laserTier = Math.max(0, state.upg?.laserFire || state.weaponTier || 0);
+  const rotating = laserTier >= 5;
+  playSound('shoot', 0.45, 0.92 + Math.random() * 0.16);
   for (let i = 0; i < dirs; i++) {
     const baseAng = state.bulletWaveAngle + (i / Math.max(1, dirs)) * Math.PI * 2;
-    for (let p = 0; p < pellets; p++) {
-      const spread = (pellets === 1) ? 0 : (p - (pellets - 1) / 2) * 0.10; // small arc spread
-      const angle = baseAng + spread;
-      const vx = Math.cos(angle) * speed;
-      const vz = Math.sin(angle) * speed;
-      // White core + glow (bloom)
-      const obj = _makePlayerLaserVisual();
-      _bulletDir.set(vx, 0, vz).normalize();
-      _bulletQ.setFromUnitVectors(_bulletUp, _bulletDir);
-      obj.quaternion.copy(_bulletQ);
-      obj.position.copy(playerGroup.position);
-      obj.position.y = floorY(bulletGeoParams);
-      scene.add(obj);
-      state.bullets.push({ obj, vx, vz, life: BULLET_LIFETIME, dmg, pierceLeft: pierce });
+    for (let b = 0; b < bursts; b++) {
+      const delay = b * burstSpacing;
+      const spawnShot = () => {
+        const vx = Math.cos(baseAng) * speed;
+        const vz = Math.sin(baseAng) * speed;
+        const obj = _makePlayerLaserVisual();
+        _bulletDir.set(vx, 0, vz).normalize();
+        _bulletQ.setFromUnitVectors(_bulletUp, _bulletDir);
+        obj.quaternion.copy(_bulletQ);
+        obj.position.copy(playerGroup.position);
+        obj.position.y = floorY(bulletGeoParams);
+        scene.add(obj);
+        state.bullets.push({ obj, vx, vz, life: bulletLife, dmg, pierceLeft: pierce });
+      };
+      if (delay <= 0) spawnShot();
+      else setTimeout(() => { if (!state.paused && !state.gameOver) spawnShot(); }, delay * 1000);
     }
   }
+  if (rotating) state.bulletWaveAngle = (state.bulletWaveAngle + (Math.PI / Math.max(1, dirs))) % (Math.PI * 2);
 }
 
 // ── Update player bullets ─────────────────────────────────────────────────────
@@ -298,7 +300,8 @@ export function updateEnemyBullets(worldDelta) {
 // ── Update orbit bullets ──────────────────────────────────────────────────────
 export function updateOrbitBullets(worldDelta) {
   const y    = floorY(bulletGeoParams);
-  const dmg  = getBulletDamage();
+  const orbitDmgTier = Math.max(0, state.upg?.orbitDamage || 0);
+  const dmg  = Math.max(1, Math.round(getBulletDamage() * (1 + 0.10 * orbitDmgTier)));
   const hr2  = 0.75 * 0.75;
 
   for (let ri = 0; ri < state.orbitRings.length; ri++) {
@@ -342,15 +345,145 @@ export function updateOrbitBullets(worldDelta) {
 }
 
 
+function _getNearestEnemy(maxRange = Infinity) {
+  let best = null;
+  let bestD2 = maxRange * maxRange;
+  for (const e of state.enemies) {
+    if (!e || e.dead) continue;
+    const dx = e.grp.position.x - playerGroup.position.x;
+    const dz = e.grp.position.z - playerGroup.position.z;
+    const d2 = dx * dx + dz * dz;
+    if (d2 < bestD2) { bestD2 = d2; best = e; }
+  }
+  return best;
+}
+
+function _makeTargetedShotVisual() {
+  return _makePlayerLaserVisual();
+}
+
+function _spawnLightningFx(pos) {
+  if (!state.lightningFx) state.lightningFx = [];
+  const geo = new THREE.CylinderGeometry(0.05, 0.14, 4.8, 6);
+  const mat = new THREE.MeshBasicMaterial({ color: 0xd8f7ff, transparent: true, opacity: 0.9, depthWrite: false });
+  const mesh = new THREE.Mesh(geo, mat);
+  mesh.position.set(pos.x, 2.4, pos.z);
+  mesh.layers.enable(1);
+  scene.add(mesh);
+  state.lightningFx.push({ mesh, geo, mat, life: 0.12, maxLife: 0.12 });
+}
+
+function _updateTargetedShots(worldDelta) {
+  if (!Array.isArray(state.targetedShots)) state.targetedShots = [];
+  for (let i = state.targetedShots.length - 1; i >= 0; i--) {
+    const b = state.targetedShots[i];
+    b.life -= worldDelta;
+    b.obj.position.x += b.vx * worldDelta;
+    b.obj.position.z += b.vz * worldDelta;
+    if (b.life <= 0) { scene.remove(b.obj); state.targetedShots.splice(i, 1); continue; }
+    let hit = false;
+    for (let j = state.enemies.length - 1; j >= 0; j--) {
+      const e = state.enemies[j]; if (!e || e.dead) continue;
+      const dx = b.obj.position.x - e.grp.position.x;
+      const dz = b.obj.position.z - e.grp.position.z;
+      if (dx*dx + dz*dz < 0.78 * 0.78) {
+        applyEnemyDamage(e, b.dmg);
+        spawnEnemyDamageNum(b.dmg, e);
+        updateEliteBar(e);
+        if (e.hp <= 0) killEnemy(j);
+        scene.remove(b.obj);
+        state.targetedShots.splice(i, 1);
+        hit = true;
+        break;
+      }
+    }
+    if (hit) continue;
+  }
+}
+
+function _updateLightningFx(worldDelta) {
+  if (!Array.isArray(state.lightningFx)) state.lightningFx = [];
+  for (let i = state.lightningFx.length - 1; i >= 0; i--) {
+    const fx = state.lightningFx[i];
+    fx.life -= worldDelta;
+    if (fx.life <= 0) {
+      scene.remove(fx.mesh); fx.geo.dispose(); fx.mat.dispose(); state.lightningFx.splice(i, 1); continue;
+    }
+    fx.mat.opacity = Math.max(0, fx.life / fx.maxLife);
+  }
+}
+
+export function updateSecondaryWeapons(worldDelta) {
+  _updateTargetedShots(worldDelta);
+  _updateLightningFx(worldDelta);
+
+  const tfTier = Math.max(0, state.upg?.targetedFire || 0);
+  if (tfTier > 0) {
+    state.targetedShotTimer = Math.max(0, (state.targetedShotTimer || 0) - worldDelta);
+    if (state.targetedShotTimer <= 0) {
+      const baseCdMult = [1.0, 1.0, 0.90, 0.80, 0.70, 0.60][Math.min(tfTier, 5)] || 1.0;
+      const extraCdMult = Math.pow(0.90, Math.max(0, state.upg?.targetedCooldown || 0));
+      const baseRangeMult = [1.0, 1.0, 1.0, 1.10, 1.10, 1.20][Math.min(tfTier, 5)] || 1.0;
+      const extraRangeMult = Math.pow(1.10, Math.max(0, state.upg?.targetedRange || 0));
+      const maxRange = 10.0 * baseRangeMult * extraRangeMult;
+      const target = _getNearestEnemy(maxRange);
+      const cd = Math.max(0.18, 1.4 * baseCdMult * extraCdMult);
+      state.targetedShotTimer = cd;
+      if (target) {
+        const dmg = Math.max(1, Math.round(getBulletDamage() * (1 + 0.10 * Math.max(0, state.upg?.targetedDamage || 0))));
+        const obj = _makeTargetedShotVisual();
+        const dx = target.grp.position.x - playerGroup.position.x;
+        const dz = target.grp.position.z - playerGroup.position.z;
+        const dir = new THREE.Vector3(dx, 0, dz).normalize();
+        const speed = BULLET_SPEED * 2.2;
+        _bulletQ.setFromUnitVectors(_bulletUp, dir);
+        obj.quaternion.copy(_bulletQ);
+        obj.position.copy(playerGroup.position);
+        obj.position.y = floorY(bulletGeoParams);
+        scene.add(obj);
+        state.targetedShots.push({ obj, vx: dir.x * speed, vz: dir.z * speed, life: maxRange / speed + 0.15, dmg });
+      }
+    }
+  }
+
+  const ltTier = Math.max(0, state.upg?.lightning || 0);
+  if (ltTier > 0) {
+    state.lightningTimer = Math.max(0, (state.lightningTimer || 0) - worldDelta);
+    if (state.lightningTimer <= 0) {
+      const cd = Math.max(0.25, 2.4 * Math.pow(0.90, Math.max(0, state.upg?.lightningCooldown || 0)));
+      state.lightningTimer = cd;
+      const strikes = Math.min(5, ltTier);
+      const dmg = Math.max(1, Math.round(getBulletDamage() * (1 + 0.10 * Math.max(0, state.upg?.lightningDamage || 0)) * 1.15));
+      const pool = state.enemies.filter(e => e && !e.dead).slice();
+      pool.sort((a, b) => {
+        const adx = a.grp.position.x - playerGroup.position.x; const adz = a.grp.position.z - playerGroup.position.z;
+        const bdx = b.grp.position.x - playerGroup.position.x; const bdz = b.grp.position.z - playerGroup.position.z;
+        return (adx*adx + adz*adz) - (bdx*bdx + bdz*bdz);
+      });
+      for (const e of pool.slice(0, strikes)) {
+        applyEnemyDamage(e, dmg);
+        spawnEnemyDamageNum(dmg, e);
+        _spawnLightningFx(e.grp.position);
+        updateEliteBar(e);
+        if (e.hp <= 0) {
+          const idx = state.enemies.indexOf(e);
+          if (idx >= 0) killEnemy(idx);
+        }
+      }
+    }
+  }
+}
+
+
 // ═══════════════════════════════════════════════════════════════════════════════
-//  180° FRONT SLASH
+//  360° SPIN-SLASH
 // ═══════════════════════════════════════════════════════════════════════════════
 
-const S_RANGE   = 3.75;
+const S_RANGE   = 5.0;
 const S_INNER   = 1.0;
 const S_RX      = 1.00;
 const S_RZ      = 1.00;
-const S_SWEEP   = Math.PI;
+const S_SWEEP   = Math.PI * 2.0;
 const S_SWING_T = 0.16;
 const S_FADE_T  = 0.14;
 const S_Y       = 1.0;
@@ -423,57 +556,12 @@ function _buildEllipseArc(innerR, outerR, rx, rz, startA, sweepA, segs = 120) {
   return g;
 }
 
-function _normAng(a) {
-  while (a > Math.PI) a -= Math.PI * 2;
-  while (a < -Math.PI) a += Math.PI * 2;
-  return a;
-}
-
-function _angDelta(a, b) {
-  return Math.abs(_normAng(a - b));
-}
-
-function _getSlashAimAngle() {
-  const vx = Number.isFinite(state.playerVel?.x) ? state.playerVel.x : 0;
-  const vz = Number.isFinite(state.playerVel?.z) ? state.playerVel.z : 0;
-  if (vx * vx + vz * vz > 1e-4) return Math.atan2(vz, vx);
-  const lx = Number.isFinite(state.lastMoveX) ? state.lastMoveX : 1;
-  const lz = Number.isFinite(state.lastMoveZ) ? state.lastMoveZ : 0;
-  return Math.atan2(lz, lx);
-}
-
-
-function getSlashTier() {
-  return Math.max(0, state.upg?.slash || 0);
-}
-
-function getSlashRange() {
-  const tier = getSlashTier();
-  return S_RANGE * (1 + 0.05 * Math.max(0, tier - 1));
-}
-
-function getSlashInterval() {
-  const tier = getSlashTier();
-  if (tier <= 0) return Infinity;
-  return Math.max(0.35, 1.0 * Math.pow(0.92, Math.max(0, tier - 1)));
-}
-
-function getSlashDamage() {
-  const tier = getSlashTier();
-  const slashBase = Math.max(1, getBulletDamage());
-  const tierMult = 1 + 0.20 * Math.max(0, tier - 1);
-  return Math.max(1, Math.round(slashBase * 1.8 * tierMult));
-}
-
-function _spinDamage(px, pz, range, dmg, centerA, halfArc) {
+function _spinDamage(px, pz, range, dmg) {
   for (let j = state.enemies.length - 1; j >= 0; j--) {
     const e = state.enemies[j];
     if (!e || e.dead) continue;
     const dx = e.grp.position.x - px, dz = e.grp.position.z - pz;
-    const dist2 = dx*dx + dz*dz;
-    if (dist2 > range*range) continue;
-    const ang = Math.atan2(dz, dx);
-    if (_angDelta(ang, centerA) > halfArc) continue;
+    if (dx*dx + dz*dz > range*range) continue;
     applyEnemyDamage(e, dmg);
     spawnEnemyDamageNum(dmg, e);
     e.staggerTimer = 0.12;
@@ -488,16 +576,14 @@ function _spinDamage(px, pz, range, dmg, centerA, halfArc) {
 }
 
 export function performSlash() {
-  if (getSlashTier() <= 0 && state.characterPrimaryWeapon === 'slash') return;
   if (!state.slashEffects) state.slashEffects = [];
   if (state.slashEffects.length > 8) return;
 
-  state._sf = ((state._sf | 0) + 1) & 1;
-  const centerA = _getSlashAimAngle();
-  const startA = state._sf ? (centerA - S_SWEEP * 0.5) : (centerA + S_SWEEP * 0.5);
+  state._sf    = ((state._sf | 0) + 1) & 1;
+  const startA = Math.PI;
   const sweepA = state._sf ? S_SWEEP : -S_SWEEP;
 
-  const range = getSlashRange(), inner = S_INNER;
+  const range = S_RANGE, inner = S_INNER;
   const px = playerGroup.position.x;
   const pz = playerGroup.position.z;
   const y  = playerGroup.position.y + S_Y;
@@ -513,8 +599,9 @@ scene.add(arcMesh);
     // Slash damage uses the same damage pipeline as player projectiles
   // (base level damage + dmg upgrades + weapon tier multiplier + Double Damage effect).
   // Slash remains a bit stronger than a single projectile by design.
-  const dmg = getSlashDamage();
-  _spinDamage(px, pz, range, dmg, centerA, S_SWEEP * 0.5);
+  const slashBase = Math.max(1, getBulletDamage());
+  const dmg = Math.max(1, Math.round(slashBase * 1.8));
+  _spinDamage(px, pz, range, dmg);
   playSound('laser_sword', 0.72, 0.93 + Math.random() * 0.14);
 
   state.slashEffects.push({ arcMesh, arcGeo, arcMat, t: 0, startA, sweepA });

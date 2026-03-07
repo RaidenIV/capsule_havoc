@@ -193,25 +193,25 @@ export function restartGame(opts = {}) {
   state.dashStreaks.forEach(ds => { scene.remove(ds.mesh); ds.mat.dispose(); });
   state.dashStreaks.length = 0;
 
+  if (Array.isArray(state.targetedShots)) {
+    state.targetedShots.forEach(s => { try { scene.remove(s.obj); } catch {} });
+    state.targetedShots.length = 0;
+  }
+  if (Array.isArray(state.lightningFx)) {
+    state.lightningFx.forEach(fx => { try { scene.remove(fx.mesh); fx.geo?.dispose?.(); fx.mat?.dispose?.(); } catch {} });
+    state.lightningFx.length = 0;
+  }
+
   destroyOrbitBullets();
 
   playerGroup.position.set(0, 0, 0);
-  const selectedCharacter = state.selectedCharacter || null;
-  const primaryWeapon = state.characterPrimaryWeapon || (selectedCharacter === 'blue' ? 'laser' : selectedCharacter === 'red' ? 'slash' : null);
-  state.characterPrimaryWeapon = primaryWeapon;
-  state.basePlayerMaxHP = selectedCharacter === 'blue' ? Math.round(PLAYER_MAX_HP * 1.10) : PLAYER_MAX_HP;
-  state.basePlayerDamage = selectedCharacter === 'red' ? Math.round(10 * 1.10) : 10;
-  state.playerHP    = state.basePlayerMaxHP;
-  state.playerMaxHP = state.basePlayerMaxHP;
-  state.playerBaseDMG = state.basePlayerDamage;
+  state.playerHP    = PLAYER_MAX_HP;
+  state.playerMaxHP = PLAYER_MAX_HP;
   state.kills       = 0;
   state.elapsed     = 0;
   state.shootTimer  = 0;
-  state._slashTimer = 0;
   state.bulletWaveAngle = 0;
   state.dashTimer   = 0; state.dashCooldown = 0; state.dashGhostTimer = 0;
-  state.dashSpeed = 0;
-  state.hasDash = false;
   state.worldScale  = 1.0;
   state.contactDmgAccum = 0; state.contactDmgTimer = 0;
   state.spawnTickTimer  = 0;
@@ -219,27 +219,21 @@ export function restartGame(opts = {}) {
   state.playerLevel = 1;
   initSpawner();
   state.coins       = 0;
+  state.weaponTier  = 0; // lasers are upgrade-only; player starts with slash only
   state.pickupRangeLvl = 0;
   state.upg = {
-    laserFire: 0, slash: 0, orbit: 0,
-    dmg:0, fireRate:0, projSpeed:0, piercing:0, multishot:0,
+    laserFire:0, orbit:0,
+    dmg:0, fireRate:0, projSpeed:0, laserRange:0, piercing:0, multishot:0,
+    orbitDamage:0, orbitRange:0, orbitSpeed:0,
+    targetedFire:0, targetedDamage:0, targetedCooldown:0, targetedRange:0,
+    lightning:0, lightningDamage:0, lightningCooldown:0,
     moveSpeed:0, dash:0, magnet:0,
     shield:0, burst:0, timeSlow:0,
-    maxHealth:0, regen:0, xpGrowth:0, coinBonus:0, luck:0,
+    maxHealth:0, regen:0, xpGrowth:0, coinBonus:0, curse:0, luck:0,
   };
-  if (state.characterPrimaryWeapon === 'laser') {
-    state.upg.laserFire = 1;
-    state.weaponTier = 1;
-  } else if (state.characterPrimaryWeapon === 'slash') {
-    state.upg.slash = 1;
-    state.weaponTier = 0;
-  } else {
-    state.weaponTier = 0;
-  }
   state.luck = 0;
   state.bossLuck = 0;
   state.curseTier = 0;
-  state.chaosTimer = 0;
   state.shieldCharges = 0;
   state.shieldRecharge = 0;
   state.shieldHitCD = 0;
@@ -260,6 +254,10 @@ export function restartGame(opts = {}) {
     coinMagnet: 0,
   };
   state.effectsDur = {};
+  state.targetedShotTimer = 0;
+  state.lightningTimer = 0;
+  state.targetedShots = [];
+  state.lightningFx = [];
   state.bossLuck = 0;
   state.arenaPickups = [];
   state.pendingShop = false;

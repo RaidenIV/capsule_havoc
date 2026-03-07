@@ -1,6 +1,6 @@
 // ─── xp.js ───────────────────────────────────────────────────────────────────
 import { state } from './state.js';
-import { WEAPON_CONFIG, isBossLevel } from './constants.js';
+import { getPlayerMaxHPForLevel, isBossLevel } from './constants.js';
 import { expToNext } from './leveling.js';
 import { getDamageMultiplier, getXPMultiplier } from './activeEffects.js';
 
@@ -12,28 +12,27 @@ const xpCurElLegacy  = document.getElementById('xp-cur');
 const xpNextElLegacy = document.getElementById('xp-next');
 
 export function getWeaponConfig() {
-  const t = (state.weaponTier ?? 0);
-  if (t <= 0) return [9999, 0, 0, 0, 0, 0, 0];
-  const idx = Math.min(Math.max(t - 1, 0), WEAPON_CONFIG.length - 1);
-  return WEAPON_CONFIG[idx];
+  const t = Math.max(0, state.upg?.laserFire || state.weaponTier || 0);
+  const waveBullets = [0, 6, 6, 8, 10, 10][Math.min(t, 5)] || 0;
+  const orbitCount = [0, 2, 3, 4, 5, 6][Math.min(Math.max(0, state.upg?.orbit || 0), 5)] || 0;
+  const orbitRadius = 1.9 + Math.max(0, state.upg?.orbitRange || 0) * 0.22;
+  const orbitSpeed = 1.7 + Math.max(0, state.upg?.orbitSpeed || 0) * 0.20;
+  return [getFireInterval(), waveBullets, 1.0, orbitCount, orbitRadius, orbitSpeed, 0x00eeff];
 }
 export function getBulletDamage() {
   const base = state.playerBaseDMG || 10;
   const dmgTier = Math.max(0, state.upg?.dmg || 0);
-  const mult = 1 + 0.15 * dmgTier;
-  const tierMult = getWeaponConfig()[2] || 1;
+  const mult = 1 + 0.10 * dmgTier;
   const eff = getDamageMultiplier();
-  return Math.round(base * mult * tierMult * eff);
+  return Math.round(base * mult * eff);
 }
 export function getFireInterval() {
-  const base = getWeaponConfig()[0] || 0.85;
-  const frTier = Math.max(0, state.upg?.fireRate || 0);
-  const mult = Math.pow(0.90, frTier); // -10% per tier
-  return Math.max(0.06, base * mult);
+  const laserTier = Math.max(0, state.upg?.laserFire || state.weaponTier || 0);
+  return laserTier > 0 ? 1.0 : 9999;
 }
 export function getWaveBullets()  {
-  // Base wave count comes from weapon tier config; multishot handled in weapons.js as additional pellets.
-  return getWeaponConfig()[1] || 0;
+  const t = Math.max(0, state.upg?.laserFire || state.weaponTier || 0);
+  return [0, 6, 6, 8, 10, 10][Math.min(t, 5)] || 0;
 }
 
 function syncXPUI() {
@@ -52,10 +51,10 @@ function syncXPUI() {
 }
 
 export function updateXP(amount) {
-  // XP Growth (+15% per tier) + Chaos (+10% per tier while active)
+  // XP Growth (+15% per tier) + Curse (+10% per tier)
   const growthTier = Math.max(0, state.upg?.xpGrowth || 0);
-  const chaosTier = (state.chaosTimer || 0) > 0 ? Math.max(0, state.curseTier || 0) : 0;
-  const mult = (1 + 0.15 * growthTier) * (1 + 0.10 * chaosTier) * getXPMultiplier();
+  const curseTier = Math.max(0, state.upg?.curse || 0);
+  const mult = (1 + 0.15 * growthTier) * (1 + 0.10 * curseTier) * getXPMultiplier();
   const add = Math.max(0, Math.floor((amount || 0) * mult));
   if (!Number.isFinite(add) || add <= 0) { syncXPUI(); return; }
 
@@ -73,10 +72,18 @@ export function updateXP(amount) {
     const prevLevel = state.playerLevel;
     state.playerLevel++;
 
-    // No automatic stat scaling on level-up. All stat growth now comes from the shop.
-    state.playerMaxHP = Math.max(1, state.playerMaxHP || state.basePlayerMaxHP || 100);
-    state.playerHP = Math.min(state.playerHP || state.playerMaxHP, state.playerMaxHP);
-    state.playerBaseDMG = Math.max(1, state.playerBaseDMG || state.basePlayerDamage || 10);
+    // Player HP scaling (design doc) + Max Health upgrade
+    const prevMax = state.playerMaxHP || getPlayerMaxHPForLevel(prevLevel);
+    const newBase  = getPlayerMaxHPForLevel(state.playerLevel);
+    const hpTier = Math.max(0, state.upg?.maxHealth || 0);
+    const newMax  = Math.round(newBase * (1 + 0.10 * hpTier));
+    const pct = prevMax > 0 ? (state.playerHP / prevMax) : 1;
+    state.playerMaxHP = newMax;
+    state.playerHP = Math.max(1, pct * newMax);
+
+    // Base damage scaling (Section 6: DMG(L) = 10 + floor((L-1)² / 50))
+    // Quadratic — reaches 204 DMG at level 100 vs 10 at level 1.
+    state.playerBaseDMG = 10 + Math.floor(Math.pow(Math.max(0, state.playerLevel - 1), 2) / 50);
 
     // Shop after every level up (but avoid interrupting boss waves)
     if (!isBossLevel(state.playerLevel)) state.pendingShop = true;

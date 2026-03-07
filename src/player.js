@@ -3,7 +3,6 @@ import * as THREE from 'three';
 import { CSS2DObject } from 'three/addons/renderers/CSS2DRenderer.js';
 import { scene, ISO_FWD, ISO_RIGHT } from './renderer.js';
 import { state } from './state.js';
-import { getActiveWorldScale } from './activeEffects.js';
 import {
   PLAYER_SPEED, DASH_SPEED, DASH_DURATION, DASH_COOLDOWN,
   DASH_SLOW_SCALE, SLOW_SNAP_RATE, SLOW_RECOVER_RATE, PLAYER_MAX_HP,
@@ -25,7 +24,6 @@ playerGroup.add(playerMesh);
 // A subtle green halo on the bloom layer when shieldCharges > 0.
 export const PLAYER_BODY_RADIUS = 0.6;
 export const SHIELD_RADIUS = 1.5;
-export const ARMOR_RADIUS = SHIELD_RADIUS;
 const _shieldGlowGeo = new THREE.SphereGeometry(SHIELD_RADIUS, 18, 14);
 const _shieldGlowMat = new THREE.MeshBasicMaterial({
   color: 0x42f578,
@@ -43,13 +41,9 @@ export function hasShieldBubble() {
   return (state.shieldCharges || 0) > 0;
 }
 
-export function hasArmorBubble() {
-  return (state.armorHits || 0) > 0;
-}
-
 // ── Armor active indicator (green bloom) ────────────────────────────────────
 // A green halo on the bloom layer when armorHits > 0.
-const _armorGlowGeo = new THREE.SphereGeometry(ARMOR_RADIUS, 18, 14);
+const _armorGlowGeo = new THREE.SphereGeometry(SHIELD_RADIUS, 18, 14);
 const _armorGlowMat = new THREE.MeshBasicMaterial({
   color: 0x42f578,
   transparent: true,
@@ -137,10 +131,10 @@ let _glowTime = 0;
 
 export function updatePlayer(delta, worldScale) {
   _glowTime += delta;
-  const abilitySlowTarget = state.slowTimer > 0 ? (state.slowScale || 0.5) : 1.0;
-  const pickupSlowTarget = getActiveWorldScale();
-  const combinedSlowTarget = Math.min(abilitySlowTarget, pickupSlowTarget);
-  const wsTarget = state.dashTimer > 0 ? Math.min(DASH_SLOW_SCALE, combinedSlowTarget) : combinedSlowTarget;
+  const abilitySlow = state.slowTimer > 0 ? (state.slowScale || 0.5) : 1.0;
+  const pickupSlow = (state.effects?.clock || 0) > 0 ? 0.15 : 1.0;
+  const slowTarget = Math.min(abilitySlow, pickupSlow);
+  const wsTarget = state.dashTimer > 0 ? Math.min(DASH_SLOW_SCALE, slowTarget) : slowTarget;
   const wsRate   = wsTarget < worldScale ? SLOW_SNAP_RATE : SLOW_RECOVER_RATE;
   state.worldScale += (wsTarget - state.worldScale) * Math.min(1, wsRate * delta);
 
@@ -169,9 +163,8 @@ export function updatePlayer(delta, worldScale) {
   // Dash (player stays at full speed — world slows around them)
   if (state.dashTimer > 0) {
     state.dashTimer -= delta;
-    const dashSpeed = Number.isFinite(state.dashSpeed) && state.dashSpeed > 0 ? state.dashSpeed : (DASH_SPEED * 0.5);
-    playerGroup.position.x += state.dashVX * dashSpeed * delta;
-    playerGroup.position.z += state.dashVZ * dashSpeed * delta;
+    playerGroup.position.x += state.dashVX * DASH_SPEED * delta;
+    playerGroup.position.z += state.dashVZ * DASH_SPEED * delta;
     state.playerVel = { x: state.dashVX, z: state.dashVZ };
     playerMesh.rotation.z = state.dashVX * -0.4;
     state.dashGhostTimer -= delta;

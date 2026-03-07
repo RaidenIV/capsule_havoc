@@ -53,7 +53,6 @@ export const state = {
   // ── Meta stats (design doc) ───────────────────────────────────────────────
   luck: 0,
   curseTier: 0,
-  chaosTimer: 0,
 
   // ── Player ───────────────────────────────────────────────────────────────────
   playerMaxHP: 100,
@@ -61,12 +60,8 @@ export const state = {
   playerXP:    0,
   playerLevel: 0,
 
-  // Base stats are character-defined; upgrades modify from these values only.
+  // Cached base damage from level (Section 6)
   playerBaseDMG: 10,
-  basePlayerMaxHP: 100,
-  basePlayerDamage: 10,
-  selectedCharacter: null,
-  characterPrimaryWeapon: null,
 
   // ── Shoot timing ────────────────────────────────────────────────────────────
   shootTimer:      0,
@@ -90,14 +85,26 @@ export const state = {
   upg: {
     // Weapons
     laserFire: 0,     // 0..5 (unlocks / tiers player lasers)
-    slash: 0,         // 0..5 (slash weapon tiers)
     orbit: 0,         // 0..5 (orbit weapon tiers)
 
     dmg: 0,           // 0..5
     fireRate: 0,      // 0..5
-    projSpeed: 0,     // 0..4
-    piercing: 0,      // 0..3
-    multishot: 0,     // 0..3
+    projSpeed: 0,     // 0..5
+    laserRange: 0,    // 0..5
+    piercing: 0,      // 0..5
+    multishot: 0,     // 0..2
+
+    // Secondary weapons
+    orbitDamage: 0,   // 0..5
+    orbitRange: 0,    // 0..5
+    orbitSpeed: 0,    // 0..5
+    targetedFire: 0,  // 0..5
+    targetedDamage: 0,// 0..5
+    targetedCooldown: 0,// 0..5
+    targetedRange: 0, // 0..5
+    lightning: 0,     // 0..5
+    lightningDamage: 0,// 0..5
+    lightningCooldown: 0,// 0..5
 
     // Movement
     moveSpeed: 0,     // 0..5
@@ -114,6 +121,7 @@ export const state = {
     regen: 0,         // 0..4
     xpGrowth: 0,      // 0..4
     coinBonus: 0,     // 0..3
+    curse: 0,         // 0..3
     luck: 0,          // 0..3
   },
 
@@ -127,6 +135,12 @@ export const state = {
   slowTimer: 0,
   slowScale: 0.5,
   slowRequested: false,
+
+  // Secondary weapon timers / visuals
+  targetedShotTimer: 0,
+  lightningTimer: 0,
+  targetedShots: [],
+  lightningFx: [],
 
   // Arena pickup entities (clock, black hole, etc.)
   arenaPickups: [],
