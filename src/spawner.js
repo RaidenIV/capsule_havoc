@@ -104,8 +104,13 @@ function countType(type) {
   for (let i = 0; i < state.enemies.length; i++) {
     const e = state.enemies[i];
     if (!e || e.dead) continue;
-    if (type === ENEMY_TYPE.BOSS) { if (e.isBoss) n++; }
-    else if (e.type === type) { n++; }
+
+    const liveType = e.enemyType ?? e.type ?? null;
+    if (type === ENEMY_TYPE.BOSS) {
+      if (e.isBoss || liveType === ENEMY_TYPE.BOSS) n++;
+    } else if (!e.isBoss && liveType === type) {
+      n++;
+    }
   }
   return n;
 }
