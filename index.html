@@ -35,6 +35,7 @@
 <div id="menu-screen" class="menu-screen show">
 
   <!-- background layers -->
+  <canvas id="menu-particles" aria-hidden="true"></canvas>
   <div class="menu-bg-vignette"></div>
   <div class="menu-orb menu-orb-1"></div>
   <div class="menu-orb menu-orb-2"></div>
@@ -44,6 +45,7 @@
 
     <!-- Branding -->
     <div class="menu-brand">
+      <div class="menu-eyebrow">BULLET HEAVEN</div>
       <h1 class="menu-title">CAPSULE<br>HAVOC</h1>
       <div class="menu-tagline">Survive. Level up. Dominate.</div>
     </div>
@@ -315,6 +317,7 @@
 <div id="game-over">
   <h1>DESTROYED</h1>
   <p id="final-stats"></p>
+  <p>Press R or click to restart</p>
   <button id="restart-btn" onclick="restartGame()">RESTART</button>
 </div>
 
@@ -541,6 +544,148 @@
       </div>
     </div>
   </div>
+
+<!-- ── Menu particle system ── -->
+<script>
+(function () {
+  const canvas = document.getElementById('menu-particles');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+
+  let W, H, particles, raf;
+
+  /* ── Config ─────────────────────────────────── */
+  const CFG = {
+    count:      55,
+    minR:       2.5,
+    maxR:       11,
+    speed:      0.22,      // base drift speed
+    colors: [              // hue families: cyan, indigo, violet
+      { h: 185, s: 100, l: 65 },
+      { h: 195, s: 100, l: 60 },
+      { h: 210, s:  90, l: 70 },
+      { h: 260, s:  85, l: 68 },
+      { h: 280, s:  80, l: 62 },
+    ],
+    minOpacity: 0.18,
+    maxOpacity: 0.72,
+  };
+
+  /* ── Sphere gradient cache ───────────────────── */
+  // Pre-render each sphere into an offscreen canvas so we never
+  // rebuild radial gradients every frame.
+  function makeSphereBitmap(r, color) {
+    const d = Math.ceil(r * 2);
+    const oc = document.createElement('canvas');
+    oc.width = oc.height = d;
+    const octx = oc.getContext('2d');
+
+    // Highlight offset (top-left quadrant)
+    const hlx = r * 0.35, hly = r * 0.30;
+
+    // Base sphere — deep centre → bright highlight
+    const grad = octx.createRadialGradient(hlx, hly, r * 0.05, r, r, r);
+    grad.addColorStop(0,   `hsla(${color.h}, ${color.s}%, ${Math.min(color.l + 30, 98)}%, 1)`);
+    grad.addColorStop(0.45,`hsla(${color.h}, ${color.s}%, ${color.l}%, 1)`);
+    grad.addColorStop(1,   `hsla(${color.h}, ${color.s}%, ${color.l - 28}%, 1)`);
+
+    octx.beginPath();
+    octx.arc(r, r, r, 0, Math.PI * 2);
+    octx.fillStyle = grad;
+    octx.fill();
+
+    // Specular glint
+    const glint = octx.createRadialGradient(hlx, hly, 0, hlx, hly, r * 0.48);
+    glint.addColorStop(0,   'rgba(255,255,255,0.75)');
+    glint.addColorStop(0.55,'rgba(255,255,255,0.10)');
+    glint.addColorStop(1,   'rgba(255,255,255,0)');
+    octx.beginPath();
+    octx.arc(r, r, r, 0, Math.PI * 2);
+    octx.fillStyle = glint;
+    octx.fill();
+
+    return oc;
+  }
+
+  /* ── Particle factory ────────────────────────── */
+  function makeParticle(forceOnScreen) {
+    const r = CFG.minR + Math.random() * (CFG.maxR - CFG.minR);
+    const color = CFG.colors[Math.floor(Math.random() * CFG.colors.length)];
+    const angle = Math.random() * Math.PI * 2;
+    const spd   = CFG.speed * (0.4 + Math.random() * 0.9) * (r / CFG.maxR * 0.7 + 0.3);
+    return {
+      x: forceOnScreen ? Math.random() * W : -r * 2,
+      y: forceOnScreen ? Math.random() * H : Math.random() * H,
+      r,
+      vx: Math.cos(angle) * spd,
+      vy: Math.sin(angle) * spd,
+      opacity: CFG.minOpacity + Math.random() * (CFG.maxOpacity - CFG.minOpacity),
+      // gentle sine wobble
+      wobble: Math.random() * Math.PI * 2,
+      wobbleSpd: 0.004 + Math.random() * 0.008,
+      wobbleAmp: 0.2 + Math.random() * 0.4,
+      bitmap: makeSphereBitmap(r, color),
+    };
+  }
+
+  /* ── Init ────────────────────────────────────── */
+  function init() {
+    resize();
+    particles = Array.from({ length: CFG.count }, () => makeParticle(true));
+    if (raf) cancelAnimationFrame(raf);
+    loop();
+  }
+
+  /* ── Resize ──────────────────────────────────── */
+  function resize() {
+    W = canvas.width  = window.innerWidth;
+    H = canvas.height = window.innerHeight;
+  }
+
+  /* ── Loop ────────────────────────────────────── */
+  function loop() {
+    ctx.clearRect(0, 0, W, H);
+
+    for (let i = 0; i < particles.length; i++) {
+      const p = particles[i];
+
+      // Wobble
+      p.wobble += p.wobbleSpd;
+      p.x += p.vx + Math.sin(p.wobble) * p.wobbleAmp * 0.3;
+      p.y += p.vy + Math.cos(p.wobble) * p.wobbleAmp * 0.15;
+
+      // Wrap / recycle off-screen particles from the left edge
+      if (p.x - p.r > W || p.y + p.r < 0 || p.y - p.r > H) {
+        particles[i] = makeParticle(false);
+        particles[i].x = -p.r * 2;
+        particles[i].y = Math.random() * H;
+        // always drift right + slight vertical
+        particles[i].vx = Math.abs(particles[i].vx);
+        continue;
+      }
+
+      ctx.globalAlpha = p.opacity;
+      ctx.drawImage(p.bitmap, p.x - p.r, p.y - p.r);
+    }
+
+    ctx.globalAlpha = 1;
+    raf = requestAnimationFrame(loop);
+  }
+
+  /* ── Pause when menu hidden ──────────────────── */
+  const observer = new MutationObserver(() => {
+    const hidden = !document.getElementById('menu-screen')?.classList.contains('show');
+    if (hidden && raf) { cancelAnimationFrame(raf); raf = null; }
+    else if (!hidden && !raf) loop();
+  });
+  const ms = document.getElementById('menu-screen');
+  if (ms) observer.observe(ms, { attributes: true, attributeFilter: ['class'] });
+
+  window.addEventListener('resize', () => { resize(); });
+  window.addEventListener('DOMContentLoaded', init);
+  if (document.readyState !== 'loading') init();
+})();
+</script>
 
 </body>
 </html>
