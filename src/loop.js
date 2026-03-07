@@ -362,10 +362,12 @@ export function tick() {
     return;
   }
   // Slash: timed by SLASH_INTERVAL; NOT scaled by worldDelta so Time Slow/Clock do not affect slash cadence
-  state._slashTimer = (state._slashTimer || 0) - delta;
-  if (state._slashTimer <= 0) {
-    performSlash();
-    state._slashTimer = SLASH_INTERVAL;
+  if (state.characterPrimaryWeapon === 'slash') {
+    state._slashTimer = (state._slashTimer || 0) - delta;
+    if (state._slashTimer <= 0) {
+      performSlash();
+      state._slashTimer = SLASH_INTERVAL;
+    }
   }
 
   updatePickups(worldDelta, state.playerLevel, state.elapsed);

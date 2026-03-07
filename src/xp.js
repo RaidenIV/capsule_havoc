@@ -22,8 +22,9 @@ export function getBulletDamage() {
   const dmgTier = Math.max(0, state.upg?.dmg || 0);
   const mult = 1 + 0.15 * dmgTier;
   const tierMult = getWeaponConfig()[2] || 1;
+  const charMult = Math.max(0.01, state.characterBaseDamageMult || 1.0);
   const eff = getDamageMultiplier();
-  return Math.round(base * mult * tierMult * eff);
+  return Math.round(base * mult * tierMult * charMult * eff);
 }
 export function getFireInterval() {
   const base = getWeaponConfig()[0] || 0.85;
@@ -77,7 +78,8 @@ export function updateXP(amount) {
     const prevMax = state.playerMaxHP || getPlayerMaxHPForLevel(prevLevel);
     const newBase  = getPlayerMaxHPForLevel(state.playerLevel);
     const hpTier = Math.max(0, state.upg?.maxHealth || 0);
-    const newMax  = Math.round(newBase * (1 + 0.10 * hpTier));
+    const charHpMult = Math.max(0.01, state.characterBaseHpMult || 1.0);
+    const newMax  = Math.round(newBase * charHpMult * (1 + 0.10 * hpTier));
     const pct = prevMax > 0 ? (state.playerHP / prevMax) : 1;
     state.playerMaxHP = newMax;
     state.playerHP = Math.max(1, pct * newMax);

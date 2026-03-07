@@ -117,7 +117,12 @@ runBootSplashSequence();
 // if initMenuUI triggers synchronous work before the const assignment completes.
 let menuUI;
 menuUI = initMenuUI({
-  onStart: async () => {
+  onStart: async (character = 'blue') => {
+    state.selectedCharacter = character === 'red' ? 'red' : 'blue';
+    state.characterBaseHpMult = state.selectedCharacter === 'blue' ? 1.10 : 1.0;
+    state.characterBaseDamageMult = state.selectedCharacter === 'red' ? 1.10 : 1.0;
+    state.characterPrimaryWeapon = state.selectedCharacter === 'blue' ? 'laser' : 'slash';
+
     // Switch screens
     menuUI.hideMenu();
     stopMusic(); // stop menu_theme before game audio takes over

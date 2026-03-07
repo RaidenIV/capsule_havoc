@@ -113,7 +113,8 @@ function applyUpgradeEffect(key, newTier) {
 
     case 'maxHealth': {
       const base   = getPlayerMaxHPForLevel(state.playerLevel || 1);
-      const newMax = Math.round(base * (1 + 0.10 * newTier));
+      const charHpMult = Math.max(0.01, state.characterBaseHpMult || 1.0);
+      const newMax = Math.round(base * charHpMult * (1 + 0.10 * newTier));
       const pct    = (state.playerMaxHP || 100) > 0
         ? state.playerHP / state.playerMaxHP
         : 1;

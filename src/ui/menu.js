@@ -22,16 +22,33 @@ export function initMenuUI({ onStart }) {
 
   const btnClearScores = menu.querySelector('#menu-clear-scores');
   const scoresList = menu.querySelector('#scores-list');
+  const characterModal = menu.querySelector('#character-modal');
+  const btnCharacterBack = menu.querySelector('#character-back');
+  const btnCharacterBlue = menu.querySelector('#character-blue');
+  const btnCharacterRed = menu.querySelector('#character-red');
 
   // Load persisted audio settings *before* user hits start (affects first music play).
   applySavedAudioSettings();
   const settingsApi = bindAudioSettingsUI(menu);
   const particleFx = initMenuParticles(menu);
 
+  function closeCharacterModal() {
+    if (!characterModal) return;
+    characterModal.classList.remove('show');
+    characterModal.setAttribute('aria-hidden', 'true');
+  }
+
+  function openCharacterModal() {
+    if (!characterModal) return;
+    characterModal.classList.add('show');
+    characterModal.setAttribute('aria-hidden', 'false');
+  }
+
   function showPage(name) {
     pageMain.classList.toggle('active', name === 'main');
     pageScores.classList.toggle('active', name === 'scores');
     pageSettings.classList.toggle('active', name === 'settings');
+    closeCharacterModal();
 
     if (name === 'scores') renderHighScores(scoresList);
     if (name === 'settings') settingsApi.syncFromEngine();
@@ -43,6 +60,7 @@ export function initMenuUI({ onStart }) {
     menu.classList.add('show');
     particleFx.start();
     showPage('main');
+    closeCharacterModal();
      // Play menu theme whenever we enter the main menu.
     startMusic('menu');
   }
@@ -56,15 +74,19 @@ export function initMenuUI({ onStart }) {
     particleFx.stop();
     document.body.classList.remove('mode-menu');
     document.body.classList.add('mode-playing');
+    closeCharacterModal();
     menu.classList.remove('show');
   }
 
-  btnStart.addEventListener('click', () => onStart());
+  btnStart.addEventListener('click', () => openCharacterModal());
   btnScores.addEventListener('click', () => showPage('scores'));
   btnSettings.addEventListener('click', () => showPage('settings'));
 
   btnBackScores.addEventListener('click', () => showPage('main'));
   btnBackSettings.addEventListener('click', () => showPage('main'));
+  btnCharacterBack?.addEventListener('click', () => closeCharacterModal());
+  btnCharacterBlue?.addEventListener('click', () => onStart('blue'));
+  btnCharacterRed?.addEventListener('click', () => onStart('red'));
 
   btnClearScores.addEventListener('click', () => {
     clearHighScores();

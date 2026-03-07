@@ -87,6 +87,8 @@ export function applyCosmetics() {
     c === 'cyan'    ? new THREE.Color(0x00e5ff) :
     c === 'magenta' ? new THREE.Color(0xff2bd6) :
     c === 'gold'    ? new THREE.Color(0xffd24a) :
+    c === 'red'     ? new THREE.Color(0xcc2222) :
+    (state.selectedCharacter === 'red' && c === 'default') ? new THREE.Color(0xcc2222) :
                       new THREE.Color(0x0044cc)
   );
   playerMat.color.copy(col);
