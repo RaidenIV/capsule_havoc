@@ -60,10 +60,12 @@ export const state = {
   playerXP:    0,
   playerLevel: 0,
 
-  // Cached base damage from level (Section 6)
+  // Base stats are character-defined; upgrades modify from these values only.
   playerBaseDMG: 10,
-  selectedCharacter: 'red',
-  characterPrimaryWeapon: 'slash',
+  basePlayerMaxHP: 100,
+  basePlayerDamage: 10,
+  selectedCharacter: null,
+  characterPrimaryWeapon: null,
 
   // ── Shoot timing ────────────────────────────────────────────────────────────
   shootTimer:      0,

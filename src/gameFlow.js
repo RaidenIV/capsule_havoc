@@ -196,8 +196,14 @@ export function restartGame(opts = {}) {
   destroyOrbitBullets();
 
   playerGroup.position.set(0, 0, 0);
-  state.playerHP    = PLAYER_MAX_HP;
-  state.playerMaxHP = PLAYER_MAX_HP;
+  const selectedCharacter = state.selectedCharacter || null;
+  const primaryWeapon = state.characterPrimaryWeapon || (selectedCharacter === 'blue' ? 'laser' : selectedCharacter === 'red' ? 'slash' : null);
+  state.characterPrimaryWeapon = primaryWeapon;
+  state.basePlayerMaxHP = selectedCharacter === 'blue' ? Math.round(PLAYER_MAX_HP * 1.10) : PLAYER_MAX_HP;
+  state.basePlayerDamage = selectedCharacter === 'red' ? Math.round(10 * 1.10) : 10;
+  state.playerHP    = state.basePlayerMaxHP;
+  state.playerMaxHP = state.basePlayerMaxHP;
+  state.playerBaseDMG = state.basePlayerDamage;
   state.kills       = 0;
   state.elapsed     = 0;
   state.shootTimer  = 0;
@@ -210,17 +216,20 @@ export function restartGame(opts = {}) {
   state.playerLevel = 1;
   initSpawner();
   state.coins       = 0;
-  const isBlueLoadout = state.selectedCharacter === 'blue' || state.characterPrimaryWeapon === 'laser';
-  state.characterPrimaryWeapon = isBlueLoadout ? 'laser' : 'slash';
-  state.weaponTier  = isBlueLoadout ? 1 : 0;
   state.pickupRangeLvl = 0;
   state.upg = {
-    laserFire: isBlueLoadout ? 1 : 0, orbit:0,
+    laserFire: 0, orbit: 0,
     dmg:0, fireRate:0, projSpeed:0, piercing:0, multishot:0,
     moveSpeed:0, dash:0, magnet:0,
     shield:0, burst:0, timeSlow:0,
     maxHealth:0, regen:0, xpGrowth:0, coinBonus:0, curse:0, luck:0,
   };
+  if (state.characterPrimaryWeapon === 'laser') {
+    state.upg.laserFire = 1;
+    state.weaponTier = 1;
+  } else {
+    state.weaponTier = 0;
+  }
   state.luck = 0;
   state.bossLuck = 0;
   state.curseTier = 0;

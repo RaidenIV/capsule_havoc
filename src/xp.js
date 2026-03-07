@@ -1,6 +1,6 @@
 // ─── xp.js ───────────────────────────────────────────────────────────────────
 import { state } from './state.js';
-import { WEAPON_CONFIG, getPlayerMaxHPForLevel, isBossLevel } from './constants.js';
+import { WEAPON_CONFIG, isBossLevel } from './constants.js';
 import { expToNext } from './leveling.js';
 import { getDamageMultiplier, getXPMultiplier } from './activeEffects.js';
 
@@ -22,9 +22,8 @@ export function getBulletDamage() {
   const dmgTier = Math.max(0, state.upg?.dmg || 0);
   const mult = 1 + 0.15 * dmgTier;
   const tierMult = getWeaponConfig()[2] || 1;
-  const charMult = Math.max(0.01, state.characterBaseDamageMult || 1.0);
   const eff = getDamageMultiplier();
-  return Math.round(base * mult * tierMult * charMult * eff);
+  return Math.round(base * mult * tierMult * eff);
 }
 export function getFireInterval() {
   const base = getWeaponConfig()[0] || 0.85;
@@ -74,19 +73,10 @@ export function updateXP(amount) {
     const prevLevel = state.playerLevel;
     state.playerLevel++;
 
-    // Player HP scaling (design doc) + Max Health upgrade
-    const prevMax = state.playerMaxHP || getPlayerMaxHPForLevel(prevLevel);
-    const newBase  = getPlayerMaxHPForLevel(state.playerLevel);
-    const hpTier = Math.max(0, state.upg?.maxHealth || 0);
-    const charHpMult = Math.max(0.01, state.characterBaseHpMult || 1.0);
-    const newMax  = Math.round(newBase * charHpMult * (1 + 0.10 * hpTier));
-    const pct = prevMax > 0 ? (state.playerHP / prevMax) : 1;
-    state.playerMaxHP = newMax;
-    state.playerHP = Math.max(1, pct * newMax);
-
-    // Base damage scaling (Section 6: DMG(L) = 10 + floor((L-1)² / 50))
-    // Quadratic — reaches 204 DMG at level 100 vs 10 at level 1.
-    state.playerBaseDMG = 10 + Math.floor(Math.pow(Math.max(0, state.playerLevel - 1), 2) / 50);
+    // No automatic stat scaling on level-up. All stat growth now comes from the shop.
+    state.playerMaxHP = Math.max(1, state.playerMaxHP || state.basePlayerMaxHP || 100);
+    state.playerHP = Math.min(state.playerHP || state.playerMaxHP, state.playerMaxHP);
+    state.playerBaseDMG = Math.max(1, state.playerBaseDMG || state.basePlayerDamage || 10);
 
     // Shop after every level up (but avoid interrupting boss waves)
     if (!isBossLevel(state.playerLevel)) state.pendingShop = true;

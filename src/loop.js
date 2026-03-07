@@ -120,15 +120,13 @@ export function tick() {
 
   // Slow-motion worldDelta is updated inside updatePlayer
   updatePlayer(delta, state.worldScale);
-  let worldDelta = delta * state.worldScale;
+  const worldDelta = delta * state.worldScale;
+  // Time Slow arena pickup now brings the world to roughly 85% speed overall.
   state.enemyTimeScale = 1.0;
 
   // Timed effects (arena pickups)
   updateArmorTimers(worldDelta);
   updateActiveEffects(worldDelta);
-  // Re-sample after timed effects so active pickup slow is reflected immediately
-  // on the current frame instead of waiting for the next one.
-  worldDelta = delta * state.worldScale;
 
   // ── Ability timers & passive effects (design doc) ─────────────────────────
   // Dash i-frames (Tier 3)
@@ -363,11 +361,15 @@ export function tick() {
     renderSceneFrame();
     return;
   }
-  // Slash: timed by SLASH_INTERVAL; NOT scaled by worldDelta so Time Slow/Clock do not affect slash cadence
-  state._slashTimer = (state._slashTimer || 0) - delta;
-  if (state._slashTimer <= 0) {
-    performSlash();
-    state._slashTimer = SLASH_INTERVAL;
+  // Slash: only auto-runs for slash-primary loadouts. If no character has been selected,
+  // preserve the legacy slash-default behavior.
+  const slashPrimary = !state.characterPrimaryWeapon || state.characterPrimaryWeapon === 'slash';
+  if (slashPrimary) {
+    state._slashTimer = (state._slashTimer || 0) - delta;
+    if (state._slashTimer <= 0) {
+      performSlash();
+      state._slashTimer = SLASH_INTERVAL;
+    }
   }
 
   updatePickups(worldDelta, state.playerLevel, state.elapsed);
