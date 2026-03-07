@@ -214,6 +214,33 @@ canvas { display: block; }
   align-items: center; gap: 10px;
 }
 
+.pause-select-row {
+  display: grid;
+  grid-template-columns: 90px 1fr;
+  align-items: center;
+  gap: 12px;
+}
+
+.pause-select {
+  width: 100%;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid rgba(255,255,255,0.12);
+  background: rgba(0,0,0,0.45);
+  color: rgba(255,255,255,0.9);
+  font: 12px Inter, system-ui, sans-serif;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.pause-select:focus { outline: none; border-color: rgba(0,229,255,0.5); box-shadow: 0 0 0 3px rgba(0,229,255,0.12); }
+
+.pause-settings-note {
+  margin: 6px 0 0;
+  color: rgba(255,255,255,0.46);
+  font-size: 11px;
+  line-height: 1.45;
+}
+
 .pause-num {
   width: 70px;
   padding: 6px 8px;

@@ -29,6 +29,7 @@ import { restartGame } from '../gameFlow.js';
 import { pauseMusic, resumeMusic } from '../gameFlow.js';
 import { setSfxVolume, setMusicVolume, setMuted, getMuted, getSfxVolume, getMusicVolume,
          setSoundVolume, getSoundVolume, getAllSoundVolumes, playSound } from '../audio.js';
+import { applySavedVisualSettings, applyVisualSettings, getVisualSettings } from '../visuals.js';
 import { clock } from '../loop.js';
 
 // ── DOM refs ──────────────────────────────────────────────────────────────────
@@ -45,6 +46,8 @@ function setR(id, val, dec = 2) {
   const v  = g(id + '-v'); if (v) v.value = Number(val).toFixed(dec);
 }
 function setC(id, hex) { const el = g(id); if (el) el.value = hex; }
+
+applySavedVisualSettings();
 
 // ── Default values for Reset buttons ─────────────────────────────────────────
 const DEFS = {
@@ -219,6 +222,7 @@ function showPausePage(name) {
   g('pause-page-main')     ?.classList.toggle('active', name === 'main');
   g('pause-page-settings') ?.classList.toggle('active', name === 'settings');
   g('pause-page-audio')    ?.classList.toggle('active', name === 'audio');
+  g('pause-page-visuals')  ?.classList.toggle('active', name === 'visuals');
   g('pause-page-sfxmixer') ?.classList.toggle('active', name === 'sfxmixer');
 
   const title = g('pause-menu-title');
@@ -226,14 +230,28 @@ function showPausePage(name) {
     if (name === 'main')     title.textContent = 'PAUSED';
     if (name === 'settings') title.textContent = 'SETTINGS';
     if (name === 'audio')    title.textContent = 'AUDIO';
+    if (name === 'visuals')  title.textContent = 'VISUALS';
     if (name === 'sfxmixer') title.textContent = 'SFX MIXER';
   }
 }
 
 function setNum(id, v) { const el = g(id); if (el) el.value = (+v).toFixed(2); }
 
+function syncPauseVisualsFromEngine() {
+  const visuals = getVisualSettings();
+  const shadowEl = g('pm-visual-shadows');
+  const bloomEl = g('pm-visual-bloom');
+  const reflEl = g('pm-visual-reflections');
+  const accentEl = g('pm-visual-accent');
+  if (shadowEl) shadowEl.value = visuals.shadows;
+  if (bloomEl) bloomEl.value = visuals.bloom ? 'on' : 'off';
+  if (reflEl) reflEl.value = visuals.reflections ? 'on' : 'off';
+  if (accentEl) accentEl.value = visuals.accentLights ? 'on' : 'off';
+}
+
 function syncPauseMenuFromEngine() {
   showPausePage('main');
+  syncPauseVisualsFromEngine();
 
   const mv = getMusicVolume();
   const sv = getSfxVolume();
@@ -382,6 +400,12 @@ g('pause-settings-btn')?.addEventListener('click', () => showPausePage('settings
 // Audio page
 g('pause-audio-btn')?.addEventListener('click', () => showPausePage('audio'));
 
+// Visuals page
+g('pause-visuals-btn')?.addEventListener('click', () => {
+  syncPauseVisualsFromEngine();
+  showPausePage('visuals');
+});
+
 // SFX Mixer page
 g('pause-sfxmixer-btn')?.addEventListener('click', () => showPausePage('sfxmixer'));
 
@@ -391,8 +415,40 @@ g('pause-back-btn')?.addEventListener('click', () => showPausePage('main'));
 // Back to settings page (from audio)
 g('pause-audio-back-btn')?.addEventListener('click', () => showPausePage('settings'));
 
+// Back to settings page (from visuals)
+g('pause-visuals-back-btn')?.addEventListener('click', () => showPausePage('settings'));
+
 // Back to audio page (from mixer)
 g('pause-sfxmixer-back-btn')?.addEventListener('click', () => showPausePage('audio'));
+
+const _shadowSelect = g('pm-visual-shadows');
+const _bloomSelect = g('pm-visual-bloom');
+const _reflectionsSelect = g('pm-visual-reflections');
+const _accentSelect = g('pm-visual-accent');
+
+_shadowSelect?.addEventListener('change', () => {
+  applyVisualSettings({ shadows: _shadowSelect.value });
+  syncPauseVisualsFromEngine();
+  showNotif(`Shadows: ${String(_shadowSelect.value).toUpperCase()}`);
+});
+
+_bloomSelect?.addEventListener('change', () => {
+  applyVisualSettings({ bloom: _bloomSelect.value === 'on' });
+  syncPauseVisualsFromEngine();
+  showNotif(`Bloom: ${_bloomSelect.value.toUpperCase()}`);
+});
+
+_reflectionsSelect?.addEventListener('change', () => {
+  applyVisualSettings({ reflections: _reflectionsSelect.value === 'on' });
+  syncPauseVisualsFromEngine();
+  showNotif(`Reflections: ${_reflectionsSelect.value.toUpperCase()}`);
+});
+
+_accentSelect?.addEventListener('change', () => {
+  applyVisualSettings({ accentLights: _accentSelect.value === 'on' });
+  syncPauseVisualsFromEngine();
+  showNotif(`Accent Lights: ${_accentSelect.value.toUpperCase()}`);
+});
 
 // Quit to main menu
 g('pause-quit-btn')?.addEventListener('click', () => {

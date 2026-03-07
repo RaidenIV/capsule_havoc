@@ -52,9 +52,19 @@ envScene.add(new THREE.Mesh(skyGeo, new THREE.MeshBasicMaterial({ color: 0x05051
   envScene.add(m);
 });
 
-scene.environment = pmrem.fromScene(envScene).texture;
+const _sceneEnvTexture = pmrem.fromScene(envScene).texture;
+scene.environment = _sceneEnvTexture;
 scene.environmentIntensity = 1.8;
 pmrem.dispose();
+
+export function setEnvironmentReflectionsEnabled(enabled) {
+  scene.environment = enabled ? _sceneEnvTexture : null;
+  scene.environmentIntensity = enabled ? 1.8 : 0.0;
+  scene.traverse((obj) => {
+    const mats = obj?.material ? (Array.isArray(obj.material) ? obj.material : [obj.material]) : [];
+    mats.forEach((mat) => { if (mat) mat.needsUpdate = true; });
+  });
+}
 
 // ── Isometric Orthographic Camera ─────────────────────────────────────────────
 export const CAM_D = 12;

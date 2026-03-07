@@ -37,6 +37,19 @@ let _lastMaxHP = null;
 export const clock = new THREE.Clock();
 let fpsEMA = 60;
 
+function renderSceneFrame() {
+  if (state.visuals?.bloom === false) {
+    camera.layers.enable(0);
+    camera.layers.enable(1);
+    camera.layers.enable(2);
+    renderer.setRenderTarget(null);
+    renderer.clear();
+    renderer.render(scene, camera);
+  } else {
+    renderBloom();
+  }
+  labelRenderer.render(scene, camera);
+}
 
 let _bannerTimer = 0;
 function _getBannerEls(){
@@ -82,8 +95,7 @@ export function tick() {
   }
 
   if (state.paused || state.gameOver || state.upgradeOpen) {
-    renderBloom();
-    labelRenderer.render(scene, camera);
+    renderSceneFrame();
     return;
   }
 
@@ -241,8 +253,7 @@ export function tick() {
   const enemyUpdateResult = updateEnemies(delta, worldDelta * (state.enemyTimeScale ?? 1.0), state.elapsed);
   if (enemyUpdateResult === 'DEAD') {
     triggerGameOver();
-    renderBloom();
-    labelRenderer.render(scene, camera);
+    renderSceneFrame();
     return;
   }
 
@@ -340,16 +351,14 @@ export function tick() {
   const enemyBulletResult = updateEnemyBullets(worldDelta * (state.enemyTimeScale ?? 1.0));
   if (enemyBulletResult === 'DEAD') {
     triggerGameOver();
-    renderBloom();
-    labelRenderer.render(scene, camera);
+    renderSceneFrame();
     return;
   }
   updateOrbitBullets(worldDelta);
 
   if (!state.gameOver && state.playerHP <= 0) {
     triggerGameOver();
-    renderBloom();
-    labelRenderer.render(scene, camera);
+    renderSceneFrame();
     return;
   }
   // Slash: timed by SLASH_INTERVAL; NOT scaled by worldDelta so Time Slow/Clock do not affect slash cadence
@@ -368,6 +377,5 @@ export function tick() {
   updateSlashEffects(worldDelta);
 
   consumeExplBloomDirty();
-  renderBloom();
-  labelRenderer.render(scene, camera);
+  renderSceneFrame();
 }

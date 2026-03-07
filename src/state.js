@@ -37,6 +37,14 @@ export const state = {
   loopStarted: false,
       // incremented on restart to cancel stale setTimeout callbacks
 
+  // ── Visual settings ─────────────────────────────────────────────────────────
+  visuals: {
+    shadows: 'high',
+    bloom: true,
+    reflections: true,
+    accentLights: true,
+  },
+
   // ── Stats ────────────────────────────────────────────────────────────────────
   kills:   0,
   elapsed: 0,
