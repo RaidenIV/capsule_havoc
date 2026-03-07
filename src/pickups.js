@@ -22,22 +22,21 @@ const coinMatBase = new THREE.MeshStandardMaterial({
 const coinCountEl = document.getElementById('coin-count');
 
 export function spawnCoins(pos, count, value = 1, colorHex = null) {
+  const GOLD_COIN = 0xffd700;
   for (let i = 0; i < count; i++) {
     const mat   = coinMatBase.clone();
-    if (colorHex != null) {
-      mat.color.setHex(colorHex);
-      // IMPORTANT: do NOT set emissive to the same saturated color (it makes coins look
-      // like neon plastic). Use a tiny neutral emissive so they still read in dark scenes.
-      mat.emissive.setHex(0x111111);
-      mat.emissiveIntensity = 0.18;
-    }
+    const finalColor = GOLD_COIN;
+    mat.color.setHex(finalColor);
+    // Keep the gold readable in dark scenes without making it look neon.
+    mat.emissive.setHex(0x111111);
+    mat.emissiveIntensity = 0.18;
     const mesh  = new THREE.Mesh(coinGeo, mat);
     const angle = Math.random() * Math.PI * 2;
     const r     = 0.3 + Math.random() * 1.2;
     mesh.position.set(pos.x + Math.cos(angle)*r, 0.35, pos.z + Math.sin(angle)*r);
     mesh.rotation.x = Math.PI / 2;
     scene.add(mesh);
-    state.coinPickups.push({ mesh, mat, value, colorHex: colorHex ?? null, attracting: false, life: 20.0, merged: false });
+    state.coinPickups.push({ mesh, mat, value, colorHex: GOLD_COIN, attracting: false, life: 20.0, merged: false });
   }
 }
 
@@ -82,7 +81,7 @@ export function dropLoot(pos, coinValue, coinMult, coinColorHex = null) {
 
 // ── Update ────────────────────────────────────────────────────────────────────
 const ATTRACT_DIST_COIN = [5.0,5.5,6.0,6.5,7.0,7.5,8.0,8.5,9.0,9.5,10.0];
-const ATTRACT_SPD_COIN  = 9.0;
+const ATTRACT_SPD_COIN  = 4.5;
 const ATTRACT_DIST_HP   = ATTRACT_DIST_COIN; // same magnet range as coins
 const ATTRACT_SPD_HP    = ATTRACT_SPD_COIN;
 const COLLECT_COIN      = 0.7;
@@ -91,7 +90,9 @@ const COLLECT_HP        = 0.8;
 export function updatePickups(worldDelta, playerLevel, elapsed) {
   const baseAttract = ATTRACT_DIST_COIN[Math.min(playerLevel, 10)];
   const bonus = Math.max(0, (state.upg?.magnet || 0)) * 1.25; // shop upgrade (design doc)
-  const attractDist = baseAttract + bonus;
+  const coinMagnetActive = (state.effects?.coinMagnet || 0) > 0;
+  const attractDist = coinMagnetActive ? Infinity : (baseAttract + bonus);
+  const attractSpeed = coinMagnetActive ? 17.0 : ATTRACT_SPD_COIN;
   // Coin merge safety (performance): consolidate if too many coins are on the ground.
   if (state.coinPickups.length > 400) {
     let sum = 0;
@@ -128,11 +129,9 @@ export function updatePickups(worldDelta, playerLevel, elapsed) {
       playSound('coin', 0.5, 0.95 + Math.random() * 0.15);
       continue;
     }
-    if ((cp.magnetBurst || 0) > 0) cp.magnetBurst = Math.max(0, cp.magnetBurst - worldDelta);
-    if (dist < attractDist) cp.attracting = true;
+    if (coinMagnetActive || dist < attractDist) cp.attracting = true;
     if (cp.attracting && dist > 0.001) {
-      const burstSpeed = (cp.magnetBurst || 0) > 0 ? 34.0 : ATTRACT_SPD_COIN;
-      const spd = burstSpeed * worldDelta;
+      const spd = attractSpeed * worldDelta;
       cp.mesh.position.x += (dx/dist) * Math.min(spd, dist);
       cp.mesh.position.z += (dz/dist) * Math.min(spd, dist);
     }
@@ -152,7 +151,7 @@ export function updatePickups(worldDelta, playerLevel, elapsed) {
       scene.remove(hp.mesh); hp.mat.dispose();
       state.healthPickups.splice(i, 1);
       const maxHP = (state.playerMaxHP || PLAYER_MAX_HP);
-      const heal = Math.round(maxHP * 0.30);
+      const heal = Math.max(1, Math.round(maxHP * HEALTH_RESTORE));
       const healed = Math.min(heal, maxHP - state.playerHP);
       state.playerHP = Math.min(maxHP, state.playerHP + heal);
       updateHealthBar();

@@ -39,8 +39,8 @@ export const SLOW_SNAP_RATE   = 22;
 export const SLOW_RECOVER_RATE = 7;
 
 // ── Pickups ───────────────────────────────────────────────────────────────────
-export const HEALTH_PICKUP_CHANCE = 0.08;
-export const HEALTH_RESTORE       = 25;
+export const HEALTH_PICKUP_CHANCE = 0.02; // reduced by 75%
+export const HEALTH_RESTORE       = 0.20; // restores 20% of max HP
 
 // ── Elite fire rates per minLevel ─────────────────────────────────────────────
 export const ELITE_FIRE_RATE = { 1: 3.0, 3: 2.5, 5: 2.0, 7: 1.5, 9: 1.2, 10: 0.9 };

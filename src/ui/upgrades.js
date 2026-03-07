@@ -202,6 +202,11 @@ function _statRow(label, value){
     </div>`;
 }
 
+function _statSection(label){
+  return `
+    <div style="margin-top:6px;padding-top:8px;border-top:1px solid rgba(255,255,255,0.10);font-weight:900;font-size:11px;letter-spacing:0.10em;opacity:0.72;">${label}</div>`;
+}
+
 function updateStatsPanel(){
   const panel = ensureStatsPanel();
   if (!panel) return;
@@ -210,47 +215,92 @@ function updateStatsPanel(){
 
   const hp = Math.round(state.playerHP);
   const maxHp = Math.round(state.playerMaxHP || 100);
-  const dmg = Math.round(getBulletDamage());
-  const shots = Math.max(1, getWaveBullets());
+  const bulletDmg = Math.round(getBulletDamage());
+  const waveDirs = Math.max(1, getWaveBullets());
   const fire = getFireInterval();
 
   const laserTier = Math.max(0, state.upg?.laserFire || 0);
   const orbitTier = Math.max(0, state.upg?.orbit || 0);
-
+  const dmgTier = Math.max(0, state.upg?.dmg || 0);
+  const fireRateTier = Math.max(0, state.upg?.fireRate || 0);
   const msTier = Math.max(0, (state.upg?.multishot ?? state.upg?.multiShot ?? 0));
   const psTier = Math.max(0, (state.upg?.projSpeed ?? 0));
   const pierce = Math.max(0, (state.upg?.piercing ?? 0));
 
-  const moveTier = Math.max(0, (state.upg?.move || 0));
+  const moveTier = Math.max(0, (state.upg?.moveSpeed || 0));
   const dashTier = Math.max(0, (state.upg?.dash || 0));
   const magnetTier = Math.max(0, (state.upg?.magnet || 0));
 
   const shieldTier = Math.max(0, (state.upg?.shield || 0));
+  const burstTier = Math.max(0, (state.upg?.burst || 0));
+  const timeSlowTier = Math.max(0, (state.upg?.timeSlow || 0));
+
+  const maxHealthTier = Math.max(0, (state.upg?.maxHealth || 0));
+  const regenTier = Math.max(0, (state.upg?.regen || 0));
+  const xpGrowthTier = Math.max(0, (state.upg?.xpGrowth || 0));
+  const coinBonusTier = Math.max(0, (state.upg?.coinBonus || 0));
+  const luckTier = Math.max(0, (state.upg?.luck || 0));
+  const curseTier = Math.max(0, (state.upg?.curse || 0));
+
   const armorHits = Math.max(0, state.armorHits || 0);
   const lives = Math.max(0, state.extraLives || 0);
+  const pelletsPerDir = 1 + msTier;
+  const totalProjectiles = waveDirs * pelletsPerDir;
+  const slashDmg = Math.max(1, Math.round(bulletDmg * 1.8));
+  const burstDmg = burstTier > 0 ? ((burstTier >= 4) ? 180 : (70 + burstTier * 30)) : 0;
+  const burstRadius = burstTier > 0 ? ((burstTier >= 4) ? 11.0 : 5.5) : 0;
+  const dashCd = dashTier > 0
+    ? (dashTier >= 2 ? 1.4 * 0.70 : 1.4)
+    : 0;
+  const shieldCharges = shieldTier >= 3 ? 2 : (shieldTier >= 1 ? 1 : 0);
+  const shieldRecharge = shieldTier > 0 ? (shieldTier >= 2 ? 12.0 * 0.65 : 12.0) : 0;
+  const timeSlowDuration = timeSlowTier > 0 ? (timeSlowTier >= 2 ? 5.0 : 3.0) : 0;
+  const timeSlowScale = timeSlowTier >= 3 ? 0.25 : (timeSlowTier >= 1 ? 0.5 : 1.0);
 
-  const luck = Math.max(0, state.luck || 0);
-  const curse = Math.max(0, state.curseTier || 0);
-
-  body.innerHTML = [
+  const rows = [
+    _statSection('CORE'),
     _statRow('HP', `${hp} / ${maxHp}`),
-    _statRow('Damage', `${dmg}`),
-    _statRow('Shots', `${shots}x`),
-    _statRow('Fire Interval', `${fire.toFixed(2)}s`),
-    _statRow('Laser Tier', `${laserTier}`),
-    _statRow('Orbit Tier', `${orbitTier}`),
-    _statRow('Multishot', `+${msTier}`),
-    _statRow('Proj Speed', `T${psTier}`),
-    _statRow('Piercing', `T${pierce}`),
-    _statRow('Move Speed', `T${moveTier}`),
-    _statRow('Dash', `T${dashTier}`),
-    _statRow('Magnet', `T${magnetTier}`),
-    _statRow('Shield', `T${shieldTier}`),
-    _statRow('Armor', `${armorHits}`),
-    _statRow('Extra Life', `${lives}`),
-    _statRow('Luck', `${luck}`),
-    _statRow('Curse', `${curse}`),
-  ].join('');
+    _statRow('Slash DMG', `${slashDmg}`),
+  ];
+
+  rows.push(_statSection('WEAPONS'));
+  if (laserTier > 0) {
+    rows.push(_statRow('Laser DMG', `${bulletDmg} / shot`));
+    rows.push(_statRow('Volley', `${totalProjectiles} proj`));
+    rows.push(_statRow('Fire Interval', `${fire.toFixed(2)}s`));
+  }
+  if (orbitTier > 0) rows.push(_statRow('Orbit DMG', `${bulletDmg} / hit`));
+  if (burstTier > 0) {
+    rows.push(_statRow('Burst DMG', `${burstDmg}`));
+    rows.push(_statRow('Burst Radius', `${burstRadius.toFixed(1)}`));
+  }
+
+  const ownedRows = [];
+  if (dmgTier > 0) ownedRows.push(_statRow('Damage Bonus', `+${dmgTier * 15}%`));
+  if (fireRateTier > 0 && laserTier > 0) ownedRows.push(_statRow('Fire Rate Bonus', `-${fireRateTier * 10}% CD`));
+  if (msTier > 0 && laserTier > 0) ownedRows.push(_statRow('Multishot', `+${msTier} / dir`));
+  if (psTier > 0 && laserTier > 0) ownedRows.push(_statRow('Proj Speed', `+${psTier * 20}%`));
+  if (pierce > 0) ownedRows.push(_statRow('Piercing', `+${pierce}`));
+  if (moveTier > 0) ownedRows.push(_statRow('Move Speed', `+${moveTier * 8}%`));
+  if (dashTier > 0) ownedRows.push(_statRow('Dash CD', `${dashCd.toFixed(2)}s`));
+  if (magnetTier > 0) ownedRows.push(_statRow('Magnet Radius', `+${(magnetTier * 1.25).toFixed(2)}`));
+  if (shieldTier > 0) ownedRows.push(_statRow('Shield', `${shieldCharges} hit • ${shieldRecharge.toFixed(1)}s recharge`));
+  if (timeSlowTier > 0) ownedRows.push(_statRow('Time Slow', `${(timeSlowScale * 100).toFixed(0)}% speed • ${timeSlowDuration.toFixed(0)}s`));
+  if (maxHealthTier > 0) ownedRows.push(_statRow('Max HP Bonus', `+${maxHealthTier * 10}%`));
+  if (regenTier > 0) ownedRows.push(_statRow('Regen', `${regenTier} HP/s`));
+  if (xpGrowthTier > 0) ownedRows.push(_statRow('XP Growth', `+${xpGrowthTier * 15}%`));
+  if (coinBonusTier > 0) ownedRows.push(_statRow('Coin Bonus', `+${coinBonusTier * 20}%`));
+  if (luckTier > 0) ownedRows.push(_statRow('Luck', `+${luckTier * 5}`));
+  if (curseTier > 0) ownedRows.push(_statRow('Curse', `T${curseTier}`));
+  if (armorHits > 0) ownedRows.push(_statRow('Armor Hits', `${armorHits}`));
+  if (lives > 0) ownedRows.push(_statRow('Extra Life', `${lives}`));
+
+  if (ownedRows.length > 0) {
+    rows.push(_statSection('OWNED UPGRADES'));
+    rows.push(...ownedRows);
+  }
+
+  body.innerHTML = rows.join('');
 }
 function $(id) { return document.getElementById(id); }
 

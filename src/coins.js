@@ -24,7 +24,7 @@ const coinMatBase = new THREE.MeshStandardMaterial({
 const coinCountEl = document.getElementById('coin-count');
 
 const ATTRACT_DIST_COIN = [5.0,5.5,6.0,6.5,7.0,7.5,8.0,8.5,9.0,9.5,10.0];
-const ATTRACT_SPD_COIN  = 9.0;
+const ATTRACT_SPD_COIN  = 4.5;
 const COLLECT_COIN      = 0.7;
 
 export function spawnCoins(pos, count, value = 1, colorHex = null) {

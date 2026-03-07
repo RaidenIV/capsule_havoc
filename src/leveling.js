@@ -92,30 +92,28 @@ export function getXPRewardForEnemy(enemyType, playerLevel) {
 }
 
 export function getCoinTierForEnemy(enemyType) {
-  // Coin tiers (doc Section 8)
-  // Copper (1): Standard + split minions
-  // Silver (5): Elite (Tanker, Sniper, Teleporter, Shielded)
-  // Gold (20): Ultra Elite (Splitter)
-  // Boss Coin (100): Boss
-  //
-  // IMPORTANT: coin COLOR should match tier name (copper/silver/gold/white).
-  const COPPER = 0xb87333;
-  const SILVER = 0xc0c0c0;
-  const GOLD   = 0xffd700;
-  const WHITE  = 0xffffff;
+  // All coins are visually gold now; enemy type only changes the value.
+  const GOLD = 0xffd700;
 
   switch (enemyType) {
+    case ENEMY_TYPE.RUSHER:
+      return { value: 1, color: GOLD };
+    case ENEMY_TYPE.ORBITER:
+      return { value: 2, color: GOLD };
     case ENEMY_TYPE.TANKER:
+      return { value: 3, color: GOLD };
     case ENEMY_TYPE.SNIPER:
+      return { value: 4, color: GOLD };
     case ENEMY_TYPE.TELEPORTER:
+      return { value: 5, color: GOLD };
     case ENEMY_TYPE.SHIELDED:
-      return { value: 5, color: SILVER };
+      return { value: 8, color: GOLD };
     case ENEMY_TYPE.SPLITTER:
-      return { value: 20, color: GOLD };
+      return { value: 10, color: GOLD };
     case ENEMY_TYPE.BOSS:
-      return { value: 100, color: WHITE };
+      return { value: 20, color: GOLD };
     default:
-      return { value: 1, color: COPPER };
+      return { value: 1, color: GOLD };
   }
 }
 
