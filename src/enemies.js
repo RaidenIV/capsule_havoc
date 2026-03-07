@@ -13,7 +13,7 @@ import {
   enemyGeo, enemyMat, enemyGeoParams, bulletGeoParams,
   enemyBulletGeo, getEnemyBulletMat, floorY,
 } from './materials.js';
-import { playerGroup, updateHealthBar, hasShieldBubble, SHIELD_RADIUS, PLAYER_BODY_RADIUS } from './player.js';
+import { playerGroup, updateHealthBar, hasShieldBubble, hasArmorBubble, SHIELD_RADIUS, PLAYER_BODY_RADIUS } from './player.js';
 import { steerAroundProps, pushOutOfProps, hasLineOfSight } from './terrain.js';
 import { spawnEnemyDamageNum, spawnPlayerDamageNum } from './damageNumbers.js';
 import { spawnExplosion } from './particles.js';
@@ -431,7 +431,7 @@ export function updateEnemies(delta, worldDelta, elapsed) {
 
     // Player contact damage
     const pr = PLAYER_BODY_RADIUS * 1.02;
-    const shieldRadius = hasShieldBubble() ? SHIELD_RADIUS : pr;
+    const shieldRadius = (hasShieldBubble() || hasArmorBubble()) ? SHIELD_RADIUS : pr;
     const er = enemyGeoParams.radius * (e.scaleMult || 1) * 1.02;
     const minD = shieldRadius + er;
     if (dist < minD && dist > 1e-6) {

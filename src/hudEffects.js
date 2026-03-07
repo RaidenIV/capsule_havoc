@@ -62,7 +62,12 @@ export function updateHudEffects(){
     el.style.color = '#fff';
     el.style.fontWeight = '800';
     el.style.fontSize = '14px';
-    el.textContent = '🪖 ';
+
+    const label = document.createElement('span');
+    label.textContent = 'Armor';
+    label.style.marginRight = '2px';
+    el.appendChild(label);
+
     for (let i = 0; i < Math.min(hits, 3); i++) {
       const pip = document.createElement('span');
       pip.textContent = '●';

@@ -6,7 +6,7 @@ import {
   BULLET_SPEED, BULLET_LIFETIME, ENEMY_BULLET_DMG, WEAPON_CONFIG,
 } from './constants.js';
 import { bulletGeo, bulletMat, bulletGeoParams, floorY } from './materials.js';
-import { playerGroup, updateHealthBar, hasShieldBubble, SHIELD_RADIUS, PLAYER_BODY_RADIUS } from './player.js';
+import { playerGroup, updateHealthBar, hasShieldBubble, hasArmorBubble, SHIELD_RADIUS, PLAYER_BODY_RADIUS } from './player.js';
 import { pushOutOfProps } from './terrain.js';
 import { spawnPlayerDamageNum, spawnEnemyDamageNum } from './damageNumbers.js';
 import { killEnemy, updateEliteBar } from './enemies.js';
@@ -261,7 +261,7 @@ export function updateEnemyBullets(worldDelta) {
     const visPos = (b.mesh || b.obj || b.core).position;
     const pdx = visPos.x - playerGroup.position.x;
     const pdz = visPos.z - playerGroup.position.z;
-    const hitRadius = hasShieldBubble() ? SHIELD_RADIUS : PLAYER_BODY_RADIUS;
+    const hitRadius = (hasShieldBubble() || hasArmorBubble()) ? SHIELD_RADIUS : PLAYER_BODY_RADIUS;
     if (pdx*pdx + pdz*pdz < hitRadius * hitRadius) {
       const dmg = (Number.isFinite(b.dmg) ? b.dmg : ENEMY_BULLET_DMG);
       // Shield absorbs hits first (abilities tab)
