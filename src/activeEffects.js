@@ -78,7 +78,7 @@ export function updateActiveEffects(worldDelta){
   // Abilities (Time Slow) already use state.slowTimer/state.slowScale in loop.js.
   if ((e.clock || 0) > 0) {
     // 15% speed; if player uses Time Slow concurrently, the slower wins.
-    const clockScale = 0.85;
+    const clockScale = 0.75;
     state.worldScale = Math.min(state.worldScale || 1.0, clockScale);
   }
 }

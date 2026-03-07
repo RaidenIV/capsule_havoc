@@ -109,9 +109,8 @@ export function tick() {
   // Slow-motion worldDelta is updated inside updatePlayer
   updatePlayer(delta, state.worldScale);
   const worldDelta = delta * state.worldScale;
-  // enemyTimeScale: slows only enemy movement and bullets (Time Freeze pickup)
-  const clockActive = (state.effects?.clock || 0) > 0;
-  state.enemyTimeScale = clockActive ? 0.05 : 1.0; // nearly frozen during clock effect
+  // Time Slow now brings the world to roughly 75% speed overall.
+  state.enemyTimeScale = 1.0;
 
   // Timed effects (arena pickups)
   updateArmorTimers(worldDelta);

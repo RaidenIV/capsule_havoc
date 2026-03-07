@@ -91,9 +91,7 @@ const COLLECT_HP        = 0.8;
 export function updatePickups(worldDelta, playerLevel, elapsed) {
   const baseAttract = ATTRACT_DIST_COIN[Math.min(playerLevel, 10)];
   const bonus = Math.max(0, (state.upg?.magnet || 0)) * 1.25; // shop upgrade (design doc)
-  const coinMagnetActive = (state.effects?.coinMagnet || 0) > 0;
-  const attractDist = coinMagnetActive ? Infinity : (baseAttract + bonus);
-  const attractSpeed = coinMagnetActive ? 34.0 : ATTRACT_SPD_COIN;
+  const attractDist = baseAttract + bonus;
   // Coin merge safety (performance): consolidate if too many coins are on the ground.
   if (state.coinPickups.length > 400) {
     let sum = 0;
@@ -130,9 +128,11 @@ export function updatePickups(worldDelta, playerLevel, elapsed) {
       playSound('coin', 0.5, 0.95 + Math.random() * 0.15);
       continue;
     }
-    if (coinMagnetActive || dist < attractDist) cp.attracting = true;
+    if ((cp.magnetBurst || 0) > 0) cp.magnetBurst = Math.max(0, cp.magnetBurst - worldDelta);
+    if (dist < attractDist) cp.attracting = true;
     if (cp.attracting && dist > 0.001) {
-      const spd = attractSpeed * worldDelta;
+      const burstSpeed = (cp.magnetBurst || 0) > 0 ? 34.0 : ATTRACT_SPD_COIN;
+      const spd = burstSpeed * worldDelta;
       cp.mesh.position.x += (dx/dist) * Math.min(spd, dist);
       cp.mesh.position.z += (dz/dist) * Math.min(spd, dist);
     }
