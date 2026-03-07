@@ -72,17 +72,20 @@ export function updateActiveEffects(worldDelta){
       if (e[k] === 0) anyExpired = true;
     }
   }
-  if (anyExpired) playSound('pickup_expire', 0.35, 1.0);
-}
-
-export function getActiveWorldScale(){
-  initActiveEffects();
-  let scale = 1.0;
-  if ((state.effects.clock || 0) > 0) {
-    // Arena Time Slow pickup: world runs at ~85% speed.
-    scale = Math.min(scale, 0.85);
+  if ((state.chaosTimer || 0) > 0) {
+    state.chaosTimer = Math.max(0, state.chaosTimer - worldDelta);
+    if (state.chaosTimer === 0) state.curseTier = 0;
   }
-  return scale;
+
+  if (anyExpired) playSound('pickup_expire', 0.35, 1.0);
+
+  // Drive worldScale for Clock effect.
+  // Abilities (Time Slow) already use state.slowTimer/state.slowScale in loop.js.
+  if ((e.clock || 0) > 0) {
+    // 15% slow; if player uses Time Slow concurrently, the slower wins.
+    const clockScale = 0.85;
+    state.worldScale = Math.min(state.worldScale || 1.0, clockScale);
+  }
 }
 
 export function getDamageMultiplier(){

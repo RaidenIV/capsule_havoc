@@ -53,6 +53,7 @@ export const state = {
   // ── Meta stats (design doc) ───────────────────────────────────────────────
   luck: 0,
   curseTier: 0,
+  chaosTimer: 0,
 
   // ── Player ───────────────────────────────────────────────────────────────────
   playerMaxHP: 100,
@@ -89,6 +90,7 @@ export const state = {
   upg: {
     // Weapons
     laserFire: 0,     // 0..5 (unlocks / tiers player lasers)
+    slash: 0,         // 0..5 (slash weapon tiers)
     orbit: 0,         // 0..5 (orbit weapon tiers)
 
     dmg: 0,           // 0..5
@@ -112,7 +114,6 @@ export const state = {
     regen: 0,         // 0..4
     xpGrowth: 0,      // 0..4
     coinBonus: 0,     // 0..3
-    curse: 0,         // 0..3
     luck: 0,          // 0..3
   },
 

@@ -52,10 +52,10 @@ function syncXPUI() {
 }
 
 export function updateXP(amount) {
-  // XP Growth (+15% per tier) + Curse (+10% per tier)
+  // XP Growth (+15% per tier) + Chaos (+10% per tier while active)
   const growthTier = Math.max(0, state.upg?.xpGrowth || 0);
-  const curseTier = Math.max(0, state.upg?.curse || 0);
-  const mult = (1 + 0.15 * growthTier) * (1 + 0.10 * curseTier) * getXPMultiplier();
+  const chaosTier = (state.chaosTimer || 0) > 0 ? Math.max(0, state.curseTier || 0) : 0;
+  const mult = (1 + 0.15 * growthTier) * (1 + 0.10 * chaosTier) * getXPMultiplier();
   const add = Math.max(0, Math.floor((amount || 0) * mult));
   if (!Number.isFinite(add) || add <= 0) { syncXPUI(); return; }
 

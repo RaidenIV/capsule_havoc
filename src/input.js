@@ -1,6 +1,6 @@
 // ─── input.js ─────────────────────────────────────────────────────────────────
 import { state } from './state.js';
-import { DASH_DURATION, DASH_COOLDOWN } from './constants.js';
+import { DASH_SPEED, DASH_DURATION, DASH_COOLDOWN } from './constants.js';
 import { ISO_FWD, ISO_RIGHT } from './renderer.js';
 import * as THREE from 'three';
 import { playSound, toggleMute } from './audio.js';
@@ -20,6 +20,15 @@ export function initInput({ togglePanel, restartGame, togglePause, onFirstKey })
 }
 
 const _dv = new THREE.Vector3();
+
+
+function getDashStats(tier){
+  const t = Math.max(0, Math.min(5, tier | 0));
+  const speedMult = [0, 0.50, 0.62, 0.75, 0.88, 1.00][t] || 0.50;
+  const cooldown = [0, 1.40, 1.20, 1.00, 0.82, 0.68][t] || DASH_COOLDOWN;
+  return { speedMult, cooldown };
+}
+
 
 window.addEventListener('keydown', e => {
   // Resume AudioContext on first interaction (browser autoplay policy)
@@ -71,11 +80,11 @@ window.addEventListener('keydown', e => {
       state.dashVX        = state.lastMoveX;
       state.dashVZ        = state.lastMoveZ;
       state.dashTimer     = DASH_DURATION;
-      // Dash Tier 2 reduces cooldown by 30%
       const dashTier = (state.upg?.dash || 0);
-      const cdMult = dashTier >= 2 ? 0.70 : 1.0;
-      state.dashCooldownMax = DASH_COOLDOWN * cdMult;
-      state.dashCooldown  = state.dashCooldownMax;
+      const dashStats = getDashStats(dashTier);
+      state.dashSpeed = DASH_SPEED * dashStats.speedMult;
+      state.dashCooldownMax = dashStats.cooldown;
+      state.dashCooldown = state.dashCooldownMax;
       state.dashGhostTimer = 0;
       playSound('dash', 0.55, 0.95 + Math.random() * 0.1);
     }

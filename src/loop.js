@@ -361,14 +361,16 @@ export function tick() {
     renderSceneFrame();
     return;
   }
-  // Slash: only auto-runs for slash-primary loadouts. If no character has been selected,
-  // preserve the legacy slash-default behavior.
+  // Slash: only auto-runs for slash-primary loadouts, and now scales from the Slash tier line.
+  const slashTier = Math.max(0, state.upg?.slash || 0);
   const slashPrimary = !state.characterPrimaryWeapon || state.characterPrimaryWeapon === 'slash';
-  if (slashPrimary) {
+  const slashEnabled = slashPrimary && (slashTier > 0 || !state.characterPrimaryWeapon);
+  const slashInterval = slashTier > 0 ? Math.max(0.35, SLASH_INTERVAL * Math.pow(0.92, Math.max(0, slashTier - 1))) : SLASH_INTERVAL;
+  if (slashEnabled) {
     state._slashTimer = (state._slashTimer || 0) - delta;
     if (state._slashTimer <= 0) {
       performSlash();
-      state._slashTimer = SLASH_INTERVAL;
+      state._slashTimer = slashInterval;
     }
   }
 

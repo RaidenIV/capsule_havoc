@@ -70,8 +70,8 @@ function getLevelScaling(level) {
 }
 
 function getCurseScaling() {
-  const tier = clamp(Math.floor(state.curseTier || 0), 0, 3);
-  return { tier, ...CURSE_SPAWN[tier] };
+  // Chaos no longer changes spawn quotas or intervals. It only affects combat/rewards.
+  return { tier: 0, quotaMul: 1.0, intervalMul: 1.0 };
 }
 
 function getEnemyCapForLevel(level) {

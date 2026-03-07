@@ -73,8 +73,8 @@ export function dropLoot(pos, coinValue, coinMult, coinColorHex = null) {
   }
   // Coins always drop (physical pickup), tiered by enemy type at the call site.
   const coinTier = Math.max(0, state.upg?.coinBonus || 0);
-  const curseTier = Math.max(0, state.upg?.curse || 0);
-  const bonus = (1 + 0.20 * coinTier) * (1 + 0.25 * curseTier) * getCoinValueMultiplier();
+  const chaosTier = (state.chaosTimer || 0) > 0 ? Math.max(0, state.curseTier || 0) : 0;
+  const bonus = (1 + 0.20 * coinTier) * (1 + 0.25 * chaosTier) * getCoinValueMultiplier();
   const val = Math.max(1, Math.round((coinValue || 1) * (coinMult || 1) * bonus));
   spawnCoins(pos, 1, val, coinColorHex);
 }

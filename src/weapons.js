@@ -442,6 +442,29 @@ function _getSlashAimAngle() {
   return Math.atan2(lz, lx);
 }
 
+
+function getSlashTier() {
+  return Math.max(0, state.upg?.slash || 0);
+}
+
+function getSlashRange() {
+  const tier = getSlashTier();
+  return S_RANGE * (1 + 0.05 * Math.max(0, tier - 1));
+}
+
+function getSlashInterval() {
+  const tier = getSlashTier();
+  if (tier <= 0) return Infinity;
+  return Math.max(0.35, 1.0 * Math.pow(0.92, Math.max(0, tier - 1)));
+}
+
+function getSlashDamage() {
+  const tier = getSlashTier();
+  const slashBase = Math.max(1, getBulletDamage());
+  const tierMult = 1 + 0.20 * Math.max(0, tier - 1);
+  return Math.max(1, Math.round(slashBase * 1.8 * tierMult));
+}
+
 function _spinDamage(px, pz, range, dmg, centerA, halfArc) {
   for (let j = state.enemies.length - 1; j >= 0; j--) {
     const e = state.enemies[j];
@@ -465,6 +488,7 @@ function _spinDamage(px, pz, range, dmg, centerA, halfArc) {
 }
 
 export function performSlash() {
+  if (getSlashTier() <= 0 && state.characterPrimaryWeapon === 'slash') return;
   if (!state.slashEffects) state.slashEffects = [];
   if (state.slashEffects.length > 8) return;
 
@@ -473,7 +497,7 @@ export function performSlash() {
   const startA = state._sf ? (centerA - S_SWEEP * 0.5) : (centerA + S_SWEEP * 0.5);
   const sweepA = state._sf ? S_SWEEP : -S_SWEEP;
 
-  const range = S_RANGE, inner = S_INNER;
+  const range = getSlashRange(), inner = S_INNER;
   const px = playerGroup.position.x;
   const pz = playerGroup.position.z;
   const y  = playerGroup.position.y + S_Y;
@@ -489,8 +513,7 @@ scene.add(arcMesh);
     // Slash damage uses the same damage pipeline as player projectiles
   // (base level damage + dmg upgrades + weapon tier multiplier + Double Damage effect).
   // Slash remains a bit stronger than a single projectile by design.
-  const slashBase = Math.max(1, getBulletDamage());
-  const dmg = Math.max(1, Math.round(slashBase * 1.8));
+  const dmg = getSlashDamage();
   _spinDamage(px, pz, range, dmg, centerA, S_SWEEP * 0.5);
   playSound('laser_sword', 0.72, 0.93 + Math.random() * 0.14);
 

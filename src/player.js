@@ -169,8 +169,9 @@ export function updatePlayer(delta, worldScale) {
   // Dash (player stays at full speed — world slows around them)
   if (state.dashTimer > 0) {
     state.dashTimer -= delta;
-    playerGroup.position.x += state.dashVX * DASH_SPEED * delta;
-    playerGroup.position.z += state.dashVZ * DASH_SPEED * delta;
+    const dashSpeed = Number.isFinite(state.dashSpeed) && state.dashSpeed > 0 ? state.dashSpeed : (DASH_SPEED * 0.5);
+    playerGroup.position.x += state.dashVX * dashSpeed * delta;
+    playerGroup.position.z += state.dashVZ * dashSpeed * delta;
     state.playerVel = { x: state.dashVX, z: state.dashVZ };
     playerMesh.rotation.z = state.dashVX * -0.4;
     state.dashGhostTimer -= delta;

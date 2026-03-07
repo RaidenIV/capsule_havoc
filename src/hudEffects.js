@@ -42,6 +42,7 @@ function badge(label, seconds){
 
 export function updateHudEffects(){
   updatePersistentToast();
+  updateChaosBanner();
   // Keep only persistent indicators (no timed-effect badges).
   const root = ensure();
   if (!root) return;
@@ -62,12 +63,7 @@ export function updateHudEffects(){
     el.style.color = '#fff';
     el.style.fontWeight = '800';
     el.style.fontSize = '14px';
-
-    const label = document.createElement('span');
-    label.textContent = 'Armor';
-    label.style.marginRight = '2px';
-    el.appendChild(label);
-
+    el.textContent = '🪖 ';
     for (let i = 0; i < Math.min(hits, 3); i++) {
       const pip = document.createElement('span');
       pip.textContent = '●';
@@ -94,6 +90,49 @@ export function updateHudEffects(){
 }
 
 
+
+
+let _chaosHost = null;
+function ensureChaosHost(){
+  if (_chaosHost) return _chaosHost;
+  _chaosHost = document.getElementById('chaos-banner');
+  if (_chaosHost) return _chaosHost;
+  _chaosHost = document.createElement('div');
+  _chaosHost.id = 'chaos-banner';
+  _chaosHost.style.position = 'absolute';
+  _chaosHost.style.left = '50%';
+  _chaosHost.style.top = '92px';
+  _chaosHost.style.transform = 'translateX(-50%)';
+  _chaosHost.style.zIndex = '28';
+  _chaosHost.style.pointerEvents = 'none';
+  document.body.appendChild(_chaosHost);
+  return _chaosHost;
+}
+
+function updateChaosBanner(){
+  const host = ensureChaosHost();
+  if (!host) return;
+  const tier = (state.chaosTimer || 0) > 0 ? Math.max(0, state.curseTier || 0) : 0;
+  if (tier <= 0) {
+    host.innerHTML = '';
+    return;
+  }
+  const secs = Math.max(0, Math.ceil(state.chaosTimer || 0));
+  const hpdmg = tier * 20;
+  const coins = tier * 25;
+  const xp = tier * 10;
+  host.innerHTML = `
+    <div style="
+      min-width:360px; padding:12px 18px; border-radius:16px;
+      background:linear-gradient(180deg, rgba(120,20,20,0.92), rgba(40,0,0,0.88));
+      border:1px solid rgba(255,120,90,0.36);
+      box-shadow:0 14px 40px rgba(0,0,0,0.45), inset 0 1px 0 rgba(255,255,255,0.06);
+      backdrop-filter: blur(10px);
+      color:#fff; text-align:center; font-family:Rajdhani,system-ui,sans-serif;">
+      <div style="font-size:22px;font-weight:900;letter-spacing:.14em;">CHAOS T${tier} · ${secs}s</div>
+      <div style="font-size:13px;font-weight:700;opacity:.9;letter-spacing:.06em;">Enemies +${hpdmg}% HP/DMG · +${coins}% Coins · +${xp}% XP</div>
+    </div>`;
+}
 
 let _toastStyleEl = null;
 function ensureToastStyles(){

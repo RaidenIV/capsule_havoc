@@ -13,7 +13,7 @@ import {
   enemyGeo, enemyMat, enemyGeoParams, bulletGeoParams,
   enemyBulletGeo, getEnemyBulletMat, floorY,
 } from './materials.js';
-import { playerGroup, updateHealthBar, hasShieldBubble, hasArmorBubble, SHIELD_RADIUS, PLAYER_BODY_RADIUS } from './player.js';
+import { playerGroup, updateHealthBar, hasShieldBubble, SHIELD_RADIUS, PLAYER_BODY_RADIUS } from './player.js';
 import { steerAroundProps, pushOutOfProps, hasLineOfSight } from './terrain.js';
 import { spawnEnemyDamageNum, spawnPlayerDamageNum } from './damageNumbers.js';
 import { spawnExplosion } from './particles.js';
@@ -36,6 +36,31 @@ function getEnemyHP() {
   const playerMax = (state.playerMaxHP ?? PLAYER_MAX_HP);
   const basePct = (ENEMY_DEFS?.[ENEMY_TYPE.RUSHER]?.hpPct ?? 0.50);
   return Math.round(playerMax * basePct);
+}
+
+
+function getActiveChaosTier() {
+  return (state.chaosTimer || 0) > 0 ? Math.max(0, state.curseTier || 0) : 0;
+}
+
+function getChaosStatMult() {
+  return 1 + 0.20 * getActiveChaosTier();
+}
+
+function syncEnemyChaosTier(e) {
+  const nextTier = getActiveChaosTier();
+  const prevTier = Math.max(0, e.chaosAppliedTier || 0);
+  if (prevTier === nextTier) return;
+  const prevMult = 1 + 0.20 * prevTier;
+  const nextMult = 1 + 0.20 * nextTier;
+  const ratio = nextMult / prevMult;
+  e.hp = Math.max(1, Math.round((e.hp || 1) * ratio));
+  e.maxHp = Math.max(1, Math.round((e.maxHp || 1) * ratio));
+  if (Number.isFinite(e.shieldHp) && e.shieldHp > 0) {
+    e.shieldHp = Math.max(1, Math.round(e.shieldHp * ratio));
+  }
+  e.chaosAppliedTier = nextTier;
+  try { updateEliteBar(e); } catch {}
 }
 
 // ── Spawn ─────────────────────────────────────────────────────────────────────
@@ -99,8 +124,8 @@ export function spawnEnemy(x, z, eliteTypeOrCfg = null) {
   grp.add(mesh);
   scene.add(grp);
 
-  const curseTier = Math.max(0, state.upg?.curse || 0);
-  const curseMult = 1 + 0.20 * curseTier;
+  const curseTier = getActiveChaosTier();
+  const curseMult = getChaosStatMult();
   const hp = (cfg && Number.isFinite(cfg.health))
     ? Math.round(cfg.health * curseMult)
     : Math.round(getEnemyHP() * hpMult * curseMult);
@@ -139,6 +164,7 @@ export function spawnEnemy(x, z, eliteTypeOrCfg = null) {
     spawnFlashTimer: SPAWN_FLASH_DURATION, matDirty: true,
     enemyType,
     bulletSpeedMult: (cfg && Number.isFinite(cfg.bulletSpeedMult)) ? cfg.bulletSpeedMult : 1,
+    chaosAppliedTier: curseTier,
   });
 
   // Spawn fade-in
@@ -273,6 +299,7 @@ export function updateEnemies(delta, worldDelta, elapsed) {
   for (let i = state.enemies.length - 1; i >= 0; i--) {
     const e = state.enemies[i];
     if (e.dead) continue;
+    syncEnemyChaosTier(e);
 
     const dx   = playerGroup.position.x - e.grp.position.x;
     const dz   = playerGroup.position.z - e.grp.position.z;
@@ -345,8 +372,8 @@ export function updateEnemies(delta, worldDelta, elapsed) {
 
           scene.add(bMesh);
 
-          const curseTier = Math.max(0, state.upg?.curse || 0);
-          const dmg = ENEMY_BULLET_DMG * (1 + 0.20 * curseTier);
+          const chaosTier = getActiveChaosTier();
+          const dmg = ENEMY_BULLET_DMG * (1 + 0.20 * chaosTier);
 
           state.enemyBullets.push({ mesh: bMesh, mat: bMat, vx: dvx, vz: dvz, life: ENEMY_BULLET_LIFETIME, dmg });
           playSound('elite_shoot', 0.5, 0.9 + Math.random() * 0.2);
@@ -431,7 +458,7 @@ export function updateEnemies(delta, worldDelta, elapsed) {
 
     // Player contact damage
     const pr = PLAYER_BODY_RADIUS * 1.02;
-    const shieldRadius = (hasShieldBubble() || hasArmorBubble()) ? SHIELD_RADIUS : pr;
+    const shieldRadius = hasShieldBubble() ? SHIELD_RADIUS : pr;
     const er = enemyGeoParams.radius * (e.scaleMult || 1) * 1.02;
     const minD = shieldRadius + er;
     if (dist < minD && dist > 1e-6) {
@@ -464,8 +491,8 @@ export function updateEnemies(delta, worldDelta, elapsed) {
             }
           } else {
             // Damage = DPS × interval so average damage rate stays the same
-            const curseTier = Math.max(0, state.upg?.curse || 0);
-            const dmg = ENEMY_CONTACT_DPS * CONTACT_HIT_INTERVAL * (1 + 0.20 * curseTier);
+            const chaosTier = getActiveChaosTier();
+            const dmg = ENEMY_CONTACT_DPS * CONTACT_HIT_INTERVAL * (1 + 0.20 * chaosTier);
             const res = applyPlayerDamage(dmg, 'contact');
             if (res.applied > 0) {
               spawnPlayerDamageNum(Math.round(res.applied));

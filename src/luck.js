@@ -3,7 +3,6 @@
 // Luck sources:
 //  - Shop purchases: state.upg.luck (tiered)
 //  - Boss wave bonuses: state.bossLuck (accumulates)
-//  - Curse: state.upg.curse (adds luck but also increases difficulty elsewhere)
 
 import { state } from './state.js';
 
@@ -15,9 +14,7 @@ const SHOP_LUCK = [0, 10, 20, 30];
 export function recomputeLuck(){
   const shop = SHOP_LUCK[clamp(state.upg?.luck ?? 0, 0, 3)] ?? 0;
   const boss = state.bossLuck ?? 0;
-  const curseTier = clamp(state.upg?.curse ?? 0, 0, 3);
-  const curseLuck = curseTier * 5; // small kicker (doc uses curse as a source)
-  state.luck = shop + boss + curseLuck;
+  state.luck = shop + boss;
   return state.luck;
 }
 
@@ -30,8 +27,6 @@ export function addLuck(amount = 0, source = 'misc'){
   if (source === 'bossWave') state.bossLuck = (state.bossLuck ?? 0) + n;
   else if (source === 'shop') {
     // shop luck is tracked via tier; do nothing here
-  } else if (source === 'curse') {
-    // curse is tracked via tier; do nothing here
   } else {
     state.bossLuck = (state.bossLuck ?? 0) + n;
   }

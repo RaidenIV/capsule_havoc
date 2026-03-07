@@ -207,8 +207,11 @@ export function restartGame(opts = {}) {
   state.kills       = 0;
   state.elapsed     = 0;
   state.shootTimer  = 0;
+  state._slashTimer = 0;
   state.bulletWaveAngle = 0;
   state.dashTimer   = 0; state.dashCooldown = 0; state.dashGhostTimer = 0;
+  state.dashSpeed = 0;
+  state.hasDash = false;
   state.worldScale  = 1.0;
   state.contactDmgAccum = 0; state.contactDmgTimer = 0;
   state.spawnTickTimer  = 0;
@@ -218,21 +221,25 @@ export function restartGame(opts = {}) {
   state.coins       = 0;
   state.pickupRangeLvl = 0;
   state.upg = {
-    laserFire: 0, orbit: 0,
+    laserFire: 0, slash: 0, orbit: 0,
     dmg:0, fireRate:0, projSpeed:0, piercing:0, multishot:0,
     moveSpeed:0, dash:0, magnet:0,
     shield:0, burst:0, timeSlow:0,
-    maxHealth:0, regen:0, xpGrowth:0, coinBonus:0, curse:0, luck:0,
+    maxHealth:0, regen:0, xpGrowth:0, coinBonus:0, luck:0,
   };
   if (state.characterPrimaryWeapon === 'laser') {
     state.upg.laserFire = 1;
     state.weaponTier = 1;
+  } else if (state.characterPrimaryWeapon === 'slash') {
+    state.upg.slash = 1;
+    state.weaponTier = 0;
   } else {
     state.weaponTier = 0;
   }
   state.luck = 0;
   state.bossLuck = 0;
   state.curseTier = 0;
+  state.chaosTimer = 0;
   state.shieldCharges = 0;
   state.shieldRecharge = 0;
   state.shieldHitCD = 0;
