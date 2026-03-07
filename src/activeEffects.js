@@ -72,11 +72,6 @@ export function updateActiveEffects(worldDelta){
       if (e[k] === 0) anyExpired = true;
     }
   }
-  if ((state.chaosTimer || 0) > 0) {
-    state.chaosTimer = Math.max(0, state.chaosTimer - worldDelta);
-    if (state.chaosTimer === 0) state.curseTier = 0;
-  }
-
   if (anyExpired) playSound('pickup_expire', 0.35, 1.0);
 
   // Drive worldScale for Clock effect.
@@ -86,6 +81,14 @@ export function updateActiveEffects(worldDelta){
     const clockScale = 0.85;
     state.worldScale = Math.min(state.worldScale || 1.0, clockScale);
   }
+}
+
+
+export function getActiveWorldScale(){
+  initActiveEffects();
+  const abilityScale = (state.slowTimer || 0) > 0 ? (state.slowScale || 0.5) : 1.0;
+  const clockScale = (state.effects?.clock || 0) > 0 ? 0.85 : 1.0;
+  return Math.min(abilityScale, clockScale);
 }
 
 export function getDamageMultiplier(){
