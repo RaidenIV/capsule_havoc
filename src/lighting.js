@@ -9,7 +9,7 @@ scene.add(ambientLight);
 export const sunLight = new THREE.DirectionalLight(0xffffff, 15);
 sunLight.position.set(15, 30, 20);
 sunLight.castShadow = true;
-sunLight.shadow.mapSize.set(2048, 2048);
+sunLight.shadow.mapSize.set(1024, 1024);
 sunLight.shadow.camera.near   = 0.1;
 sunLight.shadow.camera.far    = 150;
 sunLight.shadow.camera.left   = -50;

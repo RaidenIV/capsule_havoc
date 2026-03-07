@@ -27,10 +27,12 @@ export const playerMat = new THREE.MeshPhysicalMaterial({
 });
 export const playerBaseColor = playerMat.color.clone(); // restored after dash flash
 
-export const enemyMat = new THREE.MeshPhysicalMaterial({
-  color: 0x888888, metalness: 0.67, roughness: 0.0,
-  clearcoat: 1.0, clearcoatRoughness: 0.0, envMapIntensity: 0.0,
-  emissive: 0x000000, emissiveIntensity: 1.0,
+export const enemyMat = new THREE.MeshStandardMaterial({
+  color: 0x888888,
+  metalness: 0.67,
+  roughness: 0.0,
+  emissive: 0x000000,
+  emissiveIntensity: 1.0,
 });
 export const bulletMat = new THREE.MeshStandardMaterial({
   color: 0xffffff, emissive: 0xff1100, emissiveIntensity: 4.0,
