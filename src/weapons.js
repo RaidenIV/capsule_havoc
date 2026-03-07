@@ -6,7 +6,7 @@ import {
   BULLET_SPEED, BULLET_LIFETIME, ENEMY_BULLET_DMG, WEAPON_CONFIG,
 } from './constants.js';
 import { bulletGeo, bulletMat, bulletGeoParams, floorY } from './materials.js';
-import { playerGroup, updateHealthBar, hasShieldBubble, hasArmorBubble, SHIELD_RADIUS, PLAYER_BODY_RADIUS } from './player.js';
+import { playerGroup, updateHealthBar, hasShieldBubble, SHIELD_RADIUS, PLAYER_BODY_RADIUS } from './player.js';
 import { pushOutOfProps } from './terrain.js';
 import { spawnPlayerDamageNum, spawnEnemyDamageNum } from './damageNumbers.js';
 import { killEnemy, updateEliteBar } from './enemies.js';
@@ -261,7 +261,7 @@ export function updateEnemyBullets(worldDelta) {
     const visPos = (b.mesh || b.obj || b.core).position;
     const pdx = visPos.x - playerGroup.position.x;
     const pdz = visPos.z - playerGroup.position.z;
-    const hitRadius = (hasShieldBubble() || hasArmorBubble()) ? SHIELD_RADIUS : PLAYER_BODY_RADIUS;
+    const hitRadius = hasShieldBubble() ? SHIELD_RADIUS : PLAYER_BODY_RADIUS;
     if (pdx*pdx + pdz*pdz < hitRadius * hitRadius) {
       const dmg = (Number.isFinite(b.dmg) ? b.dmg : ENEMY_BULLET_DMG);
       // Shield absorbs hits first (abilities tab)
@@ -343,14 +343,14 @@ export function updateOrbitBullets(worldDelta) {
 
 
 // ═══════════════════════════════════════════════════════════════════════════════
-//  360° SPIN-SLASH
+//  180° FRONT SLASH
 // ═══════════════════════════════════════════════════════════════════════════════
 
-const S_RANGE   = 5.0;
+const S_RANGE   = 3.75;
 const S_INNER   = 1.0;
 const S_RX      = 1.00;
 const S_RZ      = 1.00;
-const S_SWEEP   = Math.PI * 2.0;
+const S_SWEEP   = Math.PI;
 const S_SWING_T = 0.16;
 const S_FADE_T  = 0.14;
 const S_Y       = 1.0;
@@ -423,12 +423,34 @@ function _buildEllipseArc(innerR, outerR, rx, rz, startA, sweepA, segs = 120) {
   return g;
 }
 
-function _spinDamage(px, pz, range, dmg) {
+function _normAng(a) {
+  while (a > Math.PI) a -= Math.PI * 2;
+  while (a < -Math.PI) a += Math.PI * 2;
+  return a;
+}
+
+function _angDelta(a, b) {
+  return Math.abs(_normAng(a - b));
+}
+
+function _getSlashAimAngle() {
+  const vx = Number.isFinite(state.playerVel?.x) ? state.playerVel.x : 0;
+  const vz = Number.isFinite(state.playerVel?.z) ? state.playerVel.z : 0;
+  if (vx * vx + vz * vz > 1e-4) return Math.atan2(vz, vx);
+  const lx = Number.isFinite(state.lastMoveX) ? state.lastMoveX : 1;
+  const lz = Number.isFinite(state.lastMoveZ) ? state.lastMoveZ : 0;
+  return Math.atan2(lz, lx);
+}
+
+function _spinDamage(px, pz, range, dmg, centerA, halfArc) {
   for (let j = state.enemies.length - 1; j >= 0; j--) {
     const e = state.enemies[j];
     if (!e || e.dead) continue;
     const dx = e.grp.position.x - px, dz = e.grp.position.z - pz;
-    if (dx*dx + dz*dz > range*range) continue;
+    const dist2 = dx*dx + dz*dz;
+    if (dist2 > range*range) continue;
+    const ang = Math.atan2(dz, dx);
+    if (_angDelta(ang, centerA) > halfArc) continue;
     applyEnemyDamage(e, dmg);
     spawnEnemyDamageNum(dmg, e);
     e.staggerTimer = 0.12;
@@ -446,8 +468,9 @@ export function performSlash() {
   if (!state.slashEffects) state.slashEffects = [];
   if (state.slashEffects.length > 8) return;
 
-  state._sf    = ((state._sf | 0) + 1) & 1;
-  const startA = Math.PI;
+  state._sf = ((state._sf | 0) + 1) & 1;
+  const centerA = _getSlashAimAngle();
+  const startA = state._sf ? (centerA - S_SWEEP * 0.5) : (centerA + S_SWEEP * 0.5);
   const sweepA = state._sf ? S_SWEEP : -S_SWEEP;
 
   const range = S_RANGE, inner = S_INNER;
@@ -468,7 +491,7 @@ scene.add(arcMesh);
   // Slash remains a bit stronger than a single projectile by design.
   const slashBase = Math.max(1, getBulletDamage());
   const dmg = Math.max(1, Math.round(slashBase * 1.8));
-  _spinDamage(px, pz, range, dmg);
+  _spinDamage(px, pz, range, dmg, centerA, S_SWEEP * 0.5);
   playSound('laser_sword', 0.72, 0.93 + Math.random() * 0.14);
 
   state.slashEffects.push({ arcMesh, arcGeo, arcMat, t: 0, startA, sweepA });

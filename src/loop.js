@@ -120,13 +120,16 @@ export function tick() {
 
   // Slow-motion worldDelta is updated inside updatePlayer
   updatePlayer(delta, state.worldScale);
-  const worldDelta = delta * state.worldScale;
+  let worldDelta = delta * state.worldScale;
   // Time Slow arena pickup now brings the world to roughly 85% speed overall.
   state.enemyTimeScale = 1.0;
 
   // Timed effects (arena pickups)
   updateArmorTimers(worldDelta);
   updateActiveEffects(worldDelta);
+  // Re-sample after timed effects so Clock / arena Time Slow clamps the world
+  // speed for the current frame instead of only becoming obvious a frame later.
+  worldDelta = delta * state.worldScale;
 
   // ── Ability timers & passive effects (design doc) ─────────────────────────
   // Dash i-frames (Tier 3)

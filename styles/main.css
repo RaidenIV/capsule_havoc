@@ -902,7 +902,9 @@ body.mode-playing #menu-screen { display: none !important; }
   align-items: center;
   justify-content: center;
   padding: 24px;
-  background: rgba(0, 0, 0, 0.42);
+  background: rgba(0, 0, 0, 0.68);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
   z-index: 8;
 }
 .character-modal.show { display: flex; }

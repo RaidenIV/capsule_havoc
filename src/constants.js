@@ -172,7 +172,7 @@ export const ELITE_TYPES = [
 
 // Weapon config per level: [fireInterval, waveBullets, dmgMultiplier, orbitCount, orbitRadius, orbitSpeed, orbitColor]
 export const WEAPON_CONFIG = [
-  [0.850,  8, 1.0,  0,  0.0,  0.0, 0x00eeff],
+  [1.000,  6, 1.0,  0,  0.0,  0.0, 0x00eeff],
   [0.850, 10, 1.5,  0,  0.0,  0.0, 0x00eeff],
   [0.425, 10, 1.5,  6,  2.0,  2.0, 0x00ff66],
   [0.425, 10, 2.0,  8,  3.0,  3.0, 0x00ff66],

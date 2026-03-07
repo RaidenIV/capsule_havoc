@@ -390,8 +390,15 @@ g('pause-resume-btn')?.addEventListener('click', () => {
 // Pause-menu restart
 g('pause-restart-btn')?.addEventListener('click', () => {
   restartGame({ skipInitialSpawn: true });
-  // Ensure we exit the pause overlay after restarting
-  if (state.paused) { showPausePage('main'); togglePause(); }
+  // Ensure we exit the pause overlay after restarting even if the game state
+  // was reset while the pause DOM was still visible.
+  state.paused = false;
+  pauseEl?.classList.remove('show');
+  try { document.body.classList.remove('is-paused'); } catch {}
+  showPausePage('main');
+  clock.getDelta();
+  resumeMusic();
+  updatePauseBtn();
 });
 
 // Settings page
