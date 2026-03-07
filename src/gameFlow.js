@@ -193,15 +193,6 @@ export function restartGame(opts = {}) {
   state.dashStreaks.forEach(ds => { scene.remove(ds.mesh); ds.mat.dispose(); });
   state.dashStreaks.length = 0;
 
-  if (Array.isArray(state.targetedShots)) {
-    state.targetedShots.forEach(s => { try { scene.remove(s.obj); } catch {} });
-    state.targetedShots.length = 0;
-  }
-  if (Array.isArray(state.lightningFx)) {
-    state.lightningFx.forEach(fx => { try { scene.remove(fx.mesh); fx.geo?.dispose?.(); fx.mat?.dispose?.(); } catch {} });
-    state.lightningFx.length = 0;
-  }
-
   destroyOrbitBullets();
 
   playerGroup.position.set(0, 0, 0);
@@ -219,14 +210,12 @@ export function restartGame(opts = {}) {
   state.playerLevel = 1;
   initSpawner();
   state.coins       = 0;
-  state.weaponTier  = 0; // lasers are upgrade-only; player starts with slash only
+  state.weaponTier  = state.characterPrimaryWeapon === 'laser' ? 1 : 0;
   state.pickupRangeLvl = 0;
   state.upg = {
-    laserFire:0, orbit:0,
-    dmg:0, fireRate:0, projSpeed:0, laserRange:0, piercing:0, multishot:0,
-    orbitDamage:0, orbitRange:0, orbitSpeed:0,
-    targetedFire:0, targetedDamage:0, targetedCooldown:0, targetedRange:0,
-    lightning:0, lightningDamage:0, lightningCooldown:0,
+    laserFire: state.characterPrimaryWeapon === 'laser' ? 1 : 0,
+    orbit:0,
+    dmg:0, fireRate:0, projSpeed:0, piercing:0, multishot:0,
     moveSpeed:0, dash:0, magnet:0,
     shield:0, burst:0, timeSlow:0,
     maxHealth:0, regen:0, xpGrowth:0, coinBonus:0, curse:0, luck:0,
@@ -254,10 +243,6 @@ export function restartGame(opts = {}) {
     coinMagnet: 0,
   };
   state.effectsDur = {};
-  state.targetedShotTimer = 0;
-  state.lightningTimer = 0;
-  state.targetedShots = [];
-  state.lightningFx = [];
   state.bossLuck = 0;
   state.arenaPickups = [];
   state.pendingShop = false;

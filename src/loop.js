@@ -9,7 +9,7 @@ import { updateChunks } from './terrain.js';
 import { updatePlayer, updateDashStreaks, updateHealthBar } from './player.js';
 import { updateEnemies, removeCSS2DFromGroup, killEnemy } from './enemies.js';
 import { updateSpawner, initSpawner } from './spawner.js';
-import { shootBulletWave, updateBullets, updateEnemyBullets, updateOrbitBullets, updateSecondaryWeapons, performSlash, updateSlashEffects } from './weapons.js';
+import { shootBulletWave, updateBullets, updateEnemyBullets, updateOrbitBullets, performSlash, updateSlashEffects } from './weapons.js';
 import { updatePickups } from './pickups.js';
 import { updateActiveEffects } from './activeEffects.js';
 import { updateArmorTimers } from './armor.js';
@@ -121,7 +121,7 @@ export function tick() {
   // Slow-motion worldDelta is updated inside updatePlayer
   updatePlayer(delta, state.worldScale);
   const worldDelta = delta * state.worldScale;
-  // Time Slow arena pickup can now drag the world down to 15% speed overall.
+  // Time Slow arena pickup now brings the world to roughly 85% speed overall.
   state.enemyTimeScale = 1.0;
 
   // Timed effects (arena pickups)
@@ -355,18 +355,20 @@ export function tick() {
     return;
   }
   updateOrbitBullets(worldDelta);
-  updateSecondaryWeapons(worldDelta);
 
   if (!state.gameOver && state.playerHP <= 0) {
     triggerGameOver();
     renderSceneFrame();
     return;
   }
-  // Slash: timed by SLASH_INTERVAL; NOT scaled by worldDelta so Time Slow/Clock do not affect slash cadence
-  state._slashTimer = (state._slashTimer || 0) - delta;
-  if (state._slashTimer <= 0) {
-    performSlash();
-    state._slashTimer = SLASH_INTERVAL;
+  // Slash: only the slash-primary character should auto-slash.
+  // NOT scaled by worldDelta so Time Slow/Clock do not affect slash cadence.
+  if (state.characterPrimaryWeapon === 'slash') {
+    state._slashTimer = (state._slashTimer || 0) - delta;
+    if (state._slashTimer <= 0) {
+      performSlash();
+      state._slashTimer = SLASH_INTERVAL;
+    }
   }
 
   updatePickups(worldDelta, state.playerLevel, state.elapsed);
