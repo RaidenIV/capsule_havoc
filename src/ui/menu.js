@@ -5,6 +5,7 @@ import { renderHighScores } from './scores.js';
 import { clearHighScores } from './highScores.js';
 import { bindAudioSettingsUI, applySavedAudioSettings } from './settings.js';
 import { playSound, startMusic } from '../audio.js';
+import { initMenuParticles } from './menuParticles.js';
 
 export function initMenuUI({ onStart }) {
   const menu = document.getElementById('menu-screen');
@@ -25,6 +26,7 @@ export function initMenuUI({ onStart }) {
   // Load persisted audio settings *before* user hits start (affects first music play).
   applySavedAudioSettings();
   const settingsApi = bindAudioSettingsUI(menu);
+  const particleFx = initMenuParticles(menu);
 
   function showPage(name) {
     pageMain.classList.toggle('active', name === 'main');
@@ -39,6 +41,7 @@ export function initMenuUI({ onStart }) {
     document.body.classList.add('mode-menu');
     document.body.classList.remove('mode-playing');
     menu.classList.add('show');
+    particleFx.start();
     showPage('main');
      // Play menu theme whenever we enter the main menu.
     startMusic('menu');
@@ -50,6 +53,7 @@ export function initMenuUI({ onStart }) {
     // never a frame where mode-playing shows them before the countdown hides them.
     const HUD_IDS = ['ui','hud-top-left','coin-hud','xp-hud','fpsOverlay','livesHud','instructions','tab-hint'];
     HUD_IDS.forEach(id => { const el = document.getElementById(id); if (el) el.style.visibility = 'hidden'; });
+    particleFx.stop();
     document.body.classList.remove('mode-menu');
     document.body.classList.add('mode-playing');
     menu.classList.remove('show');
