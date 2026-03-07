@@ -669,6 +669,13 @@ body.mode-playing #menu-screen { display: none !important; }
   overflow: hidden;
 }
 
+/* Particle canvas */
+#menu-particles {
+  position: absolute; inset: 0;
+  width: 100%; height: 100%;
+  pointer-events: none; z-index: 0;
+}
+
 /* Subtle scanlines texture */
 .menu-scanlines {
   position: absolute; inset: 0; pointer-events: none; z-index: 0;
