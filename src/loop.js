@@ -121,7 +121,7 @@ export function tick() {
   // Slow-motion worldDelta is updated inside updatePlayer
   updatePlayer(delta, state.worldScale);
   const worldDelta = delta * state.worldScale;
-  // Time Slow now brings the world to roughly 75% speed overall.
+  // Time Slow arena pickup now brings the world to roughly 85% speed overall.
   state.enemyTimeScale = 1.0;
 
   // Timed effects (arena pickups)
