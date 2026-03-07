@@ -11,9 +11,21 @@ const xpLevelElLegacy= document.getElementById('xp-level');
 const xpCurElLegacy  = document.getElementById('xp-cur');
 const xpNextElLegacy = document.getElementById('xp-next');
 
+function hasLaserLoadout() {
+  return state.characterPrimaryWeapon === 'laser' || state.selectedCharacter === 'blue' || (state.weaponTier || 0) >= 1;
+}
+
+function getLaserPatternTier() {
+  return Math.max(0, Math.min(5, state.upg?.laserFire || 0));
+}
+
+function getLaserVolleyCount() {
+  if (!hasLaserLoadout()) return 0;
+  return [6, 7, 8, 9, 10, 10][getLaserPatternTier()] || 0;
+}
+
 export function getWeaponConfig() {
-  const t = Math.max(0, state.upg?.laserFire || state.weaponTier || 0);
-  const waveBullets = [0, 6, 6, 8, 10, 10][Math.min(t, 5)] || 0;
+  const waveBullets = getLaserVolleyCount();
   const orbitCount = [0, 2, 3, 4, 5, 6][Math.min(Math.max(0, state.upg?.orbit || 0), 5)] || 0;
   const orbitRadius = 1.9 + Math.max(0, state.upg?.orbitRange || 0) * 0.22;
   const orbitSpeed = 1.7 + Math.max(0, state.upg?.orbitSpeed || 0) * 0.20;
@@ -27,12 +39,10 @@ export function getBulletDamage() {
   return Math.round(base * mult * eff);
 }
 export function getFireInterval() {
-  const laserTier = Math.max(0, state.upg?.laserFire || state.weaponTier || 0);
-  return laserTier > 0 ? 1.0 : 9999;
+  return hasLaserLoadout() ? 1.0 : 9999;
 }
 export function getWaveBullets()  {
-  const t = Math.max(0, state.upg?.laserFire || state.weaponTier || 0);
-  return [0, 6, 6, 8, 10, 10][Math.min(t, 5)] || 0;
+  return getLaserVolleyCount();
 }
 
 function syncXPUI() {

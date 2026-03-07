@@ -484,7 +484,7 @@ export function updateEnemies(delta, worldDelta, elapsed) {
               if (state.shieldCharges <= 0) {
                 const tier = Math.max(0, state.upg?.shield || 0);
                 const base = 12.0;
-                const rt = (tier >= 2) ? base * 0.65 : base;
+                const rt = tier >= 4 ? base * 0.45 : ((tier >= 2) ? base * 0.65 : base);
                 state.shieldRecharge = rt;
               }
               playSound('shield_break', 0.65, 1.0);

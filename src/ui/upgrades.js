@@ -43,62 +43,95 @@ function meetsRequirement(upgDef){
   return getTier(needKey) >= minTier;
 }
 
+const STANDARD_COSTS = [10, 50, 250, 1000, 2000];
+const MULTISHOT_COSTS = [1000, 2000];
+
 const CATEGORIES = [
   {
     id: 'weapons', label: 'Weapons',
     upgrades: [
-      { key: 'laserFire', name: 'Laser Fire', costs: [250, 900, 2200, 5500, 12000],
-        desc: t => t === 1 ? 'Unlocks automatic laser fire' : `Improves laser pattern (Tier ${t})` },
-      { key: 'orbit', name: 'Orbit Weapon', costs: [250, 750, 1800, 4200, 9000],
+      { key: 'laserFire', name: 'Laser Fire', costs: STANDARD_COSTS,
+        desc: t => [
+          '7 laser projectiles',
+          '8 laser projectiles',
+          '9 laser projectiles',
+          '10 laser projectiles',
+          '10 projectiles + rotating firing positions',
+        ][t - 1] || `Tier ${t}` },
+      { key: 'orbit', name: 'Orbit Weapon', costs: STANDARD_COSTS,
         desc: t => t === 1 ? 'Unlocks orbiting bullets' : `Adds orbit strength (Tier ${t})` },
-      { key: 'dmg', name: 'Damage', costs: [50, 150, 400, 1000, 2500],
-        desc: t => `+15% weapon damage (Tier ${t})` },
-      { key: 'fireRate', name: 'Fire Rate', requires: { key: 'laserFire', minTier: 1 }, costs: [75, 200, 500, 1200, 3000],
+      { key: 'dmg', name: 'Damage', costs: STANDARD_COSTS,
+        desc: t => `+10% weapon damage (Tier ${t})` },
+      { key: 'fireRate', name: 'Fire Rate', costs: STANDARD_COSTS,
         desc: t => `-10% shot cooldown (Tier ${t})` },
-      { key: 'projSpeed', name: 'Projectile Speed', requires: { key: 'laserFire', minTier: 1 }, costs: [100, 300, 800, 2000],
+      { key: 'projSpeed', name: 'Projectile Speed', costs: STANDARD_COSTS,
         desc: t => `+20% projectile speed (Tier ${t})` },
-      { key: 'piercing', name: 'Piercing', costs: [200, 600, 1500],
+      { key: 'piercing', name: 'Piercing', costs: STANDARD_COSTS,
         desc: t => `+1 enemy pierced per shot (Tier ${t})` },
-      { key: 'multishot', name: 'Multishot', requires: { key: 'laserFire', minTier: 1 }, costs: [500, 1500, 4000],
-        desc: t => `+1 extra projectile per shot (Tier ${t})` },
+      { key: 'multishot', name: 'Multi-Shot', costs: MULTISHOT_COSTS,
+        desc: t => t === 1 ? '2 shot burst' : '3 shot burst' },
     ],
   },
   {
     id: 'movement', label: 'Movement',
     upgrades: [
-      { key: 'moveSpeed', name: 'Move Speed', costs: [60, 180, 450, 1100, 2800],
+      { key: 'moveSpeed', name: 'Move Speed', costs: STANDARD_COSTS,
         desc: t => `+8% movement speed (Tier ${t})` },
-      { key: 'dash', name: 'Dash', costs: [300, 700, 1800],
-        desc: t => ['Unlocks dash (Shift key)', 'Reduces cooldown by 30%', 'Adds i-frames during dash'][t - 1] },
-      { key: 'magnet', name: 'Magnet Radius', costs: [80, 250, 650, 1600],
+      { key: 'dash', name: 'Dash', costs: STANDARD_COSTS,
+        desc: t => [
+          'Unlocks dash (Shift key)',
+          'Improves dash speed and cooldown',
+          'Adds i-frames during dash',
+          'Further improves dash speed and cooldown',
+          'Max dash speed and shortest cooldown',
+        ][t - 1] || `Tier ${t}` },
+      { key: 'magnet', name: 'Magnet Radius', costs: STANDARD_COSTS,
         desc: t => `+1.25 item attraction range (Tier ${t})` },
     ],
   },
   {
     id: 'abilities', label: 'Abilities',
     upgrades: [
-      { key: 'shield', name: 'Shield', costs: [400, 1000, 2500],
-        desc: t => ['Rechargeable bubble shield (1.5 radius, 1 hit)', '-35% recharge time', '2-hit bubble shield (1.5 radius)'][t - 1] },
-      { key: 'burst', name: 'Area Burst [E]', costs: [350, 900, 2200, 5500],
-        desc: t => ['+Radial damage pulse', '+25% radius & damage', '-30% cooldown', '+Knockback on burst'][t - 1] },
-      { key: 'timeSlow', name: 'Time Slow [Q]', costs: [600, 1500, 3800],
-        desc: t => ['50% slow for 3s on enemies', 'Extends duration to 5s', 'Deepens slow to 25% speed'][t - 1] },
+      { key: 'shield', name: 'Shield', costs: STANDARD_COSTS,
+        desc: t => [
+          'Rechargeable bubble shield (1 hit)',
+          'Faster shield recharge',
+          '2-hit bubble shield',
+          'Much faster shield recharge',
+          '3-hit bubble shield',
+        ][t - 1] || `Tier ${t}` },
+      { key: 'burst', name: 'Area Burst [E]', costs: STANDARD_COSTS,
+        desc: t => [
+          '+Radial damage pulse',
+          '+25% radius & damage',
+          '-30% cooldown',
+          '+Knockback on burst',
+          '+50% radius & damage',
+        ][t - 1] || `Tier ${t}` },
+      { key: 'timeSlow', name: 'Time Slow [Q]', costs: STANDARD_COSTS,
+        desc: t => [
+          '50% enemy speed for 3s',
+          'Extends duration to 5s',
+          'Deepens slow to 25% speed',
+          'Cuts cooldown by 50%',
+          'Deepens slow to 15% speed',
+        ][t - 1] || `Tier ${t}` },
     ],
   },
   {
     id: 'powerups', label: 'Power Ups',
     upgrades: [
-      { key: 'maxHealth', name: 'Max Health', costs: [40, 120, 350, 900, 2200],
+      { key: 'maxHealth', name: 'Max Health', costs: STANDARD_COSTS,
         desc: t => `+10% max HP (Tier ${t})` },
-      { key: 'regen', name: 'Health Regen', costs: [100, 300, 750, 1800],
+      { key: 'regen', name: 'Health Regen', costs: STANDARD_COSTS,
         desc: t => `+${t} HP/sec regeneration` },
-      { key: 'xpGrowth', name: 'XP Growth', costs: [150, 400, 1000, 2500],
+      { key: 'xpGrowth', name: 'XP Growth', costs: STANDARD_COSTS,
         desc: t => `+15% XP from kills (Tier ${t})` },
-      { key: 'coinBonus', name: 'Coin Bonus', costs: [200, 600, 1500],
+      { key: 'coinBonus', name: 'Coin Bonus', costs: STANDARD_COSTS,
         desc: t => `+20% coins per kill (Tier ${t})` },
-      { key: 'curse', name: 'Curse ⚠', costs: [500, 1500, 4000],
+      { key: 'curse', name: 'Curse ⚠', costs: STANDARD_COSTS,
         desc: t => `Enemies +20% HP/DMG → +25% coins, +10% XP (Tier ${t})` },
-      { key: 'luck', name: 'Luck', costs: [250, 700, 1800],
+      { key: 'luck', name: 'Luck', costs: STANDARD_COSTS,
         desc: t => `+5 Luck — better chests & 4th shop option chance (Tier ${t})` },
     ],
   },
@@ -115,11 +148,22 @@ function isUpgradeAllowedForLoadout(upg){
   return true;
 }
 
-function getEligibleUpgrades(category){
-  return category.upgrades.filter(upg => {
-    const cur = getTier(upg.key);
-    return cur < upg.costs.length && meetsRequirement(upg) && isUpgradeAllowedForLoadout(upg);
-  });
+function isTierOneOnlyWindow(level){
+  return Math.max(1, Math.floor(level || state.playerLevel || 1)) <= 3;
+}
+
+function isEligibleForShopWindow(upg, level){
+  const cur = getTier(upg.key);
+  if (cur >= upg.costs.length) return false;
+  if (!meetsRequirement(upg) || !isUpgradeAllowedForLoadout(upg)) return false;
+  if (isTierOneOnlyWindow(level)) {
+    return cur === 0 && upg.key !== 'multishot';
+  }
+  return true;
+}
+
+function getEligibleUpgrades(category, level){
+  return category.upgrades.filter(upg => isEligibleForShopWindow(upg, level));
 }
 
 function getDesiredOptionCount(level){
@@ -132,13 +176,13 @@ function getDesiredOptionCount(level){
 
 function rollShopChoices(level){
   const desired = getDesiredOptionCount(level);
-  const categories = shuffle(CATEGORIES.filter(cat => getEligibleUpgrades(cat).length > 0));
+  const categories = shuffle(CATEGORIES.filter(cat => getEligibleUpgrades(cat, level).length > 0));
   const picks = [];
   const usedKeys = new Set();
 
   for (const cat of categories) {
     if (picks.length >= Math.min(desired, CATEGORIES.length)) break;
-    const options = getEligibleUpgrades(cat).filter(upg => !usedKeys.has(upg.key));
+    const options = getEligibleUpgrades(cat, level).filter(upg => !usedKeys.has(upg.key));
     if (!options.length) continue;
     const pick = choice(options);
     picks.push({ category: cat.id, upgrade: pick });
@@ -147,8 +191,7 @@ function rollShopChoices(level){
 
   if (picks.length < desired) {
     const fallbackPool = shuffle(ALL_UPGRADES.filter(upg => {
-      const cur = getTier(upg.key);
-      return cur < upg.costs.length && !usedKeys.has(upg.key) && meetsRequirement(upg) && isUpgradeAllowedForLoadout(upg);
+      return !usedKeys.has(upg.key) && isEligibleForShopWindow(upg, level);
     }));
     while (picks.length < desired && fallbackPool.length) {
       const upg = fallbackPool.shift();
@@ -196,6 +239,7 @@ function applyUpgradeEffect(key, newTier) {
         state.shieldRecharge = 0;
       }
       if (newTier >= 3) state.shieldCharges = Math.max(state.shieldCharges, 2);
+      if (newTier >= 5) state.shieldCharges = Math.max(state.shieldCharges, 3);
       break;
 
     case 'laserFire':
@@ -220,6 +264,7 @@ let _shopChoices = [];
 let _shopLevel = 1;
 let _purchaseLocked = false;
 let _onClose = null;
+let _firstLevelUpFreeShop = false;
 
 function ensureStatsPanel(){
   if (_statsPanel) return _statsPanel;
@@ -229,7 +274,7 @@ function ensureStatsPanel(){
   panel.id = 'upgradeStatsPanel';
   panel.innerHTML = `
     <div style="font-weight:900;letter-spacing:0.08em;font-size:13px;opacity:0.9;margin-bottom:10px;">PLAYER STATS</div>
-    <div id="upgradeStatsBody" style="display:flex;flex-direction:column;gap:8px;"></div>
+    <div id="upgradeStatsBody"></div>
   `;
   overlay.appendChild(panel);
   _statsPanel = panel;
@@ -238,15 +283,15 @@ function ensureStatsPanel(){
 
 function _statRow(label, value){
   return `
-    <div style="display:flex;justify-content:space-between;gap:10px;align-items:baseline;">
-      <div style="opacity:0.85;font-weight:700;font-size:13px;">${label}</div>
-      <div style="font-weight:900;font-size:14px;white-space:nowrap;">${value}</div>
+    <div style="display:flex;justify-content:space-between;gap:10px;align-items:flex-start;break-inside:avoid;page-break-inside:avoid;padding:1px 0;">
+      <div style="opacity:0.85;font-weight:700;font-size:12px;line-height:1.15;">${label}</div>
+      <div style="font-weight:900;font-size:12px;line-height:1.15;text-align:right;white-space:normal;overflow-wrap:anywhere;max-width:56%;">${value}</div>
     </div>`;
 }
 
 function _statSection(label){
   return `
-    <div style="margin-top:6px;padding-top:8px;border-top:1px solid rgba(255,255,255,0.10);font-weight:900;font-size:11px;letter-spacing:0.10em;opacity:0.72;">${label}</div>`;
+    <div style="column-span:all;break-inside:avoid;page-break-inside:avoid;margin:6px 0 4px;padding-top:8px;border-top:1px solid rgba(255,255,255,0.10);font-weight:900;font-size:10px;letter-spacing:0.10em;opacity:0.72;">${label}</div>`;
 }
 
 function updateStatsPanel(){
@@ -283,13 +328,13 @@ function updateStatsPanel(){
   const armorHits = Math.max(0, state.armorHits || 0);
   const slashDmg = Math.max(1, Math.round(bulletDmg * 1.8));
   const totalProjectiles = Math.max(1, waveDirs) * (1 + msTier);
-  const dashCd = dashTier > 0 ? (dashTier >= 2 ? 1.4 * 0.70 : 1.4) : 0;
-  const shieldCharges = shieldTier >= 3 ? 2 : (shieldTier >= 1 ? 1 : 0);
-  const shieldRecharge = shieldTier > 0 ? (shieldTier >= 2 ? 12.0 * 0.65 : 12.0) : 0;
-  const burstDmg = burstTier > 0 ? ((burstTier >= 4) ? 180 : (70 + burstTier * 30)) : 0;
-  const burstRadius = burstTier > 0 ? ((burstTier >= 4) ? 11.0 : 5.5) : 0;
+  const dashCd = dashTier > 0 ? (dashTier >= 5 ? 0.68 : dashTier >= 4 ? 0.82 : dashTier >= 3 ? 1.00 : dashTier >= 2 ? 1.20 : 1.40) : 0;
+  const shieldCharges = shieldTier >= 5 ? 3 : (shieldTier >= 3 ? 2 : (shieldTier >= 1 ? 1 : 0));
+  const shieldRecharge = shieldTier > 0 ? (shieldTier >= 4 ? 12.0 * 0.45 : (shieldTier >= 2 ? 12.0 * 0.65 : 12.0)) : 0;
+  const burstDmg = burstTier > 0 ? (burstTier >= 5 ? 220 : ((burstTier >= 4) ? 180 : (70 + burstTier * 30))) : 0;
+  const burstRadius = burstTier > 0 ? (burstTier >= 5 ? 13.2 : ((burstTier >= 4) ? 11.0 : (burstTier >= 2 ? 6.9 : 5.5))) : 0;
   const timeSlowDuration = timeSlowTier > 0 ? (timeSlowTier >= 2 ? 5.0 : 3.0) : 0;
-  const timeSlowScale = timeSlowTier >= 3 ? 0.25 : (timeSlowTier >= 1 ? 0.5 : 1.0);
+  const timeSlowScale = timeSlowTier >= 5 ? 0.15 : (timeSlowTier >= 3 ? 0.25 : (timeSlowTier >= 1 ? 0.5 : 1.0));
 
   const rows = [
     _statSection('CORE'),
@@ -310,7 +355,7 @@ function updateStatsPanel(){
   }
 
   const ownedRows = [];
-  if (dmgTier > 0) ownedRows.push(_statRow('Damage Bonus', `+${dmgTier * 15}%`));
+  if (dmgTier > 0) ownedRows.push(_statRow('Damage Bonus', `+${dmgTier * 10}%`));
   if (fireRateTier > 0 && (laserTier > 0 || loadout === 'laser')) ownedRows.push(_statRow('Fire Rate Bonus', `-${fireRateTier * 10}% CD`));
   if (msTier > 0 && (laserTier > 0 || loadout === 'laser')) ownedRows.push(_statRow('Multishot', `+${msTier} / dir`));
   if (psTier > 0 && (laserTier > 0 || loadout === 'laser')) ownedRows.push(_statRow('Proj Speed', `+${psTier * 20}%`));
@@ -318,7 +363,7 @@ function updateStatsPanel(){
   if (moveTier > 0) ownedRows.push(_statRow('Move Speed', `+${moveTier * 8}%`));
   if (dashTier > 0) ownedRows.push(_statRow('Dash CD', `${dashCd.toFixed(2)}s`));
   if (magnetTier > 0) ownedRows.push(_statRow('Magnet Radius', `+${(magnetTier * 1.25).toFixed(2)}`));
-  if (shieldTier > 0) ownedRows.push(_statRow('Shield', `${shieldCharges} hit • 1.5 radius • ${shieldRecharge.toFixed(1)}s recharge`));
+  if (shieldTier > 0) ownedRows.push(_statRow('Shield', `${shieldCharges} hit • ${shieldRecharge.toFixed(1)}s recharge`));
   if (timeSlowTier > 0) ownedRows.push(_statRow('Time Slow', `${(timeSlowScale * 100).toFixed(0)}% speed • ${timeSlowDuration.toFixed(0)}s`));
   if (maxHealthTier > 0) ownedRows.push(_statRow('Max HP Bonus', `+${maxHealthTier * 10}%`));
   if (regenTier > 0) ownedRows.push(_statRow('Regen', `${regenTier} HP/s`));
@@ -342,11 +387,14 @@ function ensureShopStyles() {
   style.id = 'shop-dynamic-styles';
   style.textContent = `
     #upgradeStatsPanel {
-      position:absolute; left:18px; top:92px; width:260px; max-height:calc(100% - 140px);
-      overflow:auto; padding:14px; border-radius:18px; background:#06080f;
+      position:absolute; left:18px; top:74px; width:420px; max-height:none;
+      overflow:hidden; padding:12px 14px; border-radius:18px; background:#06080f;
       border:1px solid rgba(0,229,255,0.12); box-shadow:0 12px 34px rgba(0,0,0,0.40);
       backdrop-filter:blur(12px); -webkit-backdrop-filter:blur(12px); color:#fff; z-index:5;
       font-family: Rajdhani, system-ui, sans-serif;
+    }
+    #upgradeStatsBody {
+      columns:2; column-gap:14px;
     }
     .shop-draft-head {
       margin: 0 0 12px; padding: 0 0 10px; border-bottom: 1px solid rgba(255,255,255,0.08);
@@ -421,6 +469,11 @@ function ensureShopStyles() {
   document.head.appendChild(style);
 }
 
+function getDisplayedUpgradeCost(upg, currentTier){
+  if (_firstLevelUpFreeShop && currentTier === 0 && upg.key !== 'multishot') return 0;
+  return upg.costs[currentTier] ?? 0;
+}
+
 function updateCoinsUI() {
   const el = $('upgradeCoins');
   if (el) el.textContent = String(state.coins || 0);
@@ -452,9 +505,9 @@ function renderShop() {
     const upg = choiceItem.upgrade;
     const currentTier = getTier(upg.key);
     const maxTier = upg.costs.length;
-    const nextCost = upg.costs[currentTier] ?? 0;
+    const nextCost = getDisplayedUpgradeCost(upg, currentTier);
     const isMaxed = currentTier >= maxTier;
-    const affordable = coins >= nextCost;
+    const affordable = nextCost <= 0 || coins >= nextCost;
     const lockedByPurchase = _purchaseLocked && choiceItem.key !== _purchaseLocked;
 
     const row = document.createElement('div');
@@ -497,14 +550,16 @@ function renderShop() {
       btn.textContent = 'MAXED';
     } else {
       const label = document.createElement('span');
-      label.textContent = affordable ? 'BUY' : 'NEED';
-      const pill = document.createElement('span');
-      pill.className = 'upgrade-coins';
-      const costEl = document.createElement('span');
-      costEl.textContent = String(nextCost);
-      pill.appendChild(costEl);
+      label.textContent = nextCost <= 0 ? 'FREE' : (affordable ? 'BUY' : 'NEED');
       btn.appendChild(label);
-      btn.appendChild(pill);
+      if (nextCost > 0) {
+        const pill = document.createElement('span');
+        pill.className = 'upgrade-coins';
+        const costEl = document.createElement('span');
+        costEl.textContent = String(nextCost);
+        pill.appendChild(costEl);
+        btn.appendChild(pill);
+      }
     }
 
     btn.addEventListener('click', () => {
@@ -546,6 +601,7 @@ export function openUpgradeShop(level, onClose) {
     bought: false,
   }));
   _purchaseLocked = false;
+  _firstLevelUpFreeShop = !state.firstLevelUpShopHandled && _shopLevel <= 2;
 
   const overlay = $('upgradeOverlay');
   if (!overlay) return;
@@ -579,6 +635,8 @@ export function closeUpgradeShopIfOpen() {
   state.paused = false;
   _shopChoices = [];
   _purchaseLocked = false;
+  if (_firstLevelUpFreeShop) state.firstLevelUpShopHandled = true;
+  _firstLevelUpFreeShop = false;
   try { document.body.classList.remove('is-shop'); } catch {}
 }
 

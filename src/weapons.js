@@ -137,8 +137,8 @@ export function shootBulletWave() {
   const burstSpacing = 0.075;
   const rangeTier = Math.max(0, state.upg?.laserRange || 0);
   const bulletLife = BULLET_LIFETIME * (1 + 0.22 * rangeTier);
-  const laserTier = Math.max(0, state.upg?.laserFire || state.weaponTier || 0);
-  const rotating = laserTier >= 5;
+  const laserTier = Math.max(0, state.upg?.laserFire || 0);
+  const rotating = (state.characterPrimaryWeapon === 'laser' || state.selectedCharacter === 'blue') && laserTier >= 5;
   playSound('shoot', 0.45, 0.92 + Math.random() * 0.16);
   for (let i = 0; i < dirs; i++) {
     const baseAng = state.bulletWaveAngle + (i / Math.max(1, dirs)) * Math.PI * 2;
@@ -274,7 +274,7 @@ export function updateEnemyBullets(worldDelta) {
           if (state.shieldCharges <= 0) {
             const tier = Math.max(0, state.upg?.shield || 0);
             const base = 12.0;
-            const rt = (tier >= 2) ? base * 0.65 : base;
+            const rt = tier >= 4 ? base * 0.45 : ((tier >= 2) ? base * 0.65 : base);
             state.shieldRecharge = rt;
           }
           playSound('shield_break', 0.7, 1.0);

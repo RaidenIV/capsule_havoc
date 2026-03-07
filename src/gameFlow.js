@@ -212,8 +212,9 @@ export function restartGame(opts = {}) {
   state.coins       = 0;
   state.weaponTier  = state.characterPrimaryWeapon === 'laser' ? 1 : 0;
   state.pickupRangeLvl = 0;
+  state.firstLevelUpShopHandled = false;
   state.upg = {
-    laserFire: state.characterPrimaryWeapon === 'laser' ? 1 : 0,
+    laserFire: 0,
     orbit:0,
     dmg:0, fireRate:0, projSpeed:0, piercing:0, multishot:0,
     moveSpeed:0, dash:0, magnet:0,

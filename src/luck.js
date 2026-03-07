@@ -8,11 +8,11 @@ import { state } from './state.js';
 
 function clamp(v, a, b){ return Math.max(a, Math.min(b, v)); }
 
-// Shop luck tiers (doc): 0..3 -> 0/10/20/30
-const SHOP_LUCK = [0, 10, 20, 30];
+// Shop luck tiers: 0..5 -> +0/+5/+10/+15/+20/+25
+const SHOP_LUCK = [0, 5, 10, 15, 20, 25];
 
 export function recomputeLuck(){
-  const shop = SHOP_LUCK[clamp(state.upg?.luck ?? 0, 0, 3)] ?? 0;
+  const shop = SHOP_LUCK[clamp(state.upg?.luck ?? 0, 0, 5)] ?? 0;
   const boss = state.bossLuck ?? 0;
   state.luck = shop + boss;
   return state.luck;

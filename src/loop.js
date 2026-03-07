@@ -121,7 +121,7 @@ export function tick() {
   // Slow-motion worldDelta is updated inside updatePlayer
   updatePlayer(delta, state.worldScale);
   const worldDelta = delta * state.worldScale;
-  // Time Slow arena pickup now brings the world to roughly 85% speed overall.
+  // Time Slow pickup now brings the world to 15% normal speed overall.
   state.enemyTimeScale = 1.0;
 
   // Timed effects (arena pickups)
@@ -135,7 +135,7 @@ export function tick() {
   // Shield recharge
   if ((state.shieldHitCD || 0) > 0) state.shieldHitCD = Math.max(0, state.shieldHitCD - worldDelta);
   const shieldTier = Math.max(0, state.upg?.shield || 0);
-  const shieldMax = shieldTier >= 3 ? 2 : (shieldTier >= 1 ? 1 : 0);
+  const shieldMax = shieldTier >= 5 ? 3 : (shieldTier >= 3 ? 2 : (shieldTier >= 1 ? 1 : 0));
   if (shieldMax > 0) {
     if ((state.shieldCharges || 0) <= 0 && (state.shieldRecharge || 0) > 0) {
       state.shieldRecharge = Math.max(0, state.shieldRecharge - worldDelta);
@@ -176,12 +176,12 @@ export function tick() {
     state.slowRequested = false;
     const tier = Math.max(0, state.upg?.timeSlow || 0);
     if (tier > 0 && state.slowCooldown <= 0 && state.slowTimer <= 0) {
-      const duration = tier >= 3 ? 5.0 : 3.0;
+      const duration = tier >= 2 ? 5.0 : 3.0;
       const cdBase = 15.0;
-      const cd = (tier >= 2) ? cdBase * 0.70 : cdBase;
+      const cd = tier >= 4 ? cdBase * 0.50 : (tier >= 2 ? cdBase * 0.70 : cdBase);
       state.slowTimer = duration;
       state.slowCooldown = cd;
-      state.slowScale = 0.5;
+      state.slowScale = tier >= 5 ? 0.15 : (tier >= 3 ? 0.25 : 0.5);
       playSound('slowmo', 0.6, 1.0);
     }
   }
@@ -192,8 +192,8 @@ export function tick() {
     const tier = Math.max(0, state.upg?.burst || 0);
     if (tier > 0 && state.burstCooldown <= 0) {
       const baseRadius = 5.5;
-      const radius = tier >= 4 ? baseRadius * 2.0 : baseRadius;
-      const dmg = (tier >= 4) ? 180 : (70 + tier * 30);
+      const radius = tier >= 5 ? baseRadius * 2.4 : (tier >= 4 ? baseRadius * 2.0 : (tier >= 2 ? baseRadius * 1.25 : baseRadius));
+      const dmg = tier >= 5 ? 220 : (tier >= 4 ? 180 : (70 + tier * 30));
       // Apply damage to enemies in radius.
       for (let j = state.enemies.length - 1; j >= 0; j--) {
         const e = state.enemies[j]; if (e.dead) continue;
@@ -206,7 +206,7 @@ export function tick() {
           }
         }
       }
-      state.burstCooldown = 8.0;
+      state.burstCooldown = tier >= 3 ? 5.6 : 8.0;
       playSound('burst', 0.7, 1.0);
     }
   }
