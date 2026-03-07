@@ -24,6 +24,7 @@ export const state = {
     armor: 0,
     clock: 0,
     blackHole: 0,
+    coinMagnet: 0,
   },
 
   // Armor hits (3-hit pickup) and revive i-frames

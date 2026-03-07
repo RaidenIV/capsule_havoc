@@ -21,6 +21,7 @@ const PICKUP_TYPES = [
   'armor',
   'clock',
   'blackHole',
+  'coinMagnet',
 ];
 
 // Arena powerups should read as metallic, reflective pickups with emissive bloom.
@@ -44,6 +45,7 @@ const mats = {
   clock: new THREE.MeshPhysicalMaterial({ color: 0xbbccff, emissive: 0x9db6ff, emissiveIntensity: 0.60, metalness: 1.0, roughness: 0.10, clearcoat: 1.0, clearcoatRoughness: 0.06, reflectivity: 1.0 }),
   // Black hole pickup should stay visually black while still carrying a dark aura.
   blackHole: new THREE.MeshPhysicalMaterial({ color: 0x060606, emissive: 0x111111, emissiveIntensity: 0.675, metalness: 1.0, roughness: 0.14, clearcoat: 1.0, clearcoatRoughness: 0.08, reflectivity: 1.0 }),
+  coinMagnet: new THREE.MeshPhysicalMaterial({ color: 0x8be7ff, emissive: 0x33cfff, emissiveIntensity: 0.66, metalness: 1.0, roughness: 0.10, clearcoat: 1.0, clearcoatRoughness: 0.05, reflectivity: 1.0 }),
 };
 
 let _spawnTimer = 0;
@@ -154,6 +156,7 @@ export function updateArenaPickups(worldDelta){
           case 'xp2x':           notifyPowerup('2× XP', dur, 'xp2x'); break;
           case 'clock':          notifyPowerup('Time Slow', dur, 'clock'); break;
           case 'blackHole':      notifyPowerup('Black Hole', dur, 'blackHole'); break;
+          case 'coinMagnet':     notifyPowerup('Coin Magnet', dur, 'coinMagnet'); break;
           default:               notifyPowerup(p.type, dur, p.type); break;
         }
       }

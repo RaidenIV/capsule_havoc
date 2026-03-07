@@ -687,36 +687,6 @@ body.mode-playing #menu-screen { display: none !important; }
   background: radial-gradient(ellipse 70% 70% at 50% 50%, transparent 20%, #04060a 100%);
 }
 
-.menu-particles {
-  position: absolute; inset: 0; z-index: 0;
-  overflow: hidden; pointer-events: none;
-}
-
-.menu-particle {
-  position: absolute;
-  top: 0; left: 0;
-  border-radius: 50%;
-  opacity: 0;
-  background:
-    radial-gradient(circle at 32% 30%, rgba(255,255,255,0.95) 0%, rgba(255,255,255,0.5) 10%, rgba(186,244,255,0.34) 18%, rgba(0,229,255,0.18) 42%, rgba(0,229,255,0.04) 64%, rgba(0,229,255,0) 74%);
-  box-shadow:
-    0 0 22px rgba(0,229,255,0.12),
-    inset 12px 12px 18px rgba(255,255,255,0.07),
-    inset -14px -16px 24px rgba(0,0,0,0.3);
-  border: 1px solid rgba(255,255,255,0.08);
-  will-change: transform, opacity;
-}
-
-.menu-particle::after {
-  content: '';
-  position: absolute;
-  inset: 12% 14% auto auto;
-  width: 28%; height: 28%;
-  border-radius: 50%;
-  background: radial-gradient(circle, rgba(255,255,255,0.65) 0%, rgba(255,255,255,0) 72%);
-  filter: blur(2px);
-}
-
 /* Ambient orbs */
 .menu-orb {
   position: absolute; border-radius: 50%; pointer-events: none;
@@ -999,11 +969,12 @@ body.mode-playing #menu-screen { display: none !important; }
   padding: 0;
   color: rgba(255,255,255,0.9);
   overflow: hidden;
-  animation: shopIn 0.22s cubic-bezier(0.22,1,0.36,1) both;
+  transform-origin: 50% 50%;
+  animation: shopIn 0.18s cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 @keyframes shopIn {
-  from { transform: translateY(16px); opacity: 0; }
-  to   { transform: translateY(0);    opacity: 1; }
+  from { transform: translateY(10px) scale(0.76); opacity: 0; }
+  to   { transform: translateY(0) scale(1);       opacity: 1; }
 }
 
 /* single cyan rule at top */

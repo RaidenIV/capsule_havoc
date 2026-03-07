@@ -262,7 +262,7 @@ export function tick() {
       // Black hole should read as a BLACK sphere (no purple). We keep a subtle dark
       // emissive so bloom adds presence without tinting the core.
       color: 0x000000, emissive: 0x111111, emissiveIntensity: 2.4,
-      transparent: true, opacity: 0.92, metalness: 0.0, roughness: 0.35,
+      transparent: true, opacity: 0.92, metalness: 0.0, roughness: 1.0,
     });
     const bhMesh = new THREE.Mesh(bhGeo, bhMat);
     bhMesh.position.set(bx, 1.2, bz);
@@ -279,9 +279,13 @@ export function tick() {
       state._bhMat.dispose();
       state._bhGeo.dispose();
       state._bhMesh = null; state._bhMat = null; state._bhGeo = null;
+      for (const e of state.enemies) { if (e) e.blackHoleSuppressed = false; }
     } else {
       // Spin and pulse
       state._bhMesh.rotation.y += worldDelta * 2.5;
+      for (const e of state.enemies) {
+        if (e) e.blackHoleSuppressed = false;
+      }
       state._bhMat.emissiveIntensity = 2.5 + Math.sin(state.elapsed * 8) * 0.8;
       const PULL = 22.0;
       const KILL_R = 1.8;
@@ -316,6 +320,7 @@ export function tick() {
           }).catch(()=>{});
           state.enemies.splice(j, 1);
         } else if (bd < 30) {
+          e.blackHoleSuppressed = true;
           e.grp.position.x += (bdx/bd) * Math.min(PULL * worldDelta, bd - KILL_R);
           e.grp.position.z += (bdz/bd) * Math.min(PULL * worldDelta, bd - KILL_R);
         }

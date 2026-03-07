@@ -88,8 +88,8 @@ async function runBootSplashSequence(){
   // theme ourselves only once the menu is actually on screen.
   stopMusic();
 
-  // 1-second pause before the logo appears.
-  await new Promise(r => setTimeout(r, 1000));
+  // 1.5-second pause before the logo appears.
+  await new Promise(r => setTimeout(r, 1500));
 
   if (splashEl) {
     // Restore display, then force a reflow so the browser registers the element

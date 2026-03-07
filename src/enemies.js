@@ -317,7 +317,8 @@ export function updateEnemies(delta, worldDelta, elapsed) {
     }
 
     // Elite shooting
-    if (fullySpawned && e.fireRate && !e.dead) {
+    const blackHoleSuppressed = !!e.blackHoleSuppressed;
+    if (fullySpawned && e.fireRate && !e.dead && !blackHoleSuppressed) {
       e.shootTimer -= worldDelta;
       if (e.shootTimer <= 0) {
         e.shootTimer = e.fireRate * (0.8 + Math.random() * 0.4);
@@ -445,7 +446,7 @@ export function updateEnemies(delta, worldDelta, elapsed) {
         const CONTACT_HIT_INTERVAL = 1.0; // seconds between hits
         state.contactDmgTimer = CONTACT_HIT_INTERVAL;
 
-        if (!(state.invincible || state.dashInvincible || (state.effects?.invincibility || 0) > 0)) {
+        if (!blackHoleSuppressed && !(state.invincible || state.dashInvincible || (state.effects?.invincibility || 0) > 0)) {
           // Shield absorbs the hit as one discrete charge
           if ((state.shieldCharges || 0) > 0 && (state.shieldHitCD || 0) <= 0) {
             state.shieldCharges -= 1;

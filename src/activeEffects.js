@@ -13,6 +13,7 @@ function tkey(name){
     case 'armor': return 'armor';
     case 'clock': return 'clock';
     case 'blackHole': return 'blackHole';
+    case 'coinMagnet': return 'coinMagnet';
     default: return null;
   }
 }
@@ -27,6 +28,7 @@ export function initActiveEffects(){
       armor: 0,
       clock: 0,
       blackHole: 0,
+      coinMagnet: 0,
     };
   }
   if (!state.effectsDur) {
@@ -38,6 +40,7 @@ export function initActiveEffects(){
       armor: 0,
       clock: 0,
       blackHole: 0,
+      coinMagnet: 0,
     };
   }
 }
@@ -56,6 +59,7 @@ export function applyEffect(name, durationSec = 10){
   if (k === 'armor') playSound('pickup_armor', 0.7, 1.0);
   if (k === 'clock') playSound('pickup_clock', 0.7, 1.0);
   if (k === 'blackHole') playSound('pickup_black_hole', 0.7, 1.0);
+  if (k === 'coinMagnet') playSound('pickup_coin_value', 0.65, 1.08);
 }
 
 export function updateActiveEffects(worldDelta){
