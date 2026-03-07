@@ -23,7 +23,7 @@ playerGroup.add(playerMesh);
 // ── Shield active indicator (green bloom) ───────────────────────────────────
 // A subtle green halo on the bloom layer when shieldCharges > 0.
 export const PLAYER_BODY_RADIUS = 0.6;
-export const SHIELD_RADIUS = 1.2;
+export const SHIELD_RADIUS = 2.0;
 const _shieldGlowGeo = new THREE.SphereGeometry(SHIELD_RADIUS, 18, 14);
 const _shieldGlowMat = new THREE.MeshBasicMaterial({
   color: 0x42f578,

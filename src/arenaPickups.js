@@ -248,7 +248,7 @@ export function updateArenaPickups(worldDelta){
     const attractDist = 5.0;
     const dist = Math.sqrt(dist2);
     if (dist < attractDist && dist > 0.001) {
-      const spd = 9.0 * worldDelta;
+      const spd = 18.0 * worldDelta;
       p.mesh.position.x += (dx / dist) * Math.min(spd, dist);
       p.mesh.position.z += (dz / dist) * Math.min(spd, dist);
     }

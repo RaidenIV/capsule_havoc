@@ -12,24 +12,24 @@ import { getCoinValueMultiplier } from './activeEffects.js';
 // ── Coin ──────────────────────────────────────────────────────────────────────
 const coinGeo     = new THREE.CylinderGeometry(0.22, 0.22, 0.08, 12);
 const coinMatBase = new THREE.MeshStandardMaterial({
-  // Keep the base neutral; tier coloration is applied per-coin.
-  color: 0xffffff,
-  emissive: 0x000000,
-  emissiveIntensity: 0.0,
-  metalness: 0.85,
-  roughness: 0.25,
+  // Match the HUD coin exactly so world drops and UI use the same gold read.
+  color: 0xffe566,
+  emissive: 0xf0a800,
+  emissiveIntensity: 0.6,
+  metalness: 0.9,
+  roughness: 0.2,
 });
 const coinCountEl = document.getElementById('coin-count');
 
 export function spawnCoins(pos, count, value = 1, colorHex = null) {
-  const GOLD_COIN = 0xffd700;
+  const GOLD_COIN = 0xffe566;
   for (let i = 0; i < count; i++) {
     const mat   = coinMatBase.clone();
     const finalColor = GOLD_COIN;
     mat.color.setHex(finalColor);
-    // Keep the gold readable in dark scenes without making it look neon.
-    mat.emissive.setHex(0x111111);
-    mat.emissiveIntensity = 0.18;
+    // Match the HUD coin material exactly.
+    mat.emissive.setHex(0xf0a800);
+    mat.emissiveIntensity = 0.6;
     const mesh  = new THREE.Mesh(coinGeo, mat);
     const angle = Math.random() * Math.PI * 2;
     const r     = 0.3 + Math.random() * 1.2;
@@ -80,9 +80,9 @@ export function dropLoot(pos, coinValue, coinMult, coinColorHex = null) {
 }
 
 // ── Update ────────────────────────────────────────────────────────────────────
-const ATTRACT_DIST_COIN_BASE = 0.0;
-const ATTRACT_SPD_COIN  = 4.5;
-const MAGNET_BURST_SPEED = 17.0;
+const ATTRACT_DIST_COIN_BASE = 1.5;
+const ATTRACT_SPD_COIN  = 9.0;
+const MAGNET_BURST_SPEED = 34.0;
 const ATTRACT_DIST_HP   = [5.0,5.5,6.0,6.5,7.0,7.5,8.0,8.5,9.0,9.5,10.0];
 const ATTRACT_SPD_HP    = ATTRACT_SPD_COIN;
 const COLLECT_COIN      = 0.7;
