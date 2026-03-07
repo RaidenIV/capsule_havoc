@@ -160,6 +160,7 @@
       <!-- ── Page: Settings ── -->
       <div class="pause-page" id="pause-page-settings">
         <button class="pause-action-btn audio" id="pause-audio-btn">AUDIO</button>
+        <button class="pause-action-btn audio" id="pause-visuals-btn">VISUALS</button>
 
         <div class="pause-settings-footer">
           <button class="pause-action-btn back" id="pause-back-btn">BACK</button>
@@ -202,6 +203,55 @@
         </div>
 
       </div><!-- /pause-page-audio -->
+
+      <!-- ── Page: Visuals ── -->
+      <div class="pause-page" id="pause-page-visuals">
+
+        <div class="pause-settings-section">
+          <div class="pause-settings-section-label">VISUAL QUALITY</div>
+
+          <div class="pause-select-row">
+            <label class="pause-slider-label" for="pm-visual-shadows">Shadows</label>
+            <select class="pause-select" id="pm-visual-shadows">
+              <option value="off">OFF</option>
+              <option value="low">LOW · 512</option>
+              <option value="medium">MEDIUM · 1024</option>
+              <option value="high">HIGH · 2048</option>
+            </select>
+          </div>
+
+          <div class="pause-select-row">
+            <label class="pause-slider-label" for="pm-visual-bloom">Bloom</label>
+            <select class="pause-select" id="pm-visual-bloom">
+              <option value="on">ON</option>
+              <option value="off">OFF</option>
+            </select>
+          </div>
+
+          <div class="pause-select-row">
+            <label class="pause-slider-label" for="pm-visual-reflections">Reflections</label>
+            <select class="pause-select" id="pm-visual-reflections">
+              <option value="on">ON</option>
+              <option value="off">OFF</option>
+            </select>
+          </div>
+
+          <div class="pause-select-row">
+            <label class="pause-slider-label" for="pm-visual-accent">Accent Lights</label>
+            <select class="pause-select" id="pm-visual-accent">
+              <option value="on">ON</option>
+              <option value="off">OFF</option>
+            </select>
+          </div>
+
+          <p class="pause-settings-note">For weaker PCs, the biggest wins are Shadows OFF or LOW, Bloom OFF, and Accent Lights OFF.</p>
+        </div>
+
+        <div class="pause-settings-footer">
+          <button class="pause-action-btn back" id="pause-visuals-back-btn">BACK</button>
+        </div>
+
+      </div><!-- /pause-page-visuals -->
 
       <!-- ── Page: SFX Mixer ── -->
       <div class="pause-page" id="pause-page-sfxmixer">
