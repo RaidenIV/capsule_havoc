@@ -192,11 +192,19 @@ function spawnAtRandom(type){
 }
 
 function triggerCoinMagnetBurst(){
-  if (!Array.isArray(state.coinPickups)) return;
-  for (const cp of state.coinPickups) {
-    if (!cp) continue;
-    cp.attracting = true;
-    cp.magnetBurst = Math.max(cp.magnetBurst || 0, 1.2);
+  if (Array.isArray(state.coinPickups)) {
+    for (const cp of state.coinPickups) {
+      if (!cp) continue;
+      cp.attracting = true;
+      cp.magnetBurst = Math.max(cp.magnetBurst || 0, 1.2);
+    }
+  }
+  if (Array.isArray(state.healthPickups)) {
+    for (const hp of state.healthPickups) {
+      if (!hp) continue;
+      hp.attracting = true;
+      hp.magnetBurst = Math.max(hp.magnetBurst || 0, 1.2);
+    }
   }
 }
 

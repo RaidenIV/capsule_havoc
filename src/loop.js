@@ -124,21 +124,22 @@ export function tick() {
   // Time Slow pickup now brings the world to 15% normal speed overall.
   state.enemyTimeScale = 1.0;
 
-  // Timed effects (arena pickups)
-  updateArmorTimers(worldDelta);
-  updateActiveEffects(worldDelta);
+  // Timed effects (arena pickups / player timers) use real time so Clock
+  // slow does not extend their durations.
+  updateArmorTimers(delta);
+  updateActiveEffects(delta);
 
   // ── Ability timers & passive effects (design doc) ─────────────────────────
   // Dash i-frames (Tier 3)
   state.dashInvincible = (state.dashTimer > 0) && ((state.upg?.dash || 0) >= 3);
 
   // Shield recharge
-  if ((state.shieldHitCD || 0) > 0) state.shieldHitCD = Math.max(0, state.shieldHitCD - worldDelta);
+  if ((state.shieldHitCD || 0) > 0) state.shieldHitCD = Math.max(0, state.shieldHitCD - delta);
   const shieldTier = Math.max(0, state.upg?.shield || 0);
   const shieldMax = shieldTier >= 5 ? 3 : (shieldTier >= 3 ? 2 : (shieldTier >= 1 ? 1 : 0));
   if (shieldMax > 0) {
     if ((state.shieldCharges || 0) <= 0 && (state.shieldRecharge || 0) > 0) {
-      state.shieldRecharge = Math.max(0, state.shieldRecharge - worldDelta);
+      state.shieldRecharge = Math.max(0, state.shieldRecharge - delta);
       if (state.shieldRecharge <= 0) state.shieldCharges = shieldMax;
     } else if ((state.shieldCharges || 0) <= 0 && (state.shieldRecharge || 0) <= 0) {
       // If shield unlocked but never initialized
@@ -167,9 +168,9 @@ export function tick() {
   }
 
   // Cooldowns
-  if ((state.burstCooldown || 0) > 0) state.burstCooldown = Math.max(0, state.burstCooldown - worldDelta);
-  if ((state.slowCooldown || 0) > 0) state.slowCooldown = Math.max(0, state.slowCooldown - worldDelta);
-  if ((state.slowTimer || 0) > 0) state.slowTimer = Math.max(0, state.slowTimer - worldDelta);
+  if ((state.burstCooldown || 0) > 0) state.burstCooldown = Math.max(0, state.burstCooldown - delta);
+  if ((state.slowCooldown || 0) > 0) state.slowCooldown = Math.max(0, state.slowCooldown - delta);
+  if ((state.slowTimer || 0) > 0) state.slowTimer = Math.max(0, state.slowTimer - delta);
 
   // Time Slow activation (Q)
   if (state.slowRequested) {
@@ -215,9 +216,9 @@ export function tick() {
   // Cap is driven by player level per design doc.
   state.maxEnemies = getEnemyCapForLevel(state.playerLevel);
 
-  // Open upgrade shop every 5 levels (set by xp.js) except boss levels.
-  if (state.pendingShop && !state.upgradeOpen) {
-    state.pendingShop = false;
+  // Open one queued shop per level-up.
+  if ((Number(state.pendingShop) || 0) > 0 && !state.upgradeOpen) {
+    state.pendingShop = Math.max(0, (Number(state.pendingShop) || 0) - 1);
     openUpgradeShop(state.playerLevel);
   }
 
@@ -341,20 +342,20 @@ export function tick() {
   // ── Weapons / bullets ─────────────────────────────────────────────────────
   // Auto-shoot: only fires when weapon tier is active
   if ((state.weaponTier || 0) >= 1) {
-    state.shootTimer = (state.shootTimer || 0) - worldDelta;
+    state.shootTimer = (state.shootTimer || 0) - delta;
     if (state.shootTimer <= 0) {
       shootBulletWave();
       state.shootTimer = getFireInterval();
     }
   }
-  updateBullets(worldDelta);
+  updateBullets(delta);
   const enemyBulletResult = updateEnemyBullets(worldDelta * (state.enemyTimeScale ?? 1.0));
   if (enemyBulletResult === 'DEAD') {
     triggerGameOver();
     renderSceneFrame();
     return;
   }
-  updateOrbitBullets(worldDelta);
+  updateOrbitBullets(delta);
 
   if (!state.gameOver && state.playerHP <= 0) {
     triggerGameOver();

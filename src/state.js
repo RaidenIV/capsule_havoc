@@ -7,7 +7,7 @@ export const state = {
   // ── Game flow ───────────────────────────────────────────────────────────────
   gameOver:    false,
   paused: false,
-  pendingShop: false,
+  pendingShop: 0,
   spawnTimer: 0,
   bossRespawnTimer: 0,
   bossAlive: false,

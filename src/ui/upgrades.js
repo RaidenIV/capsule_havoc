@@ -456,8 +456,11 @@ function getDisplayedUpgradeCost(upg, currentTier){
 }
 
 function updateCoinsUI() {
+  const value = String(state.coins || 0);
   const el = $('upgradeCoins');
-  if (el) el.textContent = String(state.coins || 0);
+  if (el) el.textContent = value;
+  const gameCoinEl = document.getElementById('coin-count');
+  if (gameCoinEl) gameCoinEl.textContent = value;
 }
 
 function renderShop() {

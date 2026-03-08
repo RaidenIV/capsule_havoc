@@ -1,6 +1,6 @@
 // ─── xp.js ───────────────────────────────────────────────────────────────────
 import { state } from './state.js';
-import { getPlayerMaxHPForLevel, isBossLevel } from './constants.js';
+import { getPlayerMaxHPForLevel } from './constants.js';
 import { expToNext } from './leveling.js';
 import { getDamageMultiplier, getXPMultiplier } from './activeEffects.js';
 
@@ -95,8 +95,9 @@ export function updateXP(amount) {
     // Quadratic — reaches 204 DMG at level 100 vs 10 at level 1.
     state.playerBaseDMG = 10 + Math.floor(Math.pow(Math.max(0, state.playerLevel - 1), 2) / 50);
 
-    // Shop after every level up (but avoid interrupting boss waves)
-    if (!isBossLevel(state.playerLevel)) state.pendingShop = true;
+    // Queue a shop after every level-up. Use a counter so multi-level gains
+    // cannot collapse into a single shop open.
+    state.pendingShop = Math.max(0, Number(state.pendingShop) || 0) + 1;
   }
 
   syncXPUI();

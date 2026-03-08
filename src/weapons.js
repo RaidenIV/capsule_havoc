@@ -61,7 +61,14 @@ function getOrbitRingDefsFromTier(tier) {
 
 export function destroyOrbitBullets() {
   state.orbitRings.forEach(ring =>
-    ring.meshes.forEach(m => { scene.remove(m); m.material.dispose(); })
+    ring.meshes.forEach(group => {
+      scene.remove(group);
+      group.traverse(obj => {
+        if (obj.isMesh && obj.material && obj.material !== _orbitCoreMat) {
+          obj.material.dispose?.();
+        }
+      });
+    })
   );
   state.orbitRings.length = 0;
   state.orbitHitActive.clear();
@@ -181,12 +188,12 @@ function applyEnemyDamage(e, amount) {
   }
 }
 
-export function updateBullets(worldDelta) {
+export function updateBullets(delta) {
   for (let i = state.bullets.length - 1; i >= 0; i--) {
     const b = state.bullets[i];
-    b.life -= worldDelta;
-    b.obj.position.x += b.vx * worldDelta;
-    b.obj.position.z += b.vz * worldDelta;
+    b.life -= delta;
+    b.obj.position.x += b.vx * delta;
+    b.obj.position.z += b.vz * delta;
 
     // NOTE: bulletGeo is shared; do NOT dispose shared geometry here.
     if (b.life <= 0) {
@@ -298,7 +305,7 @@ export function updateEnemyBullets(worldDelta) {
 }
 
 // ── Update orbit bullets ──────────────────────────────────────────────────────
-export function updateOrbitBullets(worldDelta) {
+export function updateOrbitBullets(delta) {
   const y    = floorY(bulletGeoParams);
   const orbitDmgTier = Math.max(0, state.upg?.orbitDamage || 0);
   const dmg  = Math.max(1, Math.round(getBulletDamage() * (1 + 0.10 * orbitDmgTier)));
@@ -306,15 +313,17 @@ export function updateOrbitBullets(worldDelta) {
 
   for (let ri = 0; ri < state.orbitRings.length; ri++) {
     const ring = state.orbitRings[ri];
-    ring.angle += ring.def.speed * worldDelta;
+    ring.angle += ring.def.speed * delta;
     const { count, radius } = ring.def;
     for (let i = 0; i < ring.meshes.length; i++) {
       const angle = ring.angle + (i / count) * Math.PI * 2;
+      ring.meshes[i].visible = true;
+      ring.meshes[i].traverse(obj => { obj.visible = true; });
       ring.meshes[i].position.set(
         playerGroup.position.x + Math.cos(angle) * radius, y,
         playerGroup.position.z + Math.sin(angle) * radius
       );
-      ring.meshes[i].rotation.y += 5 * worldDelta;
+      ring.meshes[i].rotation.y += 5 * delta;
     }
     for (let j = state.enemies.length - 1; j >= 0; j--) {
       const e = state.enemies[j]; if (e.dead) continue;
@@ -377,9 +386,9 @@ function _updateTargetedShots(worldDelta) {
   if (!Array.isArray(state.targetedShots)) state.targetedShots = [];
   for (let i = state.targetedShots.length - 1; i >= 0; i--) {
     const b = state.targetedShots[i];
-    b.life -= worldDelta;
-    b.obj.position.x += b.vx * worldDelta;
-    b.obj.position.z += b.vz * worldDelta;
+    b.life -= delta;
+    b.obj.position.x += b.vx * delta;
+    b.obj.position.z += b.vz * delta;
     if (b.life <= 0) { scene.remove(b.obj); state.targetedShots.splice(i, 1); continue; }
     let hit = false;
     for (let j = state.enemies.length - 1; j >= 0; j--) {

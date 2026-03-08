@@ -63,6 +63,6 @@ export function applyPlayerDamage(amount, source = 'generic'){
   return { applied: dmg, died: true, revived: false };
 }
 
-export function updateArmorTimers(worldDelta){
-  if ((state.reviveIFrames || 0) > 0) state.reviveIFrames = Math.max(0, state.reviveIFrames - worldDelta);
+export function updateArmorTimers(delta){
+  if ((state.reviveIFrames || 0) > 0) state.reviveIFrames = Math.max(0, state.reviveIFrames - delta);
 }

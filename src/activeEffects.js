@@ -62,13 +62,13 @@ export function applyEffect(name, durationSec = 10){
   if (k === 'coinMagnet') playSound('pickup_coin_value', 0.65, 1.08);
 }
 
-export function updateActiveEffects(worldDelta){
+export function updateActiveEffects(delta){
   initActiveEffects();
   const e = state.effects;
   let anyExpired = false;
   for (const k of Object.keys(e)) {
     if ((e[k] || 0) > 0) {
-      e[k] = Math.max(0, e[k] - worldDelta);
+      e[k] = Math.max(0, e[k] - delta);
       if (e[k] === 0) anyExpired = true;
     }
   }
