@@ -191,15 +191,18 @@ function isEligibleForShopWindow(upg, level){
   return true;
 }
 
-function getShopCostForTier(upg, currentTier, freeShop = false){
+function getShopCostForTier(upg, currentTier, freeShop = false, level = state.playerLevel){
   if (freeShop && currentTier === 0 && upg.key !== 'multishot') return 0;
-  return upg.costs[currentTier] ?? Number.POSITIVE_INFINITY;
+  const baseCost = upg.costs[currentTier] ?? Number.POSITIVE_INFINITY;
+  const L = Math.max(1, Math.floor(level || state.playerLevel || 1));
+  if (currentTier === 0 && upg.costs === STANDARD_COSTS && L >= 3) return Math.max(baseCost, 20);
+  return baseCost;
 }
 
 function canAffordShopUpgrade(upg, level, freeShop = false){
   if (!isEligibleForShopWindow(upg, level)) return false;
   const cur = getTier(upg.key);
-  return (state.coins || 0) >= getShopCostForTier(upg, cur, freeShop);
+  return (state.coins || 0) >= getShopCostForTier(upg, cur, freeShop, level);
 }
 
 function getEligibleUpgrades(category, level, freeShop = false){
@@ -518,7 +521,7 @@ function ensureShopStyles() {
 }
 
 function getDisplayedUpgradeCost(upg, currentTier){
-  const cost = getShopCostForTier(upg, currentTier, _firstLevelUpFreeShop);
+  const cost = getShopCostForTier(upg, currentTier, _firstLevelUpFreeShop, _shopLevel);
   return Number.isFinite(cost) ? cost : 0;
 }
 
@@ -775,7 +778,7 @@ export function openChestReward(tier = 'standard') {
   items.forEach(upg => {
     const cur = getTier(upg.key);
     const nextT = cur + 1;
-    const cost = upg.costs[cur] || 0;
+    const cost = getShopCostForTier(upg, cur, false, state.playerLevel) || 0;
     const div = document.createElement('div');
     div.className = 'chest-item';
 

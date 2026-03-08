@@ -204,7 +204,7 @@ export function restartGame(opts = {}) {
   state.playerXP    = 0;
   state.playerLevel = 1;
   initSpawner();
-  state.coins       = 0;
+  state.coins       = 10;
   state.weaponTier  = state.characterPrimaryWeapon === 'laser' ? 1 : 0;
   state.pickupRangeLvl = 0;
   state.firstLevelUpShopHandled = false;
@@ -263,7 +263,7 @@ export function restartGame(opts = {}) {
 
   if (killsEl)     killsEl.textContent    = '0';
   if (timerEl)     timerEl.textContent    = '00:00';
-  if (coinCountEl) coinCountEl.textContent = '0';
+  if (coinCountEl) coinCountEl.textContent = '10';
 
   resetPowerupNotifications();
 

@@ -126,13 +126,13 @@ export async function initAudio() {
 
     // Design-doc pickup/chest/armor SFX (safe fallbacks if dedicated files aren't present)
     pickup_double_damage: './assets/sfx/coin.wav',
-    pickup_invincibility: './assets/sfx/heal.wav',
+    pickup_invincibility: ['./assets/sfx/invincibility.wav', './assets/sfx/heal.wav'],
     pickup_coin_value:    './assets/sfx/coin.wav',
     pickup_extra_life:    './assets/sfx/levelup.wav',
     pickup_xp:            './assets/sfx/levelup.wav',
     pickup_armor:         './assets/sfx/heal.wav',
     pickup_clock:         './assets/sfx/levelup.wav',
-    pickup_black_hole:    './assets/sfx/levelup.wav',
+    pickup_black_hole:    ['./assets/sfx/black_hole.wav', './assets/sfx/levelup.wav'],
     // NOTE: pickup_expire fires whenever any timed effect ends; mapping this to
     // menu_select.wav makes it feel like a random UI click during gameplay.
     // Use a subtle in-world cue instead.
@@ -142,17 +142,28 @@ export async function initAudio() {
     armor_hit:            './assets/sfx/player_hit.wav',
     armor_break:          './assets/sfx/explode_elite.wav',
     extra_life_revive:    './assets/sfx/victory.wav',
+    lightning:            ['./assets/sfx/lightning.wav', './assets/sfx/elite_shoot.wav'],
   };
 
   await Promise.allSettled(
-    Object.entries(sfxFiles).map(async ([name, url]) => {
-      try {
-        const res = await fetch(url);
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        const buf = await res.arrayBuffer();
-        sounds[name] = await ctx.decodeAudioData(buf);
-      } catch (e) {
-        console.warn(`[audio] Could not load "${name}" from ${url}:`, e.message);
+    Object.entries(sfxFiles).map(async ([name, sourceSpec]) => {
+      const urls = Array.isArray(sourceSpec) ? sourceSpec : [sourceSpec];
+      let loaded = false;
+      let lastErr = null;
+      for (const url of urls) {
+        try {
+          const res = await fetch(url);
+          if (!res.ok) throw new Error(`HTTP ${res.status}`);
+          const buf = await res.arrayBuffer();
+          sounds[name] = await ctx.decodeAudioData(buf);
+          loaded = true;
+          break;
+        } catch (e) {
+          lastErr = e;
+        }
+      }
+      if (!loaded) {
+        console.warn(`[audio] Could not load "${name}" from ${urls.join(' or ')}:`, lastErr?.message || 'unknown error');
       }
     })
   );
@@ -186,6 +197,7 @@ const soundVolumes = {
   dash:         1.0,
   gameover:     1.0,
   victory:      1.0,
+  lightning:    1.0,
 };
 
 export function getSoundVolume(name)    { return soundVolumes[name] ?? 1.0; }
