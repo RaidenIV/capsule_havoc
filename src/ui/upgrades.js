@@ -43,8 +43,15 @@ function meetsRequirement(upgDef){
   return getTier(needKey) >= minTier;
 }
 
+function getTierBonusPct(table, tier){
+  const idx = Math.max(0, Math.min(table.length - 1, Math.floor(tier || 0)));
+  return table[idx] ?? 0;
+}
+
 const STANDARD_COSTS = [10, 50, 250, 1000, 2000];
 const MULTISHOT_COSTS = [1000, 2000];
+const XP_GROWTH_BONUS_PCT = [0, 10, 20, 30, 40, 50];
+const COIN_BONUS_PCT = [0, 10, 20, 30, 40, 50];
 
 const CATEGORIES = [
   {
@@ -110,9 +117,9 @@ const CATEGORIES = [
       { key: 'regen', name: 'Health Regen', costs: STANDARD_COSTS,
         desc: t => `+${t} HP/sec regeneration` },
       { key: 'xpGrowth', name: 'XP Growth', costs: STANDARD_COSTS,
-        desc: t => `+15% XP from kills (Tier ${t})` },
+        desc: t => `+${getTierBonusPct(XP_GROWTH_BONUS_PCT, t)}% XP from kills (Tier ${t})` },
       { key: 'coinBonus', name: 'Coin Bonus', costs: STANDARD_COSTS,
-        desc: t => `+20% coins per kill (Tier ${t})` },
+        desc: t => `+${getTierBonusPct(COIN_BONUS_PCT, t)}% coins per kill (Tier ${t})` },
       { key: 'luck', name: 'Luck', costs: STANDARD_COSTS,
         desc: t => `+5 Luck — better chests & 4th shop option chance (Tier ${t})` },
     ],
@@ -153,8 +160,19 @@ function isEligibleForShopWindow(upg, level){
   return true;
 }
 
-function getEligibleUpgrades(category, level){
-  return category.upgrades.filter(upg => isEligibleForShopWindow(upg, level));
+function getShopCostForTier(upg, currentTier, freeShop = false){
+  if (freeShop && currentTier === 0 && upg.key !== 'multishot') return 0;
+  return upg.costs[currentTier] ?? Number.POSITIVE_INFINITY;
+}
+
+function canAffordShopUpgrade(upg, level, freeShop = false){
+  if (!isEligibleForShopWindow(upg, level)) return false;
+  const cur = getTier(upg.key);
+  return (state.coins || 0) >= getShopCostForTier(upg, cur, freeShop);
+}
+
+function getEligibleUpgrades(category, level, freeShop = false){
+  return category.upgrades.filter(upg => canAffordShopUpgrade(upg, level, freeShop));
 }
 
 function getDesiredOptionCount(level){
@@ -165,15 +183,15 @@ function getDesiredOptionCount(level){
   return Math.random() < getFourthOptionChance() ? 4 : 3;
 }
 
-function rollShopChoices(level){
+function rollShopChoices(level, freeShop = false){
   const desired = getDesiredOptionCount(level);
-  const categories = shuffle(CATEGORIES.filter(cat => getEligibleUpgrades(cat, level).length > 0));
+  const categories = shuffle(CATEGORIES.filter(cat => getEligibleUpgrades(cat, level, freeShop).length > 0));
   const picks = [];
   const usedKeys = new Set();
 
   for (const cat of categories) {
     if (picks.length >= Math.min(desired, CATEGORIES.length)) break;
-    const options = getEligibleUpgrades(cat, level).filter(upg => !usedKeys.has(upg.key));
+    const options = getEligibleUpgrades(cat, level, freeShop).filter(upg => !usedKeys.has(upg.key));
     if (!options.length) continue;
     const pick = choice(options);
     picks.push({ category: cat.id, upgrade: pick });
@@ -182,7 +200,7 @@ function rollShopChoices(level){
 
   if (picks.length < desired) {
     const fallbackPool = shuffle(ALL_UPGRADES.filter(upg => {
-      return !usedKeys.has(upg.key) && isEligibleForShopWindow(upg, level);
+      return !usedKeys.has(upg.key) && canAffordShopUpgrade(upg, level, freeShop);
     }));
     while (picks.length < desired && fallbackPool.length) {
       const upg = fallbackPool.shift();
@@ -348,8 +366,8 @@ function updateStatsPanel(){
   if (shieldTier > 0) ownedRows.push(_statRow('Shield', `${shieldCharges} hit • ${shieldRecharge.toFixed(1)}s recharge`));
   if (maxHealthTier > 0) ownedRows.push(_statRow('Max HP Bonus', `+${maxHealthTier * 10}%`));
   if (regenTier > 0) ownedRows.push(_statRow('Regen', `${regenTier} HP/s`));
-  if (xpGrowthTier > 0) ownedRows.push(_statRow('XP Growth', `+${xpGrowthTier * 15}%`));
-  if (coinBonusTier > 0) ownedRows.push(_statRow('Coin Bonus', `+${coinBonusTier * 20}%`));
+  if (xpGrowthTier > 0) ownedRows.push(_statRow('XP Growth', `+${getTierBonusPct(XP_GROWTH_BONUS_PCT, xpGrowthTier)}%`));
+  if (coinBonusTier > 0) ownedRows.push(_statRow('Coin Bonus', `+${getTierBonusPct(COIN_BONUS_PCT, coinBonusTier)}%`));
   if (luckTier > 0) ownedRows.push(_statRow('Luck', `+${luckTier * 5}`));
   if (curseTier > 0) ownedRows.push(_statRow('Boss Curse', `T${curseTier}`));
   if (armorHits > 0) ownedRows.push(_statRow('Armor Hits', `${armorHits}`));
@@ -451,16 +469,13 @@ function ensureShopStyles() {
 }
 
 function getDisplayedUpgradeCost(upg, currentTier){
-  if (_firstLevelUpFreeShop && currentTier === 0 && upg.key !== 'multishot') return 0;
-  return upg.costs[currentTier] ?? 0;
+  const cost = getShopCostForTier(upg, currentTier, _firstLevelUpFreeShop);
+  return Number.isFinite(cost) ? cost : 0;
 }
 
 function updateCoinsUI() {
-  const value = String(state.coins || 0);
   const el = $('upgradeCoins');
-  if (el) el.textContent = value;
-  const gameCoinEl = document.getElementById('coin-count');
-  if (gameCoinEl) gameCoinEl.textContent = value;
+  if (el) el.textContent = String(state.coins || 0);
 }
 
 function renderShop() {
@@ -484,6 +499,14 @@ function renderShop() {
   list.appendChild(head);
 
   const coins = state.coins || 0;
+
+  if (_shopChoices.length === 0) {
+    const empty = document.createElement('div');
+    empty.className = 'shop-draft-sub';
+    empty.style.padding = '10px 0 4px';
+    empty.textContent = 'No affordable upgrades available right now.';
+    list.appendChild(empty);
+  }
 
   _shopChoices.forEach(choiceItem => {
     const upg = choiceItem.upgrade;
@@ -578,14 +601,14 @@ function renderShop() {
 export function openUpgradeShop(level, onClose) {
   _onClose = typeof onClose === 'function' ? onClose : null;
   _shopLevel = Math.max(1, Math.floor(level || state.playerLevel || 1));
-  _shopChoices = rollShopChoices(_shopLevel).map(item => ({
+  _firstLevelUpFreeShop = !state.firstLevelUpShopHandled && _shopLevel <= 2;
+  _shopChoices = rollShopChoices(_shopLevel, _firstLevelUpFreeShop).map(item => ({
     key: item.upgrade.key,
     category: item.category,
     upgrade: item.upgrade,
     bought: false,
   }));
   _purchaseLocked = false;
-  _firstLevelUpFreeShop = !state.firstLevelUpShopHandled && _shopLevel <= 2;
 
   const overlay = $('upgradeOverlay');
   if (!overlay) return;

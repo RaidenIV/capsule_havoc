@@ -1,6 +1,6 @@
 // ─── xp.js ───────────────────────────────────────────────────────────────────
 import { state } from './state.js';
-import { getPlayerMaxHPForLevel } from './constants.js';
+import { getPlayerMaxHPForLevel, isBossLevel } from './constants.js';
 import { expToNext } from './leveling.js';
 import { getDamageMultiplier, getXPMultiplier } from './activeEffects.js';
 
@@ -61,10 +61,11 @@ function syncXPUI() {
 }
 
 export function updateXP(amount) {
-  // XP Growth (+15% per tier) + Curse (+10% per tier)
+  // XP Growth tiers: +10/+20/+30/+40/+50%  + Curse (+10% per tier)
   const growthTier = Math.max(0, state.upg?.xpGrowth || 0);
   const curseTier = Math.max(0, state.upg?.curse || 0);
-  const mult = (1 + 0.15 * growthTier) * (1 + 0.10 * curseTier) * getXPMultiplier();
+  const growthBonus = [0, 0.10, 0.20, 0.30, 0.40, 0.50][Math.min(growthTier, 5)] || 0;
+  const mult = (1 + growthBonus) * (1 + 0.10 * curseTier) * getXPMultiplier();
   const add = Math.max(0, Math.floor((amount || 0) * mult));
   if (!Number.isFinite(add) || add <= 0) { syncXPUI(); return; }
 
@@ -95,9 +96,8 @@ export function updateXP(amount) {
     // Quadratic — reaches 204 DMG at level 100 vs 10 at level 1.
     state.playerBaseDMG = 10 + Math.floor(Math.pow(Math.max(0, state.playerLevel - 1), 2) / 50);
 
-    // Queue a shop after every level-up. Use a counter so multi-level gains
-    // cannot collapse into a single shop open.
-    state.pendingShop = Math.max(0, Number(state.pendingShop) || 0) + 1;
+    // Shop after every level up (but avoid interrupting boss waves)
+    if (!isBossLevel(state.playerLevel)) state.pendingShop = true;
   }
 
   syncXPUI();
