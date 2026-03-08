@@ -79,14 +79,14 @@ const CATEGORIES = [
         desc: t => `+8% movement speed (Tier ${t})` },
       { key: 'dash', name: 'Dash', costs: STANDARD_COSTS,
         desc: t => [
-          'Unlocks dash (Shift key)',
-          'Improves dash speed and cooldown',
+          'Unlocks short dash (Shift key)',
+          'Improves dash distance and cooldown',
           'Adds i-frames during dash',
-          'Further improves dash speed and cooldown',
-          'Max dash speed and shortest cooldown',
+          'Further improves dash distance and cooldown',
+          'Max dash distance and cooldown',
         ][t - 1] || `Tier ${t}` },
       { key: 'magnet', name: 'Magnet Radius', costs: STANDARD_COSTS,
-        desc: t => `+1.25 item attraction range (Tier ${t})` },
+        desc: t => `+0.625 item attraction range (Tier ${t})` },
     ],
   },
   {
@@ -99,22 +99,6 @@ const CATEGORIES = [
           '2-hit bubble shield',
           'Much faster shield recharge',
           '3-hit bubble shield',
-        ][t - 1] || `Tier ${t}` },
-      { key: 'burst', name: 'Area Burst [E]', costs: STANDARD_COSTS,
-        desc: t => [
-          '+Radial damage pulse',
-          '+25% radius & damage',
-          '-30% cooldown',
-          '+Knockback on burst',
-          '+50% radius & damage',
-        ][t - 1] || `Tier ${t}` },
-      { key: 'timeSlow', name: 'Time Slow [Q]', costs: STANDARD_COSTS,
-        desc: t => [
-          '50% enemy speed for 3s',
-          'Extends duration to 5s',
-          'Deepens slow to 25% speed',
-          'Cuts cooldown by 50%',
-          'Deepens slow to 15% speed',
         ][t - 1] || `Tier ${t}` },
     ],
   },
@@ -129,8 +113,6 @@ const CATEGORIES = [
         desc: t => `+15% XP from kills (Tier ${t})` },
       { key: 'coinBonus', name: 'Coin Bonus', costs: STANDARD_COSTS,
         desc: t => `+20% coins per kill (Tier ${t})` },
-      { key: 'curse', name: 'Curse ⚠', costs: STANDARD_COSTS,
-        desc: t => `Enemies +20% HP/DMG → +25% coins, +10% XP (Tier ${t})` },
       { key: 'luck', name: 'Luck', costs: STANDARD_COSTS,
         desc: t => `+5 Luck — better chests & 4th shop option chance (Tier ${t})` },
     ],
@@ -138,6 +120,15 @@ const CATEGORIES = [
 ];
 
 const ALL_UPGRADES = CATEGORIES.flatMap(cat => cat.upgrades);
+const CHEST_ONLY_REWARDS = [
+  {
+    key: 'curse',
+    name: 'Curse ⚠',
+    chestOnly: true,
+    costs: STANDARD_COSTS,
+    desc: t => `Enemies +20% HP/DMG → +25% coins, +10% XP (Tier ${t})`,
+  },
+];
 const RED_LASER_LOCKOUT = new Set(['laserFire', 'fireRate', 'projSpeed', 'piercing', 'multishot']);
 const BLUE_SLASH_LOCKOUT = new Set(['slash', 'slashRate', 'slashRadius', 'slashArc', 'slashDamage']);
 
@@ -317,8 +308,6 @@ function updateStatsPanel(){
   const dashTier = getTier('dash');
   const magnetTier = getTier('magnet');
   const shieldTier = getTier('shield');
-  const burstTier = getTier('burst');
-  const timeSlowTier = getTier('timeSlow');
   const maxHealthTier = getTier('maxHealth');
   const regenTier = getTier('regen');
   const xpGrowthTier = getTier('xpGrowth');
@@ -328,13 +317,10 @@ function updateStatsPanel(){
   const armorHits = Math.max(0, state.armorHits || 0);
   const slashDmg = Math.max(1, Math.round(bulletDmg * 1.8));
   const totalProjectiles = Math.max(1, waveDirs) * (1 + msTier);
-  const dashCd = dashTier > 0 ? (dashTier >= 5 ? 0.68 : dashTier >= 4 ? 0.82 : dashTier >= 3 ? 1.00 : dashTier >= 2 ? 1.20 : 1.40) : 0;
+  const dashCd = dashTier > 0 ? (dashTier >= 5 ? 1.36 : dashTier >= 4 ? 1.64 : dashTier >= 3 ? 2.00 : dashTier >= 2 ? 2.40 : 2.80) : 0;
+  const magnetRadius = 0.75 + magnetTier * 0.625;
   const shieldCharges = shieldTier >= 5 ? 3 : (shieldTier >= 3 ? 2 : (shieldTier >= 1 ? 1 : 0));
   const shieldRecharge = shieldTier > 0 ? (shieldTier >= 4 ? 12.0 * 0.45 : (shieldTier >= 2 ? 12.0 * 0.65 : 12.0)) : 0;
-  const burstDmg = burstTier > 0 ? (burstTier >= 5 ? 220 : ((burstTier >= 4) ? 180 : (70 + burstTier * 30))) : 0;
-  const burstRadius = burstTier > 0 ? (burstTier >= 5 ? 13.2 : ((burstTier >= 4) ? 11.0 : (burstTier >= 2 ? 6.9 : 5.5))) : 0;
-  const timeSlowDuration = timeSlowTier > 0 ? (timeSlowTier >= 2 ? 5.0 : 3.0) : 0;
-  const timeSlowScale = timeSlowTier >= 5 ? 0.15 : (timeSlowTier >= 3 ? 0.25 : (timeSlowTier >= 1 ? 0.5 : 1.0));
 
   const rows = [
     _statSection('CORE'),
@@ -349,10 +335,6 @@ function updateStatsPanel(){
     rows.push(_statRow('Fire Interval', `${fire.toFixed(2)}s`));
   }
   if (orbitTier > 0) rows.push(_statRow('Orbit DMG', `${bulletDmg} / hit`));
-  if (burstTier > 0) {
-    rows.push(_statRow('Burst DMG', `${burstDmg}`));
-    rows.push(_statRow('Burst Radius', `${burstRadius.toFixed(1)}`));
-  }
 
   const ownedRows = [];
   if (dmgTier > 0) ownedRows.push(_statRow('Damage Bonus', `+${dmgTier * 10}%`));
@@ -362,15 +344,14 @@ function updateStatsPanel(){
   if (pierce > 0) ownedRows.push(_statRow('Piercing', `+${pierce}`));
   if (moveTier > 0) ownedRows.push(_statRow('Move Speed', `+${moveTier * 8}%`));
   if (dashTier > 0) ownedRows.push(_statRow('Dash CD', `${dashCd.toFixed(2)}s`));
-  if (magnetTier > 0) ownedRows.push(_statRow('Magnet Radius', `+${(magnetTier * 1.25).toFixed(2)}`));
+  if (magnetTier > 0) ownedRows.push(_statRow('Magnet Radius', `${magnetRadius.toFixed(2)}`));
   if (shieldTier > 0) ownedRows.push(_statRow('Shield', `${shieldCharges} hit • ${shieldRecharge.toFixed(1)}s recharge`));
-  if (timeSlowTier > 0) ownedRows.push(_statRow('Time Slow', `${(timeSlowScale * 100).toFixed(0)}% speed • ${timeSlowDuration.toFixed(0)}s`));
   if (maxHealthTier > 0) ownedRows.push(_statRow('Max HP Bonus', `+${maxHealthTier * 10}%`));
   if (regenTier > 0) ownedRows.push(_statRow('Regen', `${regenTier} HP/s`));
   if (xpGrowthTier > 0) ownedRows.push(_statRow('XP Growth', `+${xpGrowthTier * 15}%`));
   if (coinBonusTier > 0) ownedRows.push(_statRow('Coin Bonus', `+${coinBonusTier * 20}%`));
   if (luckTier > 0) ownedRows.push(_statRow('Luck', `+${luckTier * 5}`));
-  if (curseTier > 0) ownedRows.push(_statRow('Curse', `T${curseTier}`));
+  if (curseTier > 0) ownedRows.push(_statRow('Boss Curse', `T${curseTier}`));
   if (armorHits > 0) ownedRows.push(_statRow('Armor Hits', `${armorHits}`));
 
   if (ownedRows.length > 0) {
@@ -652,7 +633,8 @@ function rollChestItemCount() {
 
 function pickChestItems(count, chestTier) {
   const tierCap = { standard: 2, rare: 4, epic: 5 }[chestTier] || 2;
-  const candidates = ALL_UPGRADES.filter(upg => {
+  const chestPool = [...ALL_UPGRADES, ...CHEST_ONLY_REWARDS];
+  const candidates = chestPool.filter(upg => {
     const cur = getTier(upg.key);
     return cur < upg.costs.length && (cur + 1) <= tierCap && meetsRequirement(upg) && isUpgradeAllowedForLoadout(upg);
   });
@@ -728,7 +710,7 @@ export function openChestReward(tier = 'standard') {
 
     const descEl = document.createElement('div');
     descEl.className = 'ci-desc';
-    descEl.textContent = `${upg.desc(nextT)}  (shop value: ${cost} coins)`;
+    descEl.textContent = upg.chestOnly ? upg.desc(nextT) : `${upg.desc(nextT)}  (shop value: ${cost} coins)`;
 
     div.appendChild(nameEl);
     div.appendChild(descEl);

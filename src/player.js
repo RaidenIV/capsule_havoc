@@ -20,40 +20,90 @@ export const playerMesh = new THREE.Mesh(playerGeo, playerMat);
 playerMesh.position.y = floorY(playerGeoParams);
 playerMesh.castShadow = true;
 playerGroup.add(playerMesh);
-// ── Shield active indicator (green bloom) ───────────────────────────────────
-// A subtle green halo on the bloom layer when shieldCharges > 0.
+// ── Shield / armor indicators ──────────────────────────────────────────────
 export const PLAYER_BODY_RADIUS = 0.6;
 export const SHIELD_RADIUS = 1.5;
-const _shieldGlowGeo = new THREE.SphereGeometry(SHIELD_RADIUS, 18, 14);
-const _shieldGlowMat = new THREE.MeshBasicMaterial({
-  color: 0x42f578,
-  transparent: true,
-  opacity: 0.22,
-  depthWrite: false,
-});
-const shieldGlow = new THREE.Mesh(_shieldGlowGeo, _shieldGlowMat);
-shieldGlow.position.y = playerMesh.position.y;
-shieldGlow.layers.enable(1); // bloom
-shieldGlow.visible = false;
+
+function enableBloomRecursive(obj){
+  obj.traverse(child => { child.layers?.enable?.(1); });
+  return obj;
+}
+
+function makeShieldIndicator(){
+  const root = new THREE.Group();
+  const shell = new THREE.Mesh(
+    new THREE.SphereGeometry(SHIELD_RADIUS, 28, 22),
+    new THREE.MeshPhysicalMaterial({
+      color: 0x49f5c8,
+      emissive: 0x0fffd0,
+      emissiveIntensity: 0.9,
+      transparent: true,
+      opacity: 0.14,
+      transmission: 0.35,
+      metalness: 0.05,
+      roughness: 0.12,
+      clearcoat: 1.0,
+      clearcoatRoughness: 0.08,
+      depthWrite: false,
+    })
+  );
+  const ringA = new THREE.Mesh(
+    new THREE.TorusGeometry(SHIELD_RADIUS * 0.985, 0.038, 12, 72),
+    new THREE.MeshBasicMaterial({ color: 0x7dffea, transparent: true, opacity: 0.34, depthWrite: false })
+  );
+  ringA.rotation.x = Math.PI / 2;
+  const ringB = new THREE.Mesh(
+    new THREE.TorusGeometry(SHIELD_RADIUS * 0.94, 0.026, 10, 64),
+    new THREE.MeshBasicMaterial({ color: 0x0fffd0, transparent: true, opacity: 0.26, depthWrite: false })
+  );
+  ringB.rotation.y = Math.PI / 2;
+  root.add(shell, ringA, ringB);
+  root.userData.shell = shell;
+  root.userData.ringA = ringA;
+  root.userData.ringB = ringB;
+  root.position.y = playerMesh.position.y;
+  root.visible = false;
+  return enableBloomRecursive(root);
+}
+
+function makeArmorIndicator(){
+  const root = new THREE.Group();
+  const shell = new THREE.Mesh(
+    new THREE.SphereGeometry(SHIELD_RADIUS, 24, 18),
+    new THREE.MeshBasicMaterial({
+      color: 0xffd46b,
+      transparent: true,
+      opacity: 0.10,
+      wireframe: true,
+      depthWrite: false,
+    })
+  );
+  const cage = new THREE.Mesh(
+    new THREE.IcosahedronGeometry(SHIELD_RADIUS * 0.985, 1),
+    new THREE.MeshBasicMaterial({ color: 0xfff0a8, transparent: true, opacity: 0.18, wireframe: true, depthWrite: false })
+  );
+  const ring = new THREE.Mesh(
+    new THREE.TorusGeometry(SHIELD_RADIUS * 0.90, 0.03, 10, 64),
+    new THREE.MeshBasicMaterial({ color: 0xffb347, transparent: true, opacity: 0.24, depthWrite: false })
+  );
+  ring.rotation.x = Math.PI / 2;
+  root.add(shell, cage, ring);
+  root.userData.shell = shell;
+  root.userData.cage = cage;
+  root.userData.ring = ring;
+  root.position.y = playerMesh.position.y;
+  root.visible = false;
+  return enableBloomRecursive(root);
+}
+
+const shieldGlow = makeShieldIndicator();
 playerGroup.add(shieldGlow);
 
 export function hasShieldBubble() {
   return (state.shieldCharges || 0) > 0;
 }
 
-// ── Armor active indicator (green bloom) ────────────────────────────────────
-// A green halo on the bloom layer when armorHits > 0.
-const _armorGlowGeo = new THREE.SphereGeometry(SHIELD_RADIUS, 18, 14);
-const _armorGlowMat = new THREE.MeshBasicMaterial({
-  color: 0x42f578,
-  transparent: true,
-  opacity: 0.18,
-  depthWrite: false,
-});
-const armorGlow = new THREE.Mesh(_armorGlowGeo, _armorGlowMat);
-armorGlow.position.y = playerMesh.position.y;
-armorGlow.layers.enable(1); // bloom
-armorGlow.visible = false;
+const armorGlow = makeArmorIndicator();
 playerGroup.add(armorGlow);
 
 // ── Invincibility indicator (white bloom) ───────────────────────────────────
@@ -92,7 +142,7 @@ export function updateDashBar() {
     return;
   }
   dashBarObj.visible = true;
-  const denom = Math.max(0.01, state.dashCooldownMax || DASH_COOLDOWN);
+  const denom = Math.max(0.01, state.dashCooldownMax || (DASH_COOLDOWN * 2));
   const pct = state.dashCooldown > 0
     ? Math.max(0, 1 - state.dashCooldown / denom) : 1;
   dashFill.style.width = (pct * 100) + '%';
@@ -163,8 +213,9 @@ export function updatePlayer(delta, worldScale) {
   // Dash (player stays at full speed — world slows around them)
   if (state.dashTimer > 0) {
     state.dashTimer -= delta;
-    playerGroup.position.x += state.dashVX * DASH_SPEED * delta;
-    playerGroup.position.z += state.dashVZ * DASH_SPEED * delta;
+    const dashSpeed = Math.max(0, state.dashSpeed || (DASH_SPEED * 0.5));
+    playerGroup.position.x += state.dashVX * dashSpeed * delta;
+    playerGroup.position.z += state.dashVZ * dashSpeed * delta;
     state.playerVel = { x: state.dashVX, z: state.dashVZ };
     playerMesh.rotation.z = state.dashVX * -0.4;
     state.dashGhostTimer -= delta;
@@ -202,14 +253,27 @@ export function updatePlayer(delta, worldScale) {
   const shieldOn = (state.shieldCharges || 0) > 0;
   shieldGlow.visible = shieldOn;
   if (shieldOn) {
-    shieldGlow.material.opacity = 0.18 + Math.sin(_glowTime * 8.0) * 0.04;
+    const shieldPulse = Math.sin(_glowTime * 7.0);
+    shieldGlow.userData.shell.material.opacity = 0.12 + shieldPulse * 0.025;
+    shieldGlow.userData.ringA.material.opacity = 0.26 + shieldPulse * 0.05;
+    shieldGlow.userData.ringB.material.opacity = 0.22 + Math.cos(_glowTime * 5.6) * 0.04;
+    shieldGlow.userData.ringA.rotation.z = _glowTime * 1.6;
+    shieldGlow.userData.ringB.rotation.x = _glowTime * 1.1;
+    shieldGlow.scale.setScalar(1.0 + shieldPulse * 0.015);
   }
 
   // Armor indicator: armor powerup grants hits.
   const armorOn = (state.armorHits || 0) > 0;
   armorGlow.visible = armorOn;
   if (armorOn) {
-    armorGlow.material.opacity = 0.14 + Math.sin(_glowTime * 6.0) * 0.04;
+    const armorPulse = Math.sin(_glowTime * 5.2);
+    armorGlow.userData.shell.material.opacity = 0.08 + armorPulse * 0.02;
+    armorGlow.userData.cage.material.opacity = 0.14 + Math.cos(_glowTime * 4.2) * 0.04;
+    armorGlow.userData.ring.material.opacity = 0.20 + armorPulse * 0.04;
+    armorGlow.userData.cage.rotation.y = _glowTime * 0.9;
+    armorGlow.userData.cage.rotation.x = _glowTime * 0.45;
+    armorGlow.userData.ring.rotation.z = _glowTime * 1.3;
+    armorGlow.scale.setScalar(1.0 + armorPulse * 0.012);
   }
 
   // Invincibility indicator: ONLY the invincibility powerup (not dash iframes).

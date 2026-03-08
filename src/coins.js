@@ -23,7 +23,8 @@ const coinMatBase = new THREE.MeshStandardMaterial({
 
 const coinCountEl = document.getElementById('coin-count');
 
-const ATTRACT_DIST_COIN = [5.0,5.5,6.0,6.5,7.0,7.5,8.0,8.5,9.0,9.5,10.0];
+const ATTRACT_DIST_COIN_BASE = 0.75;
+const ATTRACT_DIST_MAGNET_PER_TIER = 0.625;
 const ATTRACT_SPD_COIN  = 4.5;
 const COLLECT_COIN      = 0.7;
 
@@ -102,8 +103,8 @@ export function updateCoins(worldDelta){
   if (!Array.isArray(state.coinPickups)) state.coinPickups = [];
   const playerLevel = Math.max(1, Math.floor(state.playerLevel || 1));
 
-  const baseAttract = ATTRACT_DIST_COIN[Math.min(playerLevel, 10)];
-  const bonus = Math.max(0, (state.upg?.magnet || 0)) * 1.25;
+  const baseAttract = ATTRACT_DIST_COIN_BASE;
+  const bonus = Math.max(0, (state.upg?.magnet || 0)) * ATTRACT_DIST_MAGNET_PER_TIER;
   const attractDist = baseAttract + bonus;
 
   mergeIfNeeded(attractDist);

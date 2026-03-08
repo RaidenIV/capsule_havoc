@@ -202,7 +202,7 @@ export function restartGame(opts = {}) {
   state.elapsed     = 0;
   state.shootTimer  = 0;
   state.bulletWaveAngle = 0;
-  state.dashTimer   = 0; state.dashCooldown = 0; state.dashGhostTimer = 0;
+  state.dashTimer   = 0; state.dashCooldown = 0; state.dashGhostTimer = 0; state.dashSpeed = 0;
   state.worldScale  = 1.0;
   state.contactDmgAccum = 0; state.contactDmgTimer = 0;
   state.spawnTickTimer  = 0;
@@ -228,8 +228,10 @@ export function restartGame(opts = {}) {
   state.shieldRecharge = 0;
   state.shieldHitCD = 0;
   state.burstCooldown = 0;
+  state.burstRequested = false;
   state.slowCooldown = 0;
   state.slowTimer = 0;
+  state.slowRequested = false;
   state.extraLives  = 0;
   state.armorHits   = 0;
   state.reviveIFrames = 0;

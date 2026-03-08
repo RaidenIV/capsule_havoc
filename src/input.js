@@ -24,8 +24,8 @@ const _dv = new THREE.Vector3();
 
 function getDashStats(tier){
   const t = Math.max(0, Math.min(5, tier | 0));
-  const speedMult = [0, 0.50, 0.62, 0.75, 0.88, 1.00][t] || 0.50;
-  const cooldown = [0, 1.40, 1.20, 1.00, 0.82, 0.68][t] || DASH_COOLDOWN;
+  const speedMult = [0, 0.50, 0.625, 0.75, 0.875, 1.00][t] || 0.50;
+  const cooldown = [0, 2.80, 2.40, 2.00, 1.64, 1.36][t] || (DASH_COOLDOWN * 2);
   return { speedMult, cooldown };
 }
 

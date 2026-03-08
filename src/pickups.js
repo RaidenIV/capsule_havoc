@@ -80,17 +80,17 @@ export function dropLoot(pos, coinValue, coinMult, coinColorHex = null) {
 }
 
 // ── Update ────────────────────────────────────────────────────────────────────
-const ATTRACT_DIST_COIN_BASE = 1.5;
+const ATTRACT_DIST_COIN_BASE = 0.75;
 const ATTRACT_SPD_COIN  = 9.0;
 const MAGNET_BURST_SPEED = 34.0;
-const ATTRACT_DIST_HP   = [5.0,5.5,6.0,6.5,7.0,7.5,8.0,8.5,9.0,9.5,10.0];
+const ATTRACT_DIST_MAGNET_PER_TIER = 0.625;
 const ATTRACT_SPD_HP    = ATTRACT_SPD_COIN;
 const COLLECT_COIN      = 0.7;
 const COLLECT_HP        = 0.8;
 
 export function updatePickups(worldDelta, playerLevel, elapsed) {
-  const coinAttractDist = ATTRACT_DIST_COIN_BASE + Math.max(0, (state.upg?.magnet || 0)) * 1.25;
-  const healthAttractDist = ATTRACT_DIST_HP[Math.min(playerLevel, 10)];
+  const coinAttractDist = ATTRACT_DIST_COIN_BASE + Math.max(0, (state.upg?.magnet || 0)) * ATTRACT_DIST_MAGNET_PER_TIER;
+  const healthAttractDist = coinAttractDist;
   // Coin merge safety (performance): consolidate if too many coins are on the ground.
   if (state.coinPickups.length > 400) {
     let sum = 0;
