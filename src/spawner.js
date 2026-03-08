@@ -16,7 +16,7 @@ import { spawnEnemyAtPosition } from './enemies.js';
 const SPAWN_BASE = Object.freeze({
   [ENEMY_TYPE.RUSHER]:     { quotaMin: 10, quotaMax: 14, intervalSec: 2.2, groupSpawn: true },
   [ENEMY_TYPE.ORBITER]:    { quotaMin: 3,  quotaMax: 5,  intervalSec: 4.6, groupSpawn: false },
-  [ENEMY_TYPE.TANKER]:     { quotaMin: 1,  quotaMax: 2,  intervalSec: 9.8, groupSpawn: false },
+  [ENEMY_TYPE.TANKER]:     { quotaMin: 2,  quotaMax: 3,  intervalSec: 6.8, groupSpawn: false },
   [ENEMY_TYPE.SNIPER]:     { quotaMin: 2,  quotaMax: 3,  intervalSec: 6.3, groupSpawn: false },
   [ENEMY_TYPE.TELEPORTER]: { quotaMin: 2,  quotaMax: 2,  intervalSec: 8.2, groupSpawn: false },
   [ENEMY_TYPE.SHIELDED]:   { quotaMin: 2,  quotaMax: 3,  intervalSec: 7.2, groupSpawn: false },
@@ -41,7 +41,7 @@ const CURSE_SPAWN = Object.freeze({
 
 const ENEMY_CAP_BY_LEVEL_RANGE = Object.freeze([
   { min: 1, max: 2,   cap: 20 },
-  { min: 3, max: 999, cap: 50 },
+  { min: 3, max: 999, cap: 60 },
 ]);
 
 function randInt(a, b) { return a + Math.floor(Math.random() * (b - a + 1)); }
@@ -88,7 +88,7 @@ function getEnemyCapForLevel(level) {
   for (const r of ENEMY_CAP_BY_LEVEL_RANGE) {
     if (L >= r.min && L <= r.max) return r.cap;
   }
-  return 50;
+  return 60;
 }
 
 function countRegularEnemies() {
@@ -280,11 +280,9 @@ function pickSupportType(activeTypes, used = new Set()) {
   if (!pool.length) return null;
   const weighted = [];
   for (const t of pool) {
-    if (t === ENEMY_TYPE.TANKER) {
-      weighted.push(t);
-    } else if (t === ENEMY_TYPE.ORBITER) {
-      weighted.push(t, t, t);
-    } else if (t === ENEMY_TYPE.SNIPER || t === ENEMY_TYPE.TELEPORTER || t === ENEMY_TYPE.SHIELDED) {
+    if (t === ENEMY_TYPE.TANKER || t === ENEMY_TYPE.SHIELDED) {
+      weighted.push(t, t);
+    } else if (t === ENEMY_TYPE.SNIPER || t === ENEMY_TYPE.TELEPORTER) {
       weighted.push(t, t);
     } else {
       weighted.push(t);
@@ -388,10 +386,9 @@ function triggerPressureFormation(level, desiredCount, reason = 'periodic') {
   const supportPool = getSupportTypes(activeTypes);
   let supportCount = 0;
   if (supportPool.length && level >= 6) {
-    const supportDivisor = level >= 21 ? 8 : 9;
-    const maxSupport = Math.min(profile.supportMax, Math.max(1, Math.floor(count / supportDivisor)));
-    supportCount = clamp(maxSupport, 0, Math.min(2, count));
-    if (reason === 'emergency') supportCount = Math.min(maxSupport + 1, Math.min(3, count));
+    const maxSupport = Math.min(profile.supportMax, Math.max(1, Math.floor(count / 7)));
+    supportCount = clamp(maxSupport, 0, Math.min(3, count));
+    if (reason === 'emergency') supportCount = Math.min(maxSupport + 1, Math.min(4, count));
   }
 
   const rusherCount = Math.max(0, count - supportCount);
@@ -441,12 +438,13 @@ function maybeTriggerSpecialEvents(level) {
     if (Math.random() < reinChance) {
       const extra = randInt(2, 3);
       const active = getActiveEnemyTypesForLevel(level);
-      const elitePool = [];
-      for (const t of active) {
-        if (t === ENEMY_TYPE.ORBITER) elitePool.push(t, t, t);
-        else if (t === ENEMY_TYPE.SNIPER || t === ENEMY_TYPE.TELEPORTER || t === ENEMY_TYPE.SHIELDED) elitePool.push(t, t);
-        else if (t === ENEMY_TYPE.TANKER && level >= 40) elitePool.push(t);
-      }
+      const elitePool = active.filter(t => (
+        t === ENEMY_TYPE.ORBITER ||
+        t === ENEMY_TYPE.TANKER ||
+        t === ENEMY_TYPE.SNIPER ||
+        t === ENEMY_TYPE.TELEPORTER ||
+        t === ENEMY_TYPE.SHIELDED
+      ));
       const pick = elitePool.length ? elitePool[randInt(0, elitePool.length - 1)] : ENEMY_TYPE.ORBITER;
       const moveAngle = getTravelAngle();
       const spawned = spawnTypePressure(pick, extra, level, moveAngle, 'event-reinforce');
@@ -620,10 +618,6 @@ export function updateSpawner(delta) {
       const cap = getEnemyCapForLevel(level);
       const floor = getPressureProfile(level).floor;
       target = Math.max(baseTarget, floor, cap - Math.max(0, countRegularEnemies() - have));
-    }
-
-    if (t === ENEMY_TYPE.TANKER) {
-      target = Math.min(target, level >= 40 ? 2 : 1);
     }
 
     if (have >= target) continue;

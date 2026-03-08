@@ -54,8 +54,9 @@ function getOrbitRingDefsFromTier(tier) {
   const t = Math.max(0, tier | 0);
   if (t <= 0) return [];
   const count = [0, 2, 3, 4, 5, 6][Math.min(t, 5)] || 0;
-  const radius = 1.9 + Math.max(0, state.upg?.orbitRange || 0) * 0.22;
-  const speedBase = 1.7 + Math.max(0, state.upg?.orbitSpeed || 0) * 0.20;
+  const tierRadiusBonus = Math.max(0, t - 1) * 0.35;
+  const radius = 1.9 + tierRadiusBonus + Math.max(0, state.upg?.orbitRange || 0) * 0.22;
+  const speedBase = (1.7 + Math.max(0, state.upg?.orbitSpeed || 0) * 0.20) * 1.5;
   return [{ count, radius, speed: speedBase, color: 0x00eeff }];
 }
 

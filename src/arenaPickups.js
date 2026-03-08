@@ -209,6 +209,7 @@ function triggerCoinMagnetBurst(){
 }
 
 export function updateArenaPickups(worldDelta){
+  const attractDelta = Math.max(0, worldDelta) / Math.max(0.0001, state.worldScale || 1.0);
   if (!Array.isArray(state.arenaPickups)) state.arenaPickups = [];
 
   const mult = getLuckSpawnMultiplier();
@@ -256,7 +257,7 @@ export function updateArenaPickups(worldDelta){
     const attractDist = 5.0;
     const dist = Math.sqrt(dist2);
     if (dist < attractDist && dist > 0.001) {
-      const spd = 18.0 * worldDelta;
+      const spd = 18.0 * attractDelta;
       p.mesh.position.x += (dx / dist) * Math.min(spd, dist);
       p.mesh.position.z += (dz / dist) * Math.min(spd, dist);
     }

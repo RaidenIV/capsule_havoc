@@ -90,6 +90,7 @@ const COLLECT_COIN      = 0.7;
 const COLLECT_HP        = 0.8;
 
 export function updatePickups(worldDelta, playerLevel, elapsed) {
+  const attractDelta = Math.max(0, worldDelta) / Math.max(0.0001, state.worldScale || 1.0);
   const coinAttractDist = ATTRACT_DIST_COIN_BASE + Math.max(0, (state.upg?.magnet || 0)) * ATTRACT_DIST_MAGNET_PER_TIER;
   const healthAttractDist = coinAttractDist;
   // Coin merge safety (performance): consolidate if too many coins are on the ground.
@@ -132,8 +133,8 @@ export function updatePickups(worldDelta, playerLevel, elapsed) {
     if (coinAttractDist > 0 && dist < coinAttractDist) cp.attracting = true;
     if (cp.attracting && dist > 0.001) {
       const burstActive = (cp.magnetBurst || 0) > 0;
-      if (burstActive) cp.magnetBurst = Math.max(0, cp.magnetBurst - worldDelta);
-      const spd = (burstActive ? MAGNET_BURST_SPEED : ATTRACT_SPD_COIN) * worldDelta;
+      if (burstActive) cp.magnetBurst = Math.max(0, cp.magnetBurst - attractDelta);
+      const spd = (burstActive ? MAGNET_BURST_SPEED : ATTRACT_SPD_COIN) * attractDelta;
       cp.mesh.position.x += (dx/dist) * Math.min(spd, dist);
       cp.mesh.position.z += (dz/dist) * Math.min(spd, dist);
     }
@@ -163,7 +164,7 @@ export function updatePickups(worldDelta, playerLevel, elapsed) {
     }
     if (dist < healthAttractDist) hp.attracting = true;
     if (hp.attracting) {
-      const spd = ATTRACT_SPD_HP * worldDelta;
+      const spd = ATTRACT_SPD_HP * attractDelta;
       hp.mesh.position.x += (dx/dist) * Math.min(spd, dist);
       hp.mesh.position.z += (dz/dist) * Math.min(spd, dist);
     }
@@ -194,7 +195,7 @@ const chestGeo = new THREE.BoxGeometry(0.85, 0.55, 0.85);
 const CHEST_MAT = {
   standard: new THREE.MeshStandardMaterial({ color: 0x8a5a2b, emissive: 0xffcc55, emissiveIntensity: 0.7, metalness: 0.4, roughness: 0.55 }),
   rare:     new THREE.MeshStandardMaterial({ color: 0x1f4a8a, emissive: 0x55ccff, emissiveIntensity: 0.9, metalness: 0.5, roughness: 0.35 }),
-  epic:     new THREE.MeshStandardMaterial({ color: 0x4a1f8a, emissive: 0xcc55ff, emissiveIntensity: 1.1, metalness: 0.55, roughness: 0.25 }),
+  epic:     new THREE.MeshStandardMaterial({ color: 0x5d31b6, emissive: 0xcc55ff, emissiveIntensity: 1.1, metalness: 1.0, roughness: 0.08 }),
 };
 
 export function spawnChest(pos, tier='standard') {
