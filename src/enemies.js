@@ -7,7 +7,7 @@ import {
   ENEMY_SPEED, ENEMY_CONTACT_DPS, ENEMY_BULLET_SPEED, ENEMY_BULLET_LIFETIME,
   ENEMY_BULLET_DMG,
   STAGGER_DURATION, SPAWN_FLASH_DURATION, ELITE_FIRE_RATE, ELITE_TYPES, PLAYER_MAX_HP,
-  ENEMY_DEFS, ENEMY_TYPE,
+  ENEMY_DEFS, ENEMY_TYPE, getBossScaleForLevel, getEnemyStatScaleForLevel,
 } from './constants.js';
 import {
   enemyGeo, enemyMat, enemyGeoParams, bulletGeoParams,
@@ -36,6 +36,12 @@ function getEnemyHP() {
   const playerMax = (state.playerMaxHP ?? PLAYER_MAX_HP);
   const basePct = (ENEMY_DEFS?.[ENEMY_TYPE.RUSHER]?.hpPct ?? 0.50);
   return Math.round(playerMax * basePct);
+}
+
+function getEnemyLevelScale(enemyType = ENEMY_TYPE.RUSHER, isBoss = false) {
+  const level = Math.max(1, Math.floor(state.playerLevel || 1));
+  if (isBoss || enemyType === ENEMY_TYPE.BOSS) return getBossScaleForLevel(level);
+  return getEnemyStatScaleForLevel(level);
 }
 
 
@@ -155,7 +161,8 @@ function _fireEnemyShot(e, dx, dz, dist) {
   scene.add(bMesh);
 
   const chaosTier = getActiveChaosTier();
-  const dmg = ENEMY_BULLET_DMG * (1 + 0.20 * chaosTier) * (e.phase >= 3 ? 1.12 : 1.0);
+  const baseBulletDamage = Number.isFinite(e.bulletDamage) ? e.bulletDamage : ENEMY_BULLET_DMG;
+  const dmg = baseBulletDamage * (1 + 0.20 * chaosTier) * (e.phase >= 3 ? 1.12 : 1.0);
   state.enemyBullets.push({ mesh: bMesh, vx: dvx, vz: dvz, life: ENEMY_BULLET_LIFETIME, dmg });
   playSound('elite_shoot', 0.5, 0.9 + Math.random() * 0.2);
 }
@@ -226,11 +233,17 @@ export function spawnEnemy(x, z, eliteTypeOrCfg = null) {
   if (typeof eliteTypeOrCfg === 'string' && ENEMY_DEFS[eliteTypeOrCfg]) {
     enemyType = eliteTypeOrCfg;
     const def = ENEMY_DEFS[enemyType];
+    const scale = getEnemyLevelScale(enemyType, enemyType === ENEMY_TYPE.BOSS);
+    const playerMaxHp = Math.max(1, state.playerMaxHP ?? PLAYER_MAX_HP);
     eliteTypeOrCfg = {
       isBoss: enemyType === ENEMY_TYPE.BOSS,
       color: def.color,
       sizeMult: def.sizeMult,
-      health: Math.round((state.playerMaxHP ?? PLAYER_MAX_HP) * (def.hpPct ?? 1)),
+      health: Math.max(1, Math.round(playerMaxHp * (def.hpPct ?? 1) * scale.hpMult)),
+      contactDps: Math.max(1, Math.round(playerMaxHp * (def.contactPct ?? (ENEMY_CONTACT_DPS / PLAYER_MAX_HP)) * scale.dmgMult)),
+      bulletDamage: def.shoot
+        ? Math.max(1, Math.round(playerMaxHp * (def.bulletPct ?? (ENEMY_BULLET_DMG / PLAYER_MAX_HP)) * scale.dmgMult))
+        : 0,
       expMult: 1,
       coinMult: 1,
       fireRate: def.shoot ? def.fireRate : undefined,
@@ -312,6 +325,8 @@ export function spawnEnemy(x, z, eliteTypeOrCfg = null) {
     staggerTimer: 0, baseColor: new THREE.Color(color),
     spawnFlashTimer: SPAWN_FLASH_DURATION, matDirty: true,
     enemyType,
+    contactDps: (cfg && Number.isFinite(cfg.contactDps)) ? cfg.contactDps : null,
+    bulletDamage: (cfg && Number.isFinite(cfg.bulletDamage)) ? cfg.bulletDamage : null,
     bulletSpeedMult: (cfg && Number.isFinite(cfg.bulletSpeedMult)) ? cfg.bulletSpeedMult : 1,
     baseBulletSpeedMult: (cfg && Number.isFinite(cfg.bulletSpeedMult)) ? cfg.bulletSpeedMult : 1,
     chaosAppliedTier: curseTier,
@@ -661,7 +676,8 @@ export function updateEnemies(delta, worldDelta, elapsed) {
             }
           } else {
             const chaosTier = getActiveChaosTier();
-            const dmg = ENEMY_CONTACT_DPS * CONTACT_HIT_INTERVAL * (1 + 0.20 * chaosTier);
+            const baseContactDps = Number.isFinite(e.contactDps) ? e.contactDps : ENEMY_CONTACT_DPS;
+            const dmg = baseContactDps * CONTACT_HIT_INTERVAL * (1 + 0.20 * chaosTier);
             const res = applyPlayerDamage(dmg, 'contact');
             if (res.applied > 0) {
               spawnPlayerDamageNum(Math.round(res.applied));
