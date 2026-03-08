@@ -9,7 +9,7 @@ import { updateChunks } from './terrain.js';
 import { updatePlayer, updateDashStreaks, updateHealthBar } from './player.js';
 import { updateEnemies, removeCSS2DFromGroup, killEnemy } from './enemies.js';
 import { updateSpawner, initSpawner } from './spawner.js';
-import { shootBulletWave, updateBullets, updateEnemyBullets, updateOrbitBullets, performSlash, updateSlashEffects } from './weapons.js';
+import { shootBulletWave, updateBullets, updateEnemyBullets, updateOrbitBullets, updateSecondaryWeapons, performSlash, updateSlashEffects } from './weapons.js';
 import { updatePickups } from './pickups.js';
 import { updateActiveEffects } from './activeEffects.js';
 import { updateArmorTimers } from './armor.js';
@@ -356,6 +356,7 @@ export function tick() {
     return;
   }
   updateOrbitBullets(delta);
+  updateSecondaryWeapons(worldDelta);
 
   if (!state.gameOver && state.playerHP <= 0) {
     triggerGameOver();

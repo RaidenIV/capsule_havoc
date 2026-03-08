@@ -105,9 +105,16 @@ export const state = {
     magnet: 0,        // 0..4
 
     // Abilities
-    shield: 0,        // 0..3
+    shield: 0,        // 0..5
     burst: 0,         // 0..4
     timeSlow: 0,      // 0..3
+    targetedFire: 0,      // 0..5
+    targetedCooldown: 0,  // 0..5
+    targetedRange: 0,     // 0..5
+    targetedDamage: 0,    // 0..5
+    lightning: 0,         // 0..5
+    lightningCooldown: 0, // 0..5
+    lightningDamage: 0,   // 0..5
 
     // Power Ups
     maxHealth: 0,     // 0..5
@@ -131,6 +138,9 @@ export const state = {
 
   // Arena pickup entities (clock, black hole, etc.)
   arenaPickups: [],
+  targetedShotTimer: 0,
+  lightningTimer: 0,
+  enemySpatialHash: null,
 
   // ── Shop upgrades ─────────────────────────────────────────────────────────
   pickupRangeLvl: 0,   // increases coin attraction distance

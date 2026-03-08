@@ -5,6 +5,7 @@ import { scene } from './renderer.js';
 // ── Config ────────────────────────────────────────────────────────────────────
 const CHUNK_SIZE  = 20;
 const CHUNK_RANGE = 4; // visible in each direction (9×9 grid)
+const PROP_GRID_CELL = 6;
 
 let showGround = true;
 let showGrid   = true;
@@ -18,16 +19,73 @@ const propGeoCyl8     = new THREE.CylinderGeometry(0.55, 0.55, 1, 8);
 const propGeoTriPrism = new THREE.CylinderGeometry(0.55, 0.55, 1, 3);
 const propGeoPyr      = new THREE.ConeGeometry(0.7, 1.2, 4);
 
-// Pre-compute bounding boxes once at module load so floorY offsets are always
-// available — avoids any lazy-evaluation timing issues and ensures cones
-// (height 1.2, min.y = -0.6) are handled correctly alongside cylinders (height 1).
 [propGeoCyl, propGeoCone, propGeoCyl6, propGeoCyl8, propGeoTriPrism, propGeoPyr]
   .forEach(g => g.computeBoundingBox());
 
 // ── Flat collider list for per-frame checks: { wx, wz, radius } ───────────────
 export const propColliders = [];
-
+const propColliderGrid = new Map();
 const chunks = new Map(); // key → { grp, groundMesh, gridHelper, propData[] }
+let _lastPlayerChunkX = null;
+let _lastPlayerChunkZ = null;
+
+function colliderCellKey(ix, iz) { return `${ix},${iz}`; }
+function colliderCellCoord(v) { return Math.floor(v / PROP_GRID_CELL); }
+
+function addPropColliderToGrid(collider) {
+  const r = collider.radius;
+  const minX = colliderCellCoord(collider.wx - r);
+  const maxX = colliderCellCoord(collider.wx + r);
+  const minZ = colliderCellCoord(collider.wz - r);
+  const maxZ = colliderCellCoord(collider.wz + r);
+  collider._gridKeys = [];
+  for (let ix = minX; ix <= maxX; ix++) {
+    for (let iz = minZ; iz <= maxZ; iz++) {
+      const key = colliderCellKey(ix, iz);
+      let bucket = propColliderGrid.get(key);
+      if (!bucket) {
+        bucket = [];
+        propColliderGrid.set(key, bucket);
+      }
+      bucket.push(collider);
+      collider._gridKeys.push(key);
+    }
+  }
+}
+
+function removePropColliderFromGrid(collider) {
+  const keys = collider?._gridKeys || [];
+  for (const key of keys) {
+    const bucket = propColliderGrid.get(key);
+    if (!bucket) continue;
+    const idx = bucket.indexOf(collider);
+    if (idx >= 0) bucket.splice(idx, 1);
+    if (bucket.length === 0) propColliderGrid.delete(key);
+  }
+  collider._gridKeys = [];
+}
+
+const _querySeen = new Set();
+export function queryNearbyPropColliders(x, z, radius = 0, out = []) {
+  out.length = 0;
+  _querySeen.clear();
+  const minX = colliderCellCoord(x - radius);
+  const maxX = colliderCellCoord(x + radius);
+  const minZ = colliderCellCoord(z - radius);
+  const maxZ = colliderCellCoord(z + radius);
+  for (let ix = minX; ix <= maxX; ix++) {
+    for (let iz = minZ; iz <= maxZ; iz++) {
+      const bucket = propColliderGrid.get(colliderCellKey(ix, iz));
+      if (!bucket) continue;
+      for (const c of bucket) {
+        if (_querySeen.has(c)) continue;
+        _querySeen.add(c);
+        out.push(c);
+      }
+    }
+  }
+  return out;
+}
 
 // Seeded per-chunk pseudo-random
 function cRand(cx, cz, idx) {
@@ -85,7 +143,7 @@ function createChunk(cx, cz) {
     const lz   = (cRand(cx, cz, p*7+3) * 2 - 1) * halfC;
     const rShape  = cRand(cx, cz, p*7+4);
     const rSpawn  = cRand(cx, cz, p*7+40);
-    if (rSpawn < 0.50) continue; // 50% less likely overall
+    if (rSpawn < 0.50) continue;
 
     const sizeClass = cRand(cx, cz, p*7+5);
 
@@ -94,7 +152,6 @@ function createChunk(cx, cz) {
     else if (sizeClass < 0.70) { scaleXZ = 1.0 + cRand(cx,cz,p*7+6)*1.5; scaleY = 0.8 + cRand(cx,cz,p*7+7)*1.5; }
     else                       { scaleXZ = 1.5 + cRand(cx,cz,p*7+6)*2.0; scaleY = 2.5 + cRand(cx,cz,p*7+7)*5.0; }
 
-    // Only flat-base props — bounding boxes pre-computed at module load
     let geo;
     if      (rShape < 0.18) geo = propGeoCyl;
     else if (rShape < 0.34) geo = propGeoCone;
@@ -106,7 +163,6 @@ function createChunk(cx, cz) {
     const mesh = new THREE.Mesh(geo, makePropMaterial(cx, cz, p));
     mesh.scale.set(scaleXZ, scaleY, scaleXZ);
 
-    // Offset Y so the prop's lowest vertex rests exactly on the floor.
     const baseOffsetY = -geo.boundingBox.min.y * scaleY;
     mesh.position.set(lx, baseOffsetY, lz);
     mesh.castShadow = mesh.receiveShadow = true;
@@ -114,6 +170,7 @@ function createChunk(cx, cz) {
 
     const collider = { wx: wx + lx, wz: wz + lz, radius: scaleXZ * 0.55 };
     propColliders.push(collider);
+    addPropColliderToGrid(collider);
     propData.push({ mesh, collider });
   }
 
@@ -128,17 +185,21 @@ function removeChunk(key) {
   c.groundMesh.material.dispose();
   c.propData.forEach(({ mesh, collider }) => {
     mesh.material.dispose();
+    removePropColliderFromGrid(collider);
     const idx = propColliders.indexOf(collider);
     if (idx !== -1) propColliders.splice(idx, 1);
   });
   chunks.delete(key);
 }
 
-// Update which chunks are loaded around the player
 const _chunkNeeded = new Set();
 export function updateChunks(playerPosition) {
   const pcx = Math.round(playerPosition.x / CHUNK_SIZE);
   const pcz = Math.round(playerPosition.z / CHUNK_SIZE);
+  if (_lastPlayerChunkX === pcx && _lastPlayerChunkZ === pcz && chunks.size > 0) return;
+  _lastPlayerChunkX = pcx;
+  _lastPlayerChunkZ = pcz;
+
   _chunkNeeded.clear();
   for (let dx = -CHUNK_RANGE; dx <= CHUNK_RANGE; dx++) {
     for (let dz = -CHUNK_RANGE; dz <= CHUNK_RANGE; dz++) {
@@ -147,12 +208,11 @@ export function updateChunks(playerPosition) {
       if (!chunks.has(key)) createChunk(pcx + dx, pcz + dz);
     }
   }
-  for (const key of chunks.keys()) {
+  for (const key of Array.from(chunks.keys())) {
     if (!_chunkNeeded.has(key)) removeChunk(key);
   }
 }
 
-// Proxies for control panel visibility toggles
 export const ground = {
   get visible() { return showGround; },
   set visible(v) { showGround = v; chunks.forEach(c => { c.groundMesh.visible = v; }); },
@@ -162,23 +222,27 @@ export const grid = {
   set visible(v) { showGrid = v; chunks.forEach(c => { c.gridHelper.visible = v; }); },
 };
 
-// ── Line-of-sight check (segment vs all prop colliders) ──────────────────────
+const _losCandidates = [];
 export function hasLineOfSight(ax, az, bx, bz) {
   const dx = bx - ax, dz = bz - az;
   const len2 = dx * dx + dz * dz;
   if (len2 < 0.001) return true;
   const inv = 1 / len2;
-  for (const c of propColliders) {
+  const cx = (ax + bx) * 0.5;
+  const cz = (az + bz) * 0.5;
+  const span = Math.max(Math.abs(dx), Math.abs(dz)) * 0.5 + 2.0;
+  const candidates = queryNearbyPropColliders(cx, cz, span, _losCandidates);
+  for (const c of candidates) {
     const ex = c.wx - ax, ez = c.wz - az;
     const t  = Math.max(0, Math.min(1, (ex*dx + ez*dz) * inv));
-    const cx = ax + t*dx - c.wx, cz = az + t*dz - c.wz;
-    if (cx*cx + cz*cz < c.radius * c.radius) return false;
+    const rx = ax + t*dx - c.wx, rz = az + t*dz - c.wz;
+    if (rx*rx + rz*rz < c.radius * c.radius) return false;
   }
   return true;
 }
 
-// ── Enemy steering (blends desired direction with prop + peer avoidance) ──────
 const _steerOut = { sx: 0, sz: 0 };
+const _steerCandidates = [];
 export function steerAroundProps(ex, ez, tx, tz, capsuleR, enemies, selfIdx) {
   const ddx = tx - ex, ddz = tz - ez;
   const dlen = Math.sqrt(ddx*ddx + ddz*ddz);
@@ -187,7 +251,8 @@ export function steerAroundProps(ex, ez, tx, tz, capsuleR, enemies, selfIdx) {
   const LOOK = Math.max(4.5, capsuleR * 10);
   let avX = 0, avZ = 0;
 
-  for (const c of propColliders) {
+  const nearby = queryNearbyPropColliders(ex, ez, LOOK + capsuleR + 2.0, _steerCandidates);
+  for (const c of nearby) {
     const minClear = c.radius + capsuleR + 0.5;
     const cx = c.wx - ex, cz = c.wz - ez;
     const dd = Math.sqrt(cx*cx + cz*cz);
@@ -210,7 +275,7 @@ export function steerAroundProps(ex, ez, tx, tz, capsuleR, enemies, selfIdx) {
     for (let j = 0; j < enemies.length; j++) {
       if (j === selfIdx || enemies[j].dead) continue;
       const o  = enemies[j];
-      const oR = 0.4 * (o.scaleMult || 1); // enemyGeoParams.radius baked as 0.4
+      const oR = 0.4 * (o.scaleMult || 1);
       const sep = selfR + oR + 0.35;
       const ox = o.grp.position.x - ex, oz = o.grp.position.z - ez;
       const od = Math.sqrt(ox*ox + oz*oz);
@@ -222,16 +287,17 @@ export function steerAroundProps(ex, ez, tx, tz, capsuleR, enemies, selfIdx) {
   }
 
   if (avX === 0 && avZ === 0) { _steerOut.sx = nx; _steerOut.sz = nz; return _steerOut; }
-  const bx = nx + avX, bz = nz + avZ;
-  const bl = Math.sqrt(bx*bx + bz*bz);
-  if (bl > 0.001) { _steerOut.sx = bx/bl; _steerOut.sz = bz/bl; }
+  const bx2 = nx + avX, bz2 = nz + avZ;
+  const bl = Math.sqrt(bx2*bx2 + bz2*bz2);
+  if (bl > 0.001) { _steerOut.sx = bx2/bl; _steerOut.sz = bz2/bl; }
   else { _steerOut.sx = nx; _steerOut.sz = nz; }
   return _steerOut;
 }
 
-// ── Push a position out of overlapping prop colliders ─────────────────────────
+const _pushCandidates = [];
 export function pushOutOfProps(pos, capsuleR) {
-  for (const c of propColliders) {
+  const nearby = queryNearbyPropColliders(pos.x, pos.z, capsuleR + 2.0, _pushCandidates);
+  for (const c of nearby) {
     const minDist = c.radius + capsuleR;
     const dx = pos.x - c.wx, dz = pos.z - c.wz;
     const d2 = dx*dx + dz*dz;

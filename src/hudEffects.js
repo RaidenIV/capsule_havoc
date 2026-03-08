@@ -74,7 +74,7 @@ export function updateHudEffects(){
   }
 
   // Extra life icon if banked
-  if ((state.extraLife || 0) > 0) {
+  if ((state.extraLives || 0) > 0) {
     const el = document.createElement('div');
     el.style.padding = '6px 10px';
     el.style.borderRadius = '12px';

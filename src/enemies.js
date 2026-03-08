@@ -39,6 +39,152 @@ function getEnemyHP() {
 }
 
 
+const _enemyBulletPool = [];
+const ENEMY_HASH_CELL = 4;
+
+function _hashKey(ix, iz) { return `${ix},${iz}`; }
+function _hashCoord(v) { return Math.floor(v / ENEMY_HASH_CELL); }
+
+function makeGroundCue(color = 0xffffff, radius = 0.9) {
+  const mesh = new THREE.Mesh(
+    new THREE.TorusGeometry(radius, 0.045, 10, 48),
+    new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.0, depthWrite: false })
+  );
+  mesh.rotation.x = Math.PI / 2;
+  mesh.position.y = 0.08;
+  mesh.visible = false;
+  return mesh;
+}
+
+function ensureOrbiterLane() {
+  if (state._orbiterLane) return state._orbiterLane;
+  const radius = ENEMY_DEFS[ENEMY_TYPE.ORBITER]?.orbitR ?? 6.5;
+  const mesh = new THREE.Mesh(
+    new THREE.TorusGeometry(radius, 0.045, 10, 96),
+    new THREE.MeshBasicMaterial({ color: 0x66ff99, transparent: true, opacity: 0.0, depthWrite: false })
+  );
+  mesh.rotation.x = Math.PI / 2;
+  mesh.position.y = 0.06;
+  mesh.visible = false;
+  scene.add(mesh);
+  state._orbiterLane = mesh;
+  return mesh;
+}
+
+function getShotTellConfig(enemyType, isBoss) {
+  if (isBoss || enemyType === ENEMY_TYPE.BOSS) return { prep: 0.34, color: 0xff4444, scale: 1.6 };
+  if (enemyType === ENEMY_TYPE.SNIPER) return { prep: 0.58, color: 0xd975ff, scale: 1.45 };
+  if (enemyType === ENEMY_TYPE.TANKER) return { prep: 0.42, color: 0xffaa33, scale: 1.75 };
+  if (enemyType === ENEMY_TYPE.ORBITER) return { prep: 0.22, color: 0x66ff99, scale: 1.25 };
+  if (enemyType === ENEMY_TYPE.SPLITTER) return { prep: 0.28, color: 0x80fb37, scale: 1.5 };
+  return { prep: 0.20, color: 0xff8844, scale: 1.3 };
+}
+
+function rebuildEnemySpatialHash() {
+  const map = new Map();
+  for (const e of state.enemies) {
+    if (!e || e.dead) continue;
+    const ix = _hashCoord(e.grp.position.x);
+    const iz = _hashCoord(e.grp.position.z);
+    const key = _hashKey(ix, iz);
+    let bucket = map.get(key);
+    if (!bucket) {
+      bucket = [];
+      map.set(key, bucket);
+    }
+    bucket.push(e);
+  }
+  state.enemySpatialHash = map;
+}
+
+const _enemyQuerySeen = new Set();
+export function queryEnemiesNear(x, z, radius = 0, out = []) {
+  out.length = 0;
+  const map = state.enemySpatialHash;
+  if (!map) return out;
+  _enemyQuerySeen.clear();
+  const minX = _hashCoord(x - radius);
+  const maxX = _hashCoord(x + radius);
+  const minZ = _hashCoord(z - radius);
+  const maxZ = _hashCoord(z + radius);
+  for (let ix = minX; ix <= maxX; ix++) {
+    for (let iz = minZ; iz <= maxZ; iz++) {
+      const bucket = map.get(_hashKey(ix, iz));
+      if (!bucket) continue;
+      for (const e of bucket) {
+        if (_enemyQuerySeen.has(e)) continue;
+        _enemyQuerySeen.add(e);
+        out.push(e);
+      }
+    }
+  }
+  return out;
+}
+
+export function acquireEnemyBulletVisual(color = 0xff4400) {
+  const mesh = _enemyBulletPool.pop() || new THREE.Mesh(enemyBulletGeo, getEnemyBulletMat(color));
+  mesh.material = getEnemyBulletMat(color);
+  mesh.visible = true;
+  mesh.layers.enable(1);
+  return mesh;
+}
+
+export function releaseEnemyBulletVisual(mesh) {
+  if (!mesh) return;
+  scene.remove(mesh);
+  mesh.visible = false;
+  _enemyBulletPool.push(mesh);
+}
+
+function _fireEnemyShot(e, dx, dz, dist) {
+  if (!(dist > 0.5)) return;
+  const RANGE = ENEMY_BULLET_SPEED * ENEMY_BULLET_LIFETIME * 0.72;
+  if (dist >= RANGE) return;
+  if (!hasLineOfSight(e.grp.position.x, e.grp.position.z, playerGroup.position.x, playerGroup.position.z)) return;
+
+  const spd = ENEMY_BULLET_SPEED * (e.bulletSpeedMult || 1);
+  const dvx = (dx / dist) * spd;
+  const dvz = (dz / dist) * spd;
+  const bMesh = acquireEnemyBulletVisual(e.enemyType === ENEMY_TYPE.SNIPER ? 0xd975ff : (e.isBoss ? 0xff3333 : 0xff4400));
+
+  _eBulletDir.set(dvx, 0, dvz).normalize();
+  _eBulletQ.setFromUnitVectors(_eBulletUp, _eBulletDir);
+  bMesh.quaternion.copy(_eBulletQ);
+  bMesh.position.copy(e.grp.position);
+  bMesh.position.y = floorY(bulletGeoParams);
+  scene.add(bMesh);
+
+  const chaosTier = getActiveChaosTier();
+  const dmg = ENEMY_BULLET_DMG * (1 + 0.20 * chaosTier) * (e.phase >= 3 ? 1.12 : 1.0);
+  state.enemyBullets.push({ mesh: bMesh, vx: dvx, vz: dvz, life: ENEMY_BULLET_LIFETIME, dmg });
+  playSound('elite_shoot', 0.5, 0.9 + Math.random() * 0.2);
+}
+
+function _maybeAdvanceBossPhase(e) {
+  if (!e?.isBoss || !e.maxHp) return;
+  const ratio = e.hp / e.maxHp;
+  if ((e.phase || 1) < 2 && ratio <= 0.66) {
+    e.phase = 2;
+    e.fireRate = Math.max(0.35, (e.baseFireRate || e.fireRate || 1.5) * 0.85);
+    e.bulletSpeedMult = (e.baseBulletSpeedMult || e.bulletSpeedMult || 1) * 1.12;
+    for (let k = 0; k < 3; k++) {
+      const a = Math.random() * Math.PI * 2;
+      spawnEnemyAtPosition(e.grp.position.x + Math.cos(a) * (2.2 + Math.random() * 1.4), e.grp.position.z + Math.sin(a) * (2.2 + Math.random() * 1.4), ENEMY_TYPE.RUSHER);
+    }
+  }
+  if ((e.phase || 1) < 3 && ratio <= 0.33) {
+    e.phase = 3;
+    e.fireRate = Math.max(0.28, (e.baseFireRate || e.fireRate || 1.25) * 0.68);
+    e.bulletSpeedMult = (e.baseBulletSpeedMult || e.bulletSpeedMult || 1) * 1.25;
+    for (let k = 0; k < 2; k++) {
+      const a = Math.random() * Math.PI * 2;
+      const type = (state.playerLevel || 1) >= 21 ? ENEMY_TYPE.SNIPER : ENEMY_TYPE.TANKER;
+      spawnEnemyAtPosition(e.grp.position.x + Math.cos(a) * (2.6 + Math.random() * 1.8), e.grp.position.z + Math.sin(a) * (2.6 + Math.random() * 1.8), type);
+    }
+  }
+}
+
+
 function getActiveChaosTier() {
   return (state.chaosTimer || 0) > 0 ? Math.max(0, state.curseTier || 0) : 0;
 }
@@ -155,17 +301,25 @@ export function spawnEnemy(x, z, eliteTypeOrCfg = null) {
     eliteBarFill = bFill;
   }
 
-  state.enemies.push({
+  const shotCue = makeGroundCue(getShotTellConfig(enemyType, isBossBar).color, (enemyGeoParams.radius * scaleMult) * getShotTellConfig(enemyType, isBossBar).scale);
+  grp.add(shotCue);
+  const enemyData = {
     grp, mesh, mat, hp, maxHp: hp, dead: false,
     isBoss: isBossBar,
     scaleMult, expMult, coinMult, eliteType, eliteBarFill,
-    fireRate, shootTimer: fireRate ? Math.random() * fireRate : 0,
+    fireRate, baseFireRate: fireRate,
+    shootTimer: fireRate ? Math.random() * fireRate : 0,
     staggerTimer: 0, baseColor: new THREE.Color(color),
     spawnFlashTimer: SPAWN_FLASH_DURATION, matDirty: true,
     enemyType,
     bulletSpeedMult: (cfg && Number.isFinite(cfg.bulletSpeedMult)) ? cfg.bulletSpeedMult : 1,
+    baseBulletSpeedMult: (cfg && Number.isFinite(cfg.bulletSpeedMult)) ? cfg.bulletSpeedMult : 1,
     chaosAppliedTier: curseTier,
-  });
+    shotCue,
+    fireTellTimer: 0,
+    phase: 1,
+  };
+  state.enemies.push(enemyData);
 
   // Spawn fade-in
   mat.transparent = true;
@@ -237,6 +391,10 @@ const killsEl = document.getElementById('kills-value');
 export function killEnemy(j) {
   const e = state.enemies[j];
   const wasBoss = !!(e && (e.isBoss || e.enemyType === ENEMY_TYPE.BOSS));
+  if (e?.teleportMarker) {
+    try { scene.remove(e.teleportMarker); e.teleportMarker.geometry.dispose(); e.teleportMarker.material.dispose(); } catch {}
+    e.teleportMarker = null;
+  }
   spawnExplosion(e.grp.position, e.eliteType);
   removeCSS2DFromGroup(e.grp);
   scene.remove(e.grp);
@@ -294,19 +452,26 @@ export function killEnemy(j) {
 }
 
 // ── Update ────────────────────────────────────────────────────────────────────
+
 export function updateEnemies(delta, worldDelta, elapsed) {
   let contactThisFrame = false;
+  let orbiterAlive = false;
+  const lane = ensureOrbiterLane();
+  const sepCandidates = [];
+
   for (let i = state.enemies.length - 1; i >= 0; i--) {
     const e = state.enemies[i];
-    if (e.dead) continue;
+    if (!e || e.dead) continue;
     syncEnemyChaosTier(e);
+    _maybeAdvanceBossPhase(e);
 
     const dx   = playerGroup.position.x - e.grp.position.x;
     const dz   = playerGroup.position.z - e.grp.position.z;
     const dist = Math.sqrt(dx*dx + dz*dz);
+    const et = e.enemyType;
 
-    // Spawn fade-in — tick unconditionally so stagger hits can't freeze the timer.
-    // Enemies move throughout (no continue) so they can't get stuck inside terrain.
+    if (et === ENEMY_TYPE.ORBITER) orbiterAlive = true;
+
     if (e.spawnFlashTimer > 0) {
       e.spawnFlashTimer = Math.max(0, e.spawnFlashTimer - worldDelta);
       const progress = 1 - e.spawnFlashTimer / SPAWN_FLASH_DURATION;
@@ -318,11 +483,8 @@ export function updateEnemies(delta, worldDelta, elapsed) {
         e.mesh.castShadow = true;
       }
     }
-
-    // Gate shooting: enemies can't fire while still fading in (prevents invisible projectiles).
     const fullySpawned = e.spawnFlashTimer <= 0;
 
-    // Stagger flash
     if (e.staggerTimer > 0) {
       e.staggerTimer = Math.max(0, e.staggerTimer - worldDelta);
       const t = e.staggerTimer / STAGGER_DURATION;
@@ -334,115 +496,130 @@ export function updateEnemies(delta, worldDelta, elapsed) {
       e.mat.emissive.setRGB(1, 1, 1);
       e.mat.emissiveIntensity = t > 0 ? t * 4 : enemyMat.emissiveIntensity;
       e.matDirty = true;
-    } else {
-      if (e.matDirty) {
-        e.mat.color.copy(e.baseColor);
-        e.mat.emissive.setRGB(0, 0, 0);
-        e.mat.emissiveIntensity = enemyMat.emissiveIntensity;
-        e.matDirty = false;
+    } else if (e.matDirty) {
+      e.mat.color.copy(e.baseColor);
+      e.mat.emissive.setRGB(0, 0, 0);
+      e.mat.emissiveIntensity = enemyMat.emissiveIntensity;
+      e.matDirty = false;
+    }
+
+    const blackHoleSuppressed = !!e.blackHoleSuppressed;
+
+    // Teleporter readability: mark destination first, then blink.
+    if (et === ENEMY_TYPE.TELEPORTER) {
+      const thresh = (ENEMY_DEFS[ENEMY_TYPE.TELEPORTER]?.teleportWhenBelow ?? 0.5);
+      e._tpCD = Math.max(0, e._tpCD || 0);
+      if (e.teleportPending) {
+        e.teleportPending.timer -= worldDelta;
+        if (e.teleportMarker) {
+          e.teleportMarker.visible = true;
+          e.teleportMarker.material.opacity = Math.min(0.85, e.teleportPending.timer / Math.max(0.01, e.teleportPending.maxTimer));
+          e.teleportMarker.rotation.z += worldDelta * 4.0;
+        }
+        e.mesh.visible = false;
+        if (e.teleportPending.timer <= 0) {
+          e.grp.position.set(e.teleportPending.x, 0, e.teleportPending.z);
+          e.mesh.visible = true;
+          e._tpCD = 4.0;
+          if (e.teleportMarker) { scene.remove(e.teleportMarker); e.teleportMarker.geometry.dispose(); e.teleportMarker.material.dispose(); e.teleportMarker = null; }
+          e.teleportPending = null;
+        }
+      } else {
+        e._tpCD = Math.max(0, e._tpCD - worldDelta);
+        if (e._tpCD <= 0 && e.maxHp > 0 && (e.hp / e.maxHp) <= thresh) {
+          const ang = Math.random() * Math.PI * 2;
+          const rr  = (Number.isFinite(CAM_D) ? CAM_D : 18) * 1.7 + 6;
+          const tx = playerGroup.position.x + Math.cos(ang) * rr;
+          const tz = playerGroup.position.z + Math.sin(ang) * rr;
+          const marker = makeGroundCue(0xe0e0e0, enemyGeoParams.radius * (e.scaleMult || 1) * 2.1);
+          marker.position.set(tx, 0.08, tz);
+          marker.visible = true;
+          marker.material.opacity = 0.75;
+          scene.add(marker);
+          e.teleportMarker = marker;
+          e.teleportPending = { x: tx, z: tz, timer: 0.42, maxTimer: 0.42 };
+        }
       }
     }
 
-    // Elite shooting
-    const blackHoleSuppressed = !!e.blackHoleSuppressed;
+    // Shot telegraph / firing cadence.
     if (fullySpawned && e.fireRate && !e.dead && !blackHoleSuppressed) {
-      e.shootTimer -= worldDelta;
-      if (e.shootTimer <= 0) {
-        e.shootTimer = e.fireRate * (0.8 + Math.random() * 0.4);
+      const tell = getShotTellConfig(et, e.isBoss);
+      if ((e.fireTellTimer || 0) > 0) {
+        e.fireTellTimer = Math.max(0, e.fireTellTimer - worldDelta);
+        if (e.shotCue) {
+          e.shotCue.visible = true;
+          const pulse = 0.45 + 0.55 * (1 - e.fireTellTimer / Math.max(0.01, tell.prep));
+          e.shotCue.material.opacity = pulse * 0.85;
+          e.shotCue.scale.setScalar(1.0 + (1 - e.fireTellTimer / Math.max(0.01, tell.prep)) * 0.22);
+        }
+        e.mat.emissive.setHex(tell.color);
+        e.mat.emissiveIntensity = 1.1 + (1 - e.fireTellTimer / Math.max(0.01, tell.prep)) * (et === ENEMY_TYPE.TANKER ? 2.2 : 1.6);
+        if (e.fireTellTimer <= 0) {
+          _fireEnemyShot(e, dx, dz, dist);
+          e.shootTimer = (e.fireRate || 1.5) * (0.8 + Math.random() * 0.4);
+          if (e.shotCue) { e.shotCue.visible = false; e.shotCue.material.opacity = 0; e.shotCue.scale.setScalar(1); }
+          if (e.staggerTimer <= 0) {
+            e.mat.emissive.setRGB(0, 0, 0);
+            e.mat.emissiveIntensity = enemyMat.emissiveIntensity;
+          }
+        }
+      } else {
+        if (e.shotCue) { e.shotCue.visible = false; e.shotCue.material.opacity = 0; e.shotCue.scale.setScalar(1); }
+        if (e.staggerTimer <= 0) {
+          e.mat.emissive.setRGB(0, 0, 0);
+          e.mat.emissiveIntensity = enemyMat.emissiveIntensity;
+        }
+        e.shootTimer -= worldDelta;
         const RANGE = ENEMY_BULLET_SPEED * ENEMY_BULLET_LIFETIME * 0.72;
-        if (dist > 0.5 && dist < RANGE &&
-            hasLineOfSight(e.grp.position.x, e.grp.position.z,
-                           playerGroup.position.x, playerGroup.position.z)) {
-          const spd = ENEMY_BULLET_SPEED * (e.bulletSpeedMult || 1);
-          const dvx = (dx/dist) * spd;
-          const dvz = (dz/dist) * spd;
-
-          // Use the proven single-mesh enemy bullet from the older working version.
-          // (Still emissive + bloom layer so it's visible.)
-          const bMat  = getEnemyBulletMat(0xff4400);
-          const bMesh = new THREE.Mesh(enemyBulletGeo, bMat);
-
-          _eBulletDir.set(dvx, 0, dvz).normalize();
-          _eBulletQ.setFromUnitVectors(_eBulletUp, _eBulletDir);
-          bMesh.quaternion.copy(_eBulletQ);
-
-          bMesh.layers.enable(1);
-          bMesh.position.copy(e.grp.position);
-          bMesh.position.y = floorY(bulletGeoParams);
-
-          scene.add(bMesh);
-
-          const chaosTier = getActiveChaosTier();
-          const dmg = ENEMY_BULLET_DMG * (1 + 0.20 * chaosTier);
-
-          state.enemyBullets.push({ mesh: bMesh, mat: bMat, vx: dvx, vz: dvz, life: ENEMY_BULLET_LIFETIME, dmg });
-          playSound('elite_shoot', 0.5, 0.9 + Math.random() * 0.2);
-}
+        if (e.shootTimer <= tell.prep && dist > 0.5 && dist < RANGE && hasLineOfSight(e.grp.position.x, e.grp.position.z, playerGroup.position.x, playerGroup.position.z)) {
+          e.fireTellTimer = tell.prep;
+        }
+      }
+    } else if (e.shotCue) {
+      e.shotCue.visible = false;
+      e.shotCue.material.opacity = 0;
+      if (e.staggerTimer <= 0) {
+        e.mat.emissive.setRGB(0, 0, 0);
+        e.mat.emissiveIntensity = enemyMat.emissiveIntensity;
       }
     }
 
     // Movement (per-type behavior)
-    if (dist > 0.01 && e.staggerTimer <= 0) {
+    if (!e.teleportPending && dist > 0.01 && e.staggerTimer <= 0) {
       const eR = enemyGeoParams.radius * (e.scaleMult || 1);
-      const et = e.enemyType;
-
-      // Base steer vector toward player (terrain-aware)
       let { sx, sz } = steerAroundProps(
         e.grp.position.x, e.grp.position.z,
         playerGroup.position.x, playerGroup.position.z,
         eR, state.enemies, i
       );
 
-      // Speed multipliers by type (doc Section 13)
       let spdMult = 1.0;
       if (et === ENEMY_TYPE.TANKER) spdMult = 0.90;
       if (et === ENEMY_TYPE.SPLITTER) spdMult = 0.80;
-      if (et === ENEMY_TYPE.BOSS) spdMult = 0.90;
+      if (et === ENEMY_TYPE.BOSS || e.isBoss) spdMult = 0.90;
 
-      // Overrides
       if (et === ENEMY_TYPE.ORBITER) {
         const orbitR = (ENEMY_DEFS[ENEMY_TYPE.ORBITER]?.orbitR ?? 6.5);
-        // radial direction to player
         const rx = dx / dist;
         const rz = dz / dist;
-        // tangential (90°)
         const tx = -rz;
         const tz = rx;
-
-        // If outside orbit radius, bias inward; if inside, bias outward slightly.
         const radialErr = (dist - orbitR);
         const radialBias = Math.max(-1, Math.min(1, radialErr / 2.5));
-
         sx = tx * 0.9 + rx * radialBias * 0.6;
         sz = tz * 0.9 + rz * radialBias * 0.6;
-
         const len = Math.hypot(sx, sz) || 1;
         sx /= len; sz /= len;
         spdMult = 1.05;
       } else if (et === ENEMY_TYPE.SNIPER) {
         const desired = 14.0;
         if (dist < desired) {
-          // retreat directly away
           sx = -dx / dist;
           sz = -dz / dist;
           spdMult = 1.05;
         } else {
-          // slow approach to keep pressure
           spdMult = 0.85;
-        }
-      } else if (et === ENEMY_TYPE.TELEPORTER) {
-        const thresh = (ENEMY_DEFS[ENEMY_TYPE.TELEPORTER]?.teleportWhenBelow ?? 0.5);
-        if (!e._tpCD) e._tpCD = 0;
-        e._tpCD = Math.max(0, e._tpCD - worldDelta);
-        if (e._tpCD <= 0 && e.maxHp > 0 && (e.hp / e.maxHp) <= thresh) {
-          // teleport to random off-screen position and re-approach
-          const ang = Math.random() * Math.PI * 2;
-          const rr  = (Number.isFinite(CAM_D) ? CAM_D : 18) * 1.7 + 6;
-          e.grp.position.x = playerGroup.position.x + Math.cos(ang) * rr;
-          e.grp.position.z = playerGroup.position.z + Math.sin(ang) * rr;
-          e._tpCD = 4.0;
-          // reset steer after teleport
-          sx = dx / dist; sz = dz / dist;
         }
       }
 
@@ -451,33 +628,26 @@ export function updateEnemies(delta, worldDelta, elapsed) {
     }
     pushOutOfProps(e.grp.position, enemyGeoParams.radius * (e.scaleMult || 1));
 
-    // Bob + face player
     const eFloorY = (enemyGeoParams.radius + enemyGeoParams.length / 2) * (e.scaleMult || 1);
     e.mesh.position.y  = eFloorY + Math.sin(elapsed * 3 + i) * 0.05;
     e.grp.rotation.y   = Math.atan2(dx, dz);
 
-    // Player contact damage
     const pr = PLAYER_BODY_RADIUS * 1.02;
     const shieldRadius = hasShieldBubble() ? SHIELD_RADIUS : pr;
     const er = enemyGeoParams.radius * (e.scaleMult || 1) * 1.02;
     const minD = shieldRadius + er;
-    if (dist < minD && dist > 1e-6) {
+    if (!e.teleportPending && dist < minD && dist > 1e-6) {
       contactThisFrame = true;
       const nx = dx/dist, nz = dz/dist;
       const push = (minD - dist) * 0.55;
       e.grp.position.x -= nx * push; e.grp.position.z -= nz * push;
       playerGroup.position.x += nx * push; playerGroup.position.z += nz * push;
-      // Discrete hit model: one damage tick per CONTACT_HIT_INTERVAL seconds.
-      // Tick the timer down every frame while in contact.
       state.contactDmgTimer = Math.max(0, (state.contactDmgTimer || 0) - worldDelta);
       if (state.contactDmgTimer <= 0) {
-        const CONTACT_HIT_INTERVAL = 1.0; // seconds between hits
+        const CONTACT_HIT_INTERVAL = 1.0;
         state.contactDmgTimer = CONTACT_HIT_INTERVAL;
-
         if (!blackHoleSuppressed && !(state.invincible || state.dashInvincible || (state.effects?.invincibility || 0) > 0)) {
           if ((state.shieldCharges || 0) > 0) {
-            // Bubble shield blocks contact at its outer radius; only consume a hit
-            // when the shield's contact cooldown allows it.
             if ((state.shieldHitCD || 0) <= 0) {
               state.shieldCharges -= 1;
               state.shieldHitCD = 0.6;
@@ -490,7 +660,6 @@ export function updateEnemies(delta, worldDelta, elapsed) {
               playSound('shield_break', 0.65, 1.0);
             }
           } else {
-            // Damage = DPS × interval so average damage rate stays the same
             const chaosTier = getActiveChaosTier();
             const dmg = ENEMY_CONTACT_DPS * CONTACT_HIT_INTERVAL * (1 + 0.20 * chaosTier);
             const res = applyPlayerDamage(dmg, 'contact');
@@ -505,18 +674,26 @@ export function updateEnemies(delta, worldDelta, elapsed) {
     }
   }
 
-  // Reset contact sound timer when player is not touching any enemy,
-  // so the sound plays immediately on the next contact
   if (!contactThisFrame) state.contactDmgTimer = 0;
 
-  // ── Enemy/enemy separation ─────────────────────────────────────────────────
+  lane.visible = orbiterAlive;
+  if (orbiterAlive) {
+    lane.position.set(playerGroup.position.x, 0.06, playerGroup.position.z);
+    lane.material.opacity = 0.18 + Math.sin(elapsed * 2.8) * 0.05;
+    lane.rotation.z += worldDelta * 0.2;
+  }
+
+  rebuildEnemySpatialHash();
   for (let i = 0; i < state.enemies.length; i++) {
-    const a = state.enemies[i]; if (a.dead) continue;
+    const a = state.enemies[i]; if (!a || a.dead) continue;
     const ra = enemyGeoParams.radius * (a.scaleMult || 1) * 1.05;
-    for (let j = i + 1; j < state.enemies.length; j++) {
-      const b = state.enemies[j]; if (b.dead) continue;
+    const candidates = queryEnemiesNear(a.grp.position.x, a.grp.position.z, ra + 3.0, sepCandidates);
+    for (const b of candidates) {
+      if (!b || b.dead || b === a) continue;
+      const j = state.enemies.indexOf(b);
+      if (j <= i) continue;
       const rb   = enemyGeoParams.radius * (b.scaleMult || 1) * 1.05;
-      const minD = ra + rb + 1.0;   // maintain 1.0-unit gap between enemies
+      const minD = ra + rb + 1.0;
       const dx = b.grp.position.x - a.grp.position.x;
       const dz = b.grp.position.z - a.grp.position.z;
       const d2 = dx*dx + dz*dz;
@@ -528,4 +705,5 @@ export function updateEnemies(delta, worldDelta, elapsed) {
       }
     }
   }
+  rebuildEnemySpatialHash();
 }

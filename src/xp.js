@@ -39,7 +39,10 @@ export function getBulletDamage() {
   return Math.round(base * mult * eff);
 }
 export function getFireInterval() {
-  return hasLaserLoadout() ? 1.0 : 9999;
+  if (!hasLaserLoadout()) return 9999;
+  const base = 1.0;
+  const fireRateTier = Math.max(0, state.upg?.fireRate || 0);
+  return Math.max(0.35, base * Math.pow(0.90, fireRateTier));
 }
 export function getWaveBullets()  {
   return getLaserVolleyCount();

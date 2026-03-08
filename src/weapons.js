@@ -7,9 +7,9 @@ import {
 } from './constants.js';
 import { bulletGeo, bulletMat, bulletGeoParams, floorY } from './materials.js';
 import { playerGroup, updateHealthBar, hasShieldBubble, SHIELD_RADIUS, PLAYER_BODY_RADIUS } from './player.js';
-import { pushOutOfProps } from './terrain.js';
+import { pushOutOfProps, queryNearbyPropColliders } from './terrain.js';
 import { spawnPlayerDamageNum, spawnEnemyDamageNum } from './damageNumbers.js';
-import { killEnemy, updateEliteBar } from './enemies.js';
+import { killEnemy, updateEliteBar, queryEnemiesNear, releaseEnemyBulletVisual } from './enemies.js';
 import { applyPlayerDamage } from './armor.js';
 import {
   getFireInterval, getWaveBullets, getBulletDamage, getWeaponConfig,
@@ -132,6 +132,21 @@ function _makePlayerLaserVisual() {
   return g;
 }
 
+const _playerBulletPool = [];
+function _acquirePlayerLaserVisual() {
+  const g = _playerBulletPool.pop() || _makePlayerLaserVisual();
+  g.visible = true;
+  g.traverse(obj => { obj.visible = true; });
+  return g;
+}
+function _releasePlayerLaserVisual(g) {
+  if (!g) return;
+  scene.remove(g);
+  g.visible = false;
+  g.traverse(obj => { obj.visible = false; });
+  _playerBulletPool.push(g);
+}
+
 export function shootBulletWave() {
   const dirs = getWaveBullets();
   if (dirs <= 0) return;
@@ -147,6 +162,7 @@ export function shootBulletWave() {
   const laserTier = Math.max(0, state.upg?.laserFire || 0);
   const rotating = (state.characterPrimaryWeapon === 'laser' || state.selectedCharacter === 'blue') && laserTier >= 5;
   playSound('shoot', 0.45, 0.92 + Math.random() * 0.16);
+  const session = state.gameSession;
   for (let i = 0; i < dirs; i++) {
     const baseAng = state.bulletWaveAngle + (i / Math.max(1, dirs)) * Math.PI * 2;
     for (let b = 0; b < bursts; b++) {
@@ -154,7 +170,7 @@ export function shootBulletWave() {
       const spawnShot = () => {
         const vx = Math.cos(baseAng) * speed;
         const vz = Math.sin(baseAng) * speed;
-        const obj = _makePlayerLaserVisual();
+        const obj = _acquirePlayerLaserVisual();
         _bulletDir.set(vx, 0, vz).normalize();
         _bulletQ.setFromUnitVectors(_bulletUp, _bulletDir);
         obj.quaternion.copy(_bulletQ);
@@ -164,15 +180,15 @@ export function shootBulletWave() {
         state.bullets.push({ obj, vx, vz, life: bulletLife, dmg, pierceLeft: pierce });
       };
       if (delay <= 0) spawnShot();
-      else setTimeout(() => { if (!state.paused && !state.gameOver) spawnShot(); }, delay * 1000);
+      else setTimeout(() => { if (!state.paused && !state.gameOver && state.gameSession === session) spawnShot(); }, delay * 1000);
     }
   }
   if (rotating) state.bulletWaveAngle = (state.bulletWaveAngle + (Math.PI / Math.max(1, dirs))) % (Math.PI * 2);
 }
 
 // ── Update player bullets ─────────────────────────────────────────────────────
-import { propColliders } from './terrain.js';
-
+const _nearbyPropHits = [];
+const _nearbyEnemies = [];
 
 function applyEnemyDamage(e, amount) {
   // Shield absorbs damage first (shielded enemies are effectively immune until broken).
@@ -197,25 +213,27 @@ export function updateBullets(delta) {
 
     // NOTE: bulletGeo is shared; do NOT dispose shared geometry here.
     if (b.life <= 0) {
-      scene.remove(b.obj);
+      _releasePlayerLaserVisual(b.obj);
       state.bullets.splice(i, 1);
       continue;
     }
 
     // Prop collision
     let dead = false;
-    for (const c of propColliders) {
+    for (const c of queryNearbyPropColliders(b.obj.position.x, b.obj.position.z, 1.25, _nearbyPropHits)) {
       const dx = b.obj.position.x - c.wx, dz = b.obj.position.z - c.wz;
       if (dx*dx + dz*dz < (c.radius + 0.045) * (c.radius + 0.045)) {
-        scene.remove(b.obj); state.bullets.splice(i, 1); dead = true; break;
+        _releasePlayerLaserVisual(b.obj); state.bullets.splice(i, 1); dead = true; break;
       }
     }
     if (dead) continue;
 
     // Enemy collision
     let hit = false;
-    for (let j = state.enemies.length - 1; j >= 0; j--) {
-      const e = state.enemies[j]; if (e.dead) continue;
+    const nearbyEnemies = queryEnemiesNear(b.obj.position.x, b.obj.position.z, 1.6, _nearbyEnemies);
+    for (let n = nearbyEnemies.length - 1; n >= 0; n--) {
+      const e = nearbyEnemies[n]; if (!e || e.dead) continue;
+      const j = state.enemies.indexOf(e); if (j < 0) continue;
       const dx = b.obj.position.x - e.grp.position.x;
       const dz = b.obj.position.z - e.grp.position.z;
       if (dx*dx + dz*dz < 0.75*0.75) {
@@ -226,7 +244,7 @@ export function updateBullets(delta) {
         if ((b.pierceLeft || 0) > 0) {
           b.pierceLeft--;
         } else {
-          scene.remove(b.obj); state.bullets.splice(i, 1);
+          _releasePlayerLaserVisual(b.obj); state.bullets.splice(i, 1);
         }
         hit = true;
         if (e.hp <= 0) {
@@ -244,14 +262,9 @@ export function updateBullets(delta) {
 
 // ── Update enemy bullets ──────────────────────────────────────────────────────
 function _removeEBullet(b) {
-  // Back/forward-compatible removal for enemy bullets
-  if (b.core) scene.remove(b.core);
-  if (b.mesh) scene.remove(b.mesh);
-  if (b.obj)  scene.remove(b.obj);
-
-  // Dispose any per-bullet materials (enemy bullet mats are per-bullet in this build)
-  b.mat?.dispose?.();
-  b.extraMat?.dispose?.();
+  if (b.core) releaseEnemyBulletVisual(b.core);
+  if (b.mesh && b.mesh !== b.core) releaseEnemyBulletVisual(b.mesh);
+  if (b.obj && b.obj !== b.mesh && b.obj !== b.core) releaseEnemyBulletVisual(b.obj);
 }
 
 export function updateEnemyBullets(worldDelta) {
@@ -296,7 +309,7 @@ export function updateEnemyBullets(worldDelta) {
     }
 
     let blocked = false;
-    for (const c of propColliders) {
+    for (const c of queryNearbyPropColliders(visPos.x, visPos.z, 1.5, _nearbyPropHits)) {
       const cdx = visPos.x - c.wx, cdz = visPos.z - c.wz; // bullet visual = glow mesh, tracks bullet position
       if (cdx*cdx + cdz*cdz < (c.radius + 0.14) * (c.radius + 0.14)) { blocked = true; break; }
     }
@@ -325,9 +338,11 @@ export function updateOrbitBullets(delta) {
       );
       ring.meshes[i].rotation.y += 5 * delta;
     }
-    for (let j = state.enemies.length - 1; j >= 0; j--) {
-      const e = state.enemies[j]; if (e.dead) continue;
-      for (let k = 0; k < ring.meshes.length; k++) {
+    for (let k = 0; k < ring.meshes.length; k++) {
+      const candidates = queryEnemiesNear(ring.meshes[k].position.x, ring.meshes[k].position.z, 1.5, _nearbyEnemies);
+      for (let c = candidates.length - 1; c >= 0; c--) {
+        const e = candidates[c]; if (!e || e.dead) continue;
+        const j = state.enemies.indexOf(e); if (j < 0) continue;
         const dx = ring.meshes[k].position.x - e.grp.position.x;
         const dz = ring.meshes[k].position.z - e.grp.position.z;
         const inContact = dx*dx + dz*dz < hr2;
@@ -368,7 +383,7 @@ function _getNearestEnemy(maxRange = Infinity) {
 }
 
 function _makeTargetedShotVisual() {
-  return _makePlayerLaserVisual();
+  return _acquirePlayerLaserVisual();
 }
 
 function _spawnLightningFx(pos) {
@@ -386,13 +401,15 @@ function _updateTargetedShots(worldDelta) {
   if (!Array.isArray(state.targetedShots)) state.targetedShots = [];
   for (let i = state.targetedShots.length - 1; i >= 0; i--) {
     const b = state.targetedShots[i];
-    b.life -= delta;
-    b.obj.position.x += b.vx * delta;
-    b.obj.position.z += b.vz * delta;
-    if (b.life <= 0) { scene.remove(b.obj); state.targetedShots.splice(i, 1); continue; }
+    b.life -= worldDelta;
+    b.obj.position.x += b.vx * worldDelta;
+    b.obj.position.z += b.vz * worldDelta;
+    if (b.life <= 0) { _releasePlayerLaserVisual(b.obj); state.targetedShots.splice(i, 1); continue; }
     let hit = false;
-    for (let j = state.enemies.length - 1; j >= 0; j--) {
-      const e = state.enemies[j]; if (!e || e.dead) continue;
+    const candidates = queryEnemiesNear(b.obj.position.x, b.obj.position.z, 1.6, _nearbyEnemies);
+    for (let n = candidates.length - 1; n >= 0; n--) {
+      const e = candidates[n]; if (!e || e.dead) continue;
+      const j = state.enemies.indexOf(e); if (j < 0) continue;
       const dx = b.obj.position.x - e.grp.position.x;
       const dz = b.obj.position.z - e.grp.position.z;
       if (dx*dx + dz*dz < 0.78 * 0.78) {
@@ -400,7 +417,7 @@ function _updateTargetedShots(worldDelta) {
         spawnEnemyDamageNum(b.dmg, e);
         updateEliteBar(e);
         if (e.hp <= 0) killEnemy(j);
-        scene.remove(b.obj);
+        _releasePlayerLaserVisual(b.obj);
         state.targetedShots.splice(i, 1);
         hit = true;
         break;

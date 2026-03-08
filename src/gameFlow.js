@@ -149,7 +149,7 @@ export function restartGame(opts = {}) {
   const startCountdownNow = (opts.startCountdown !== false);
   state.gameSession++;
 
-  state.enemies.forEach(e => { removeCSS2DFromGroup(e.grp); scene.remove(e.grp); });
+  state.enemies.forEach(e => { try { if (e?.teleportMarker) { scene.remove(e.teleportMarker); e.teleportMarker.geometry?.dispose?.(); e.teleportMarker.material?.dispose?.(); } } catch {} removeCSS2DFromGroup(e.grp); scene.remove(e.grp); });
   state.enemies.length = 0;
 
   state.bullets.forEach(b => { const o = b.obj ?? b.mesh; if (o) scene.remove(o); });
@@ -159,9 +159,9 @@ export function restartGame(opts = {}) {
   // otherwise orphaned cores can remain in the scene looking like "frozen" lasers.
   state.enemyBullets.forEach(b => {
     try {
-      if (b.core) { scene.remove(b.core); b.mat?.dispose?.(); }
+      if (b.core) scene.remove(b.core);
       if (b.mesh) scene.remove(b.mesh);
-      b.extraMat?.dispose?.();
+      if (b.obj) scene.remove(b.obj);
     } catch {}
   });
   state.enemyBullets.length = 0;
@@ -170,7 +170,7 @@ export function restartGame(opts = {}) {
   state.particles.length = 0;
 
   state.damageNums.forEach(d => {
-    scene.remove(d.spr); d.spr.material.map.dispose(); d.spr.material.dispose();
+    try { scene.remove(d.spr); } catch {}
   });
   state.damageNums.length = 0;
 
@@ -194,6 +194,16 @@ export function restartGame(opts = {}) {
   state.dashStreaks.length = 0;
 
   destroyOrbitBullets();
+  if (state._orbiterLane) state._orbiterLane.visible = false;
+
+  if (Array.isArray(state.targetedShots)) {
+    state.targetedShots.forEach(b => { try { if (b.obj) scene.remove(b.obj); } catch {} });
+    state.targetedShots.length = 0;
+  }
+  if (Array.isArray(state.lightningFx)) {
+    state.lightningFx.forEach(fx => { try { if (fx.mesh) scene.remove(fx.mesh); } catch {} });
+    state.lightningFx.length = 0;
+  }
 
   playerGroup.position.set(0, 0, 0);
   state.playerHP    = PLAYER_MAX_HP;
@@ -219,6 +229,8 @@ export function restartGame(opts = {}) {
     dmg:0, fireRate:0, projSpeed:0, piercing:0, multishot:0,
     moveSpeed:0, dash:0, magnet:0,
     shield:0, burst:0, timeSlow:0,
+    targetedFire:0, targetedCooldown:0, targetedRange:0, targetedDamage:0,
+    lightning:0, lightningCooldown:0, lightningDamage:0,
     maxHealth:0, regen:0, xpGrowth:0, coinBonus:0, curse:0, luck:0,
   };
   state.luck = 0;
@@ -227,6 +239,8 @@ export function restartGame(opts = {}) {
   state.shieldCharges = 0;
   state.shieldRecharge = 0;
   state.shieldHitCD = 0;
+  state.targetedShotTimer = 0;
+  state.lightningTimer = 0;
   state.burstCooldown = 0;
   state.burstRequested = false;
   state.slowCooldown = 0;
@@ -252,6 +266,7 @@ export function restartGame(opts = {}) {
   state.bossAlive   = false;
   state.bossRespawnTimer = 0;
   state.spawnTimer  = 0;
+  state.enemySpatialHash = null;
   if (state.cosmetic) state.cosmetic.playerColor = 'default';
   state.upgradeOpen = false;
   state.wave        = 1;
