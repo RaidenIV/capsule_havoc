@@ -156,32 +156,43 @@ export function shootBulletWave() {
   const speed  = BULLET_SPEED * (1 + 0.20 * psTier);
   const pierce = Math.max(0, state.upg?.piercing || 0);
   const msTier = Math.max(0, (state.upg?.multishot ?? 0));
-  const bursts = msTier >= 2 ? 3 : (msTier >= 1 ? 2 : 1);
-  const burstSpacing = 0.075;
   const rangeTier = Math.max(0, state.upg?.laserRange || 0);
   const bulletLife = BULLET_LIFETIME * (1 + 0.22 * rangeTier);
   const laserTier = Math.max(0, state.upg?.laserFire || 0);
   const rotating = (state.characterPrimaryWeapon === 'laser' || state.selectedCharacter === 'blue') && laserTier >= 5;
+  const volleyCount = (state.multiShotVolleyCount || 0) + 1;
+  state.multiShotVolleyCount = volleyCount;
+  const multishotActive = msTier > 0 && (volleyCount % 5 === 0);
+  const procIndex = Math.max(0, Math.floor(volleyCount / 5));
+  const spreadOffset = dirs >= 10 ? 0.055 : (dirs >= 8 ? 0.070 : 0.085);
+
   playSound('shoot', 0.45, 0.92 + Math.random() * 0.16);
-  const session = state.gameSession;
+
+  const spawnShot = (ang) => {
+    const vx = Math.cos(ang) * speed;
+    const vz = Math.sin(ang) * speed;
+    const obj = _acquirePlayerLaserVisual();
+    _bulletDir.set(vx, 0, vz).normalize();
+    _bulletQ.setFromUnitVectors(_bulletUp, _bulletDir);
+    obj.quaternion.copy(_bulletQ);
+    obj.position.copy(playerGroup.position);
+    obj.position.y = floorY(bulletGeoParams);
+    scene.add(obj);
+    state.bullets.push({ obj, vx, vz, life: bulletLife, dmg, pierceLeft: pierce });
+  };
+
   for (let i = 0; i < dirs; i++) {
     const baseAng = state.bulletWaveAngle + (i / Math.max(1, dirs)) * Math.PI * 2;
-    for (let b = 0; b < bursts; b++) {
-      const delay = b * burstSpacing;
-      const spawnShot = () => {
-        const vx = Math.cos(baseAng) * speed;
-        const vz = Math.sin(baseAng) * speed;
-        const obj = _acquirePlayerLaserVisual();
-        _bulletDir.set(vx, 0, vz).normalize();
-        _bulletQ.setFromUnitVectors(_bulletUp, _bulletDir);
-        obj.quaternion.copy(_bulletQ);
-        obj.position.copy(playerGroup.position);
-        obj.position.y = floorY(bulletGeoParams);
-        scene.add(obj);
-        state.bullets.push({ obj, vx, vz, life: bulletLife, dmg, pierceLeft: pierce });
-      };
-      if (delay <= 0) spawnShot();
-      else setTimeout(() => { if (!state.paused && !state.gameOver && state.gameSession === session) spawnShot(); }, delay * 1000);
+    spawnShot(baseAng);
+
+    if (!multishotActive) continue;
+
+    if (msTier >= 2) {
+      spawnShot(baseAng - spreadOffset);
+      spawnShot(baseAng + spreadOffset);
+    } else {
+      const side = (procIndex % 2 === 0) ? -1 : 1;
+      spawnShot(baseAng + side * spreadOffset);
     }
   }
   if (rotating) state.bulletWaveAngle = (state.bulletWaveAngle + (Math.PI / Math.max(1, dirs))) % (Math.PI * 2);

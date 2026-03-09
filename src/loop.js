@@ -270,14 +270,16 @@ export function tick() {
     const bz = playerGroup.position.z + Math.sin(ang) * dist;
     const bhGeo = new THREE.SphereGeometry(1.2, 16, 16);
     const bhMat = new THREE.MeshStandardMaterial({
-      // Black hole should read as a BLACK sphere (no purple). We keep a subtle dark
-      // emissive so bloom adds presence without tinting the core.
-      color: 0x000000, emissive: 0x111111, emissiveIntensity: 2.4,
-      transparent: true, opacity: 0.92, metalness: 0.0, roughness: 1.0,
+      color: 0x000000,
+      emissive: 0x000000,
+      emissiveIntensity: 0.0,
+      transparent: false,
+      opacity: 1.0,
+      metalness: 0.0,
+      roughness: 1.0,
     });
     const bhMesh = new THREE.Mesh(bhGeo, bhMat);
     bhMesh.position.set(bx, 1.2, bz);
-    bhMesh.layers.enable(1);
     scene.add(bhMesh);
     state._bhMesh = bhMesh;
     state._bhMat = bhMat;
@@ -297,7 +299,8 @@ export function tick() {
       for (const e of state.enemies) {
         if (e) e.blackHoleSuppressed = false;
       }
-      state._bhMat.emissiveIntensity = 2.5 + Math.sin(state.elapsed * 8) * 0.8;
+      const bhPulse = 1.0 + Math.sin(state.elapsed * 8) * 0.035;
+      state._bhMesh.scale.setScalar(bhPulse);
       const PULL = 22.0;
       const KILL_R = 1.8;
       const bhx = state._bhMesh.position.x;

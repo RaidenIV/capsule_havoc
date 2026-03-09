@@ -198,6 +198,7 @@ export function restartGame(opts = {}) {
   state.elapsed     = 0;
   state.shootTimer  = 0;
   state.bulletWaveAngle = 0;
+  state.multiShotVolleyCount = 0;
   state.dashTimer   = 0; state.dashCooldown = 0; state.dashGhostTimer = 0; state.dashSpeed = 0;
   state.worldScale  = 1.0;
   state.contactDmgAccum = 0; state.contactDmgTimer = 0;

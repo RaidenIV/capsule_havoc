@@ -112,7 +112,7 @@ const CATEGORIES = [
       { key: 'piercing', name: 'Piercing', costs: STANDARD_COSTS,
         desc: t => `+1 enemy pierced per shot (Tier ${t})` },
       { key: 'multishot', name: 'Multi-Shot', costs: MULTISHOT_COSTS,
-        desc: t => t === 1 ? '2 shot burst' : '3 shot burst' },
+        desc: t => t === 1 ? 'Every 5th volley fires 1 extra spread laser' : 'Every 5th volley fires 2 extra spread lasers' },
       { key: 'targetedFire', name: 'Targeted Shot', costs: STANDARD_COSTS,
         desc: t => [
           'Unlocks auto-targeting shot',
@@ -411,7 +411,7 @@ function updateStatsPanel(){
   const curseTier = getTier('curse');
   const armorHits = Math.max(0, state.armorHits || 0);
   const slashDmg = Math.max(1, Math.round(bulletDmg * 1.8));
-  const totalProjectiles = Math.max(1, waveDirs) * (1 + msTier);
+  const totalProjectiles = Math.max(1, waveDirs);
   const dashCd = dashTier > 0 ? (dashTier >= 5 ? 1.36 : dashTier >= 4 ? 1.64 : dashTier >= 3 ? 2.00 : dashTier >= 2 ? 2.40 : 2.80) : 0;
   const magnetRadius = getMagnetAttractRangeForTier(magnetTier, false);
   const shieldCharges = shieldTier >= 5 ? 3 : (shieldTier >= 3 ? 2 : (shieldTier >= 1 ? 1 : 0));
@@ -436,7 +436,7 @@ function updateStatsPanel(){
   const ownedRows = [];
   if (dmgTier > 0) ownedRows.push(_statRow('Damage Bonus', `+${dmgTier * 10}%`));
   if (fireRateTier > 0 && (laserTier > 0 || loadout === 'laser')) ownedRows.push(_statRow('Fire Rate Bonus', `-${fireRateTier * 10}% CD`));
-  if (msTier > 0 && (laserTier > 0 || loadout === 'laser')) ownedRows.push(_statRow('Multishot', `+${msTier} / dir`));
+  if (msTier > 0 && (laserTier > 0 || loadout === 'laser')) ownedRows.push(_statRow('Multishot', `Every 5th volley • +${msTier} / dir`));
   if (psTier > 0 && (laserTier > 0 || loadout === 'laser')) ownedRows.push(_statRow('Proj Speed', `+${psTier * 20}%`));
   if (pierce > 0) ownedRows.push(_statRow('Piercing', `+${pierce}`));
   if (moveTier > 0) ownedRows.push(_statRow('Move Speed', `+${moveTier * 8}%`));

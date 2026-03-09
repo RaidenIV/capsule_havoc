@@ -45,7 +45,7 @@ const mats = {
   xp2x: new THREE.MeshPhysicalMaterial({ color: 0x00e5ff, emissive: 0x00e5ff, emissiveIntensity: 0.78, metalness: 1.0, roughness: 0.10, clearcoat: 1.0, clearcoatRoughness: 0.06, reflectivity: 1.0 }),
   armor: new THREE.MeshPhysicalMaterial({ color: 0x66ff99, emissive: 0x22ff77, emissiveIntensity: 0.66, metalness: 1.0, roughness: 0.10, clearcoat: 1.0, clearcoatRoughness: 0.06, reflectivity: 1.0 }),
   clock: new THREE.MeshPhysicalMaterial({ color: 0xc8c7ff, emissive: 0xb8c7ff, emissiveIntensity: 0.70, metalness: 1.0, roughness: 0.10, clearcoat: 1.0, clearcoatRoughness: 0.06, reflectivity: 1.0 }),
-  blackHole: new THREE.MeshPhysicalMaterial({ color: 0x060606, emissive: 0x111111, emissiveIntensity: 0.70, metalness: 0.65, roughness: 0.78, clearcoat: 0.12, clearcoatRoughness: 1.0, reflectivity: 0.08 }),
+  blackHole: new THREE.MeshStandardMaterial({ color: 0x000000, emissive: 0x000000, metalness: 0.0, roughness: 1.0 }),
   coinMagnet: new THREE.MeshPhysicalMaterial({ color: 0xd8e5ff, emissive: 0x69b8ff, emissiveIntensity: 0.54, metalness: 1.0, roughness: 0.14, clearcoat: 1.0, clearcoatRoughness: 0.06, reflectivity: 1.0 }),
 };
 
@@ -102,6 +102,35 @@ function makeOrbPickup(type){
   }
 
   return { root, mat: mesh.material, extraMats: root.userData.aura ? [root.userData.aura.material] : [] };
+}
+
+function makeBlackHolePickup(){
+  const root = new THREE.Group();
+
+  const coreMat = mats.blackHole.clone();
+  coreMat.transparent = false;
+  coreMat.opacity = 1.0;
+  const core = new THREE.Mesh(orbGeo, coreMat);
+  core.position.y = ORB_RADIUS;
+  core.castShadow = true;
+  core.receiveShadow = true;
+  root.add(core);
+
+  const auraMat = new THREE.MeshBasicMaterial({ color: 0x111111, transparent: true, opacity: 0.16, depthWrite: false });
+  const aura = new THREE.Mesh(auraGeo, auraMat);
+  aura.position.y = ORB_RADIUS;
+  aura.layers.enable(1);
+  root.add(aura);
+
+  root.userData.visual = core;
+  root.userData.shape = 'orb';
+  root.userData.aura = aura;
+
+  return {
+    root,
+    mat: coreMat,
+    extraMats: [auraMat],
+  };
 }
 
 function makeInvincibilityPickup(){
@@ -224,6 +253,7 @@ function makeCubePickup(type){
 
 function createPickupVisual(type){
   if (type === 'doubleDamage' || type === 'coinValue2x') return makeOrbPickup(type);
+  if (type === 'blackHole') return makeBlackHolePickup();
   if (type === 'invincibility') return makeInvincibilityPickup();
   if (type === 'coinMagnet') return makeCoinMagnetPickup();
   return makeCubePickup(type);

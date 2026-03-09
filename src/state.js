@@ -72,6 +72,7 @@ export const state = {
   // ── Shoot timing ────────────────────────────────────────────────────────────
   shootTimer:      0,
   bulletWaveAngle: 0,
+  multiShotVolleyCount: 0,
   spawnTickTimer:  0,
   maxEnemies:      50,
 
