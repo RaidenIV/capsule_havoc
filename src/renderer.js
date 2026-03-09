@@ -8,8 +8,9 @@ renderer.setSize(window.innerWidth, window.innerHeight);
 renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+if ('useLegacyLights' in renderer) renderer.useLegacyLights = false;
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
-renderer.toneMappingExposure = 0.3;
+renderer.toneMappingExposure = 0.42;
 document.body.appendChild(renderer.domElement);
 renderer.domElement.id = 'webgl-canvas';
 // Ensure WebGL canvas covers the full viewport (prevents top bars from layout)
@@ -24,8 +25,8 @@ document.body.appendChild(labelRenderer.domElement);
 
 // ── Scene ─────────────────────────────────────────────────────────────────────
 export const scene = new THREE.Scene();
-scene.background = new THREE.Color(0x080810);
-scene.fog = new THREE.Fog(0x080810, 1, 200);
+scene.background = new THREE.Color(0x06080d);
+scene.fog = new THREE.Fog(0x06080d, 1, 200);
 
 // ── Environment Map (makes metallic capsules reflect vivid colours) ───────────
 const pmrem = new THREE.PMREMGenerator(renderer);
@@ -37,12 +38,12 @@ skyGeo.scale(-1, -1, -1);
 envScene.add(new THREE.Mesh(skyGeo, new THREE.MeshBasicMaterial({ color: 0x050510 })));
 
 [
-  { col: 0x0066ff, pos: [  4,  2,  0 ] },
-  { col: 0xff0022, pos: [ -4,  2,  0 ] },
+  { col: 0xeaf4ff, pos: [  4,  2,  0 ] },
+  { col: 0xbfd7ff, pos: [ -4,  2,  0 ] },
   { col: 0xffffff, pos: [  0,  4,  0 ] },
-  { col: 0x00ffcc, pos: [  0, -1,  4 ] },
-  { col: 0xff6600, pos: [  0,  2, -4 ] },
-  { col: 0x8800ff, pos: [  2, -1, -3 ] },
+  { col: 0xa9dbff, pos: [  0, -1,  4 ] },
+  { col: 0xcdd8e8, pos: [  0,  2, -4 ] },
+  { col: 0x8db7ff, pos: [  2, -1, -3 ] },
 ].forEach(({ col, pos }) => {
   const m = new THREE.Mesh(
     new THREE.SphereGeometry(0.7, 16, 16),
@@ -54,12 +55,12 @@ envScene.add(new THREE.Mesh(skyGeo, new THREE.MeshBasicMaterial({ color: 0x05051
 
 const _sceneEnvTexture = pmrem.fromScene(envScene).texture;
 scene.environment = _sceneEnvTexture;
-scene.environmentIntensity = 1.8;
+scene.environmentIntensity = 1.15;
 pmrem.dispose();
 
 export function setEnvironmentReflectionsEnabled(enabled) {
   scene.environment = enabled ? _sceneEnvTexture : null;
-  scene.environmentIntensity = enabled ? 1.8 : 0.0;
+  scene.environmentIntensity = enabled ? 1.15 : 0.0;
   scene.traverse((obj) => {
     const mats = obj?.material ? (Array.isArray(obj.material) ? obj.material : [obj.material]) : [];
     mats.forEach((mat) => { if (mat) mat.needsUpdate = true; });

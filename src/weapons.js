@@ -383,8 +383,53 @@ function _getNearestEnemy(maxRange = Infinity) {
   return best;
 }
 
+const _targetedLaserCoreMat = new THREE.MeshStandardMaterial({
+  color: 0xffffff,
+  emissive: 0xffffff,
+  emissiveIntensity: 0.35,
+  metalness: 0.15,
+  roughness: 0.35,
+});
+const _targetedLaserGlowMat = new THREE.MeshPhysicalMaterial({
+  color: 0x8ecbff,
+  emissive: 0x3ea0ff,
+  emissiveIntensity: 2.15,
+  metalness: 0.05,
+  roughness: 0.22,
+  clearcoat: 1.0,
+  clearcoatRoughness: 0.08,
+  transmission: 0.0,
+  transparent: true,
+  opacity: 1.0,
+  depthWrite: false,
+});
+const _targetedBulletPool = [];
 function _makeTargetedShotVisual() {
-  return _acquirePlayerLaserVisual();
+  const g = new THREE.Group();
+
+  const core = new THREE.Mesh(bulletGeo, _targetedLaserCoreMat);
+  core.layers.set(0);
+  g.add(core);
+
+  const glow = new THREE.Mesh(bulletGeo, _targetedLaserGlowMat);
+  glow.layers.set(1);
+  glow.scale.set(1.55, 1.55, 1.35);
+  g.add(glow);
+
+  return g;
+}
+function _acquireTargetedShotVisual() {
+  const g = _targetedBulletPool.pop() || _makeTargetedShotVisual();
+  g.visible = true;
+  g.traverse(obj => { obj.visible = true; });
+  return g;
+}
+function _releaseTargetedShotVisual(g) {
+  if (!g) return;
+  scene.remove(g);
+  g.visible = false;
+  g.traverse(obj => { obj.visible = false; });
+  _targetedBulletPool.push(g);
 }
 
 function _spawnLightningFx(pos) {
@@ -405,7 +450,7 @@ function _updateTargetedShots(worldDelta) {
     b.life -= worldDelta;
     b.obj.position.x += b.vx * worldDelta;
     b.obj.position.z += b.vz * worldDelta;
-    if (b.life <= 0) { _releasePlayerLaserVisual(b.obj); state.targetedShots.splice(i, 1); continue; }
+    if (b.life <= 0) { _releaseTargetedShotVisual(b.obj); state.targetedShots.splice(i, 1); continue; }
     let hit = false;
     const candidates = queryEnemiesNear(b.obj.position.x, b.obj.position.z, 1.6, _nearbyEnemies);
     for (let n = candidates.length - 1; n >= 0; n--) {
@@ -418,7 +463,7 @@ function _updateTargetedShots(worldDelta) {
         spawnEnemyDamageNum(b.dmg, e);
         updateEliteBar(e);
         if (e.hp <= 0) killEnemy(j);
-        _releasePlayerLaserVisual(b.obj);
+        _releaseTargetedShotVisual(b.obj);
         state.targetedShots.splice(i, 1);
         hit = true;
         break;
@@ -458,7 +503,7 @@ export function updateSecondaryWeapons(worldDelta) {
       state.targetedShotTimer = cd;
       if (target) {
         const dmg = Math.max(1, Math.round(getBulletDamage() * (1 + 0.10 * Math.max(0, state.upg?.targetedDamage || 0))));
-        const obj = _makeTargetedShotVisual();
+        const obj = _acquireTargetedShotVisual();
         const dx = target.grp.position.x - playerGroup.position.x;
         const dz = target.grp.position.z - playerGroup.position.z;
         const dir = new THREE.Vector3(dx, 0, dz).normalize();

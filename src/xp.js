@@ -1,6 +1,6 @@
 // ─── xp.js ───────────────────────────────────────────────────────────────────
 import { state } from './state.js';
-import { getPlayerMaxHPForLevel, isBossLevel } from './constants.js';
+import { getPlayerMaxHPForLevel, getPlayerBaseDamageForLevel } from './constants.js';
 import { expToNext } from './leveling.js';
 import { getDamageMultiplier, getXPMultiplier } from './activeEffects.js';
 
@@ -96,12 +96,14 @@ export function updateXP(amount) {
     state.playerMaxHP = newMax;
     state.playerHP = Math.max(1, pct * newMax);
 
-    // Base damage scaling (Section 6: DMG(L) = 10 + floor((L-1)² / 50))
-    // Quadratic — reaches 204 DMG at level 100 vs 10 at level 1.
-    state.playerBaseDMG = 10 + Math.floor(Math.pow(Math.max(0, state.playerLevel - 1), 2) / 50);
+    // Controlled late-run damage growth so the player scales up without flattening
+    // higher-tier enemies. Upgrades, multishot, orbit, targeted fire, and effects
+    // still stack on top of this base value.
+    state.playerBaseDMG = getPlayerBaseDamageForLevel(state.playerLevel);
 
-    // Shop after every level up (but avoid interrupting boss waves)
-    if (!isBossLevel(state.playerLevel)) state.pendingShop = true;
+    // Queue a shop for every level-up, including boss levels. Using a numeric queue
+    // avoids skipped shops when a single XP gain grants multiple levels.
+    state.pendingShop = Math.max(0, Number(state.pendingShop) || 0) + 1;
   }
 
   syncXPUI();

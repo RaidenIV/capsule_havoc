@@ -270,31 +270,26 @@ export function getBossScaleForLevel(level){
   return { hpMult: 2.20 + 0.20 * wave, dmgMult: 1.60 + 0.10 * wave };
 }
 
-export function getEnemyStatScaleForLevel(level){
-  const L = Math.max(1, Math.floor(level || 1));
-  if (L <= 1) return { hpMult: 1.0, dmgMult: 1.0 };
-
-  let hpMult = 1.0;
-  let dmgMult = 1.0;
-  const addBand = (levels, hpStep, dmgStep) => {
-    if (levels <= 0) return;
-    hpMult += levels * hpStep;
-    dmgMult += levels * dmgStep;
-  };
-
-  addBand(Math.min(L - 1, 9),  0.05, 0.025);              // Lv 2-10
-  addBand(Math.min(Math.max(L - 10, 0), 20), 0.04, 0.020); // Lv 11-30
-  addBand(Math.min(Math.max(L - 30, 0), 30), 0.03, 0.015); // Lv 31-60
-  addBand(Math.max(L - 60, 0), 0.02, 0.010);               // Lv 61+
-
-  return {
-    hpMult: Number(hpMult.toFixed(3)),
-    dmgMult: Number(dmgMult.toFixed(3)),
-  };
-}
-
 // Player scaling (Section 6)
 export function getPlayerMaxHPForLevel(level){
   const L = Math.max(1, Math.floor(level||1));
   return 100 + 5 * (L - 1);
+}
+
+export function getPlayerBaseDamageForLevel(level){
+  const L = Math.max(1, Math.floor(level || 1));
+  const n = Math.max(0, L - 1);
+  return 10 + Math.floor(n * 0.20) + Math.floor(Math.sqrt(n) * 2.0);
+}
+
+export function getEnemyHealthScaleForLevel(level){
+  const L = Math.max(1, Math.floor(level || 1));
+  const n = Math.max(0, L - 1);
+  return 1 + (n * 0.007) + (Math.floor(n / 10) * 0.05);
+}
+
+export function getEnemyDamageScaleForLevel(level){
+  const L = Math.max(1, Math.floor(level || 1));
+  const n = Math.max(0, L - 1);
+  return 1 + (n * 0.006) + (Math.floor(n / 10) * 0.04);
 }

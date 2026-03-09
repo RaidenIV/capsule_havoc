@@ -1,6 +1,6 @@
 // ─── gameFlow.js ──────────────────────────────────────────────────────────────
 import { state } from './state.js';
-import { PLAYER_MAX_HP } from './constants.js';
+import { PLAYER_MAX_HP, getPlayerBaseDamageForLevel } from './constants.js';
 import { scene, renderer, labelRenderer } from './renderer.js';
 import { playerGroup, playerMesh, hbObj, dashBarObj, updateHealthBar, updateDashBar } from './player.js';
 import { updateXP } from './xp.js';
@@ -193,6 +193,7 @@ export function restartGame(opts = {}) {
   playerGroup.position.set(0, 0, 0);
   state.playerHP    = PLAYER_MAX_HP;
   state.playerMaxHP = PLAYER_MAX_HP;
+  state.playerBaseDMG = getPlayerBaseDamageForLevel(1);
   state.kills       = 0;
   state.elapsed     = 0;
   state.shootTimer  = 0;
@@ -205,7 +206,6 @@ export function restartGame(opts = {}) {
   state.playerLevel = 1;
   initSpawner();
   state.coins       = 10;
-  state.hasDash     = false;
   state.weaponTier  = state.characterPrimaryWeapon === 'laser' ? 1 : 0;
   state.pickupRangeLvl = 0;
   state.firstLevelUpShopHandled = false;

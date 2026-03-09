@@ -45,7 +45,7 @@ const mats = {
   armor: new THREE.MeshPhysicalMaterial({ color: 0x66ff99, emissive: 0x22ff77, emissiveIntensity: 0.66, metalness: 1.0, roughness: 0.10, clearcoat: 1.0, clearcoatRoughness: 0.06, reflectivity: 1.0 }),
   clock: new THREE.MeshPhysicalMaterial({ color: 0xc8c7ff, emissive: 0xb8c7ff, emissiveIntensity: 0.70, metalness: 1.0, roughness: 0.10, clearcoat: 1.0, clearcoatRoughness: 0.06, reflectivity: 1.0 }),
   blackHole: new THREE.MeshPhysicalMaterial({ color: 0x060606, emissive: 0x111111, emissiveIntensity: 0.70, metalness: 0.65, roughness: 0.78, clearcoat: 0.12, clearcoatRoughness: 1.0, reflectivity: 0.08 }),
-  coinMagnet: new THREE.MeshPhysicalMaterial({ color: 0x8be7ff, emissive: 0x33cfff, emissiveIntensity: 0.72, metalness: 1.0, roughness: 0.10, clearcoat: 1.0, clearcoatRoughness: 0.05, reflectivity: 1.0 }),
+  coinMagnet: new THREE.MeshPhysicalMaterial({ color: 0xd8e5ff, emissive: 0x69b8ff, emissiveIntensity: 0.54, metalness: 1.0, roughness: 0.14, clearcoat: 1.0, clearcoatRoughness: 0.06, reflectivity: 1.0 }),
 };
 
 let _spawnTimer = 0;
@@ -142,6 +142,58 @@ function makeInvincibilityPickup(){
   };
 }
 
+function makeCoinMagnetPickup(){
+  const root = new THREE.Group();
+  const body = new THREE.Group();
+
+  const coreMat = mats.coinMagnet.clone();
+  const leftTipMat = new THREE.MeshPhysicalMaterial({ color: 0xff4b5e, emissive: 0xff314a, emissiveIntensity: 0.70, metalness: 1.0, roughness: 0.14, clearcoat: 1.0, clearcoatRoughness: 0.05, reflectivity: 1.0 });
+  const rightTipMat = new THREE.MeshPhysicalMaterial({ color: 0x4fb9ff, emissive: 0x2aa6ff, emissiveIntensity: 0.70, metalness: 1.0, roughness: 0.14, clearcoat: 1.0, clearcoatRoughness: 0.05, reflectivity: 1.0 });
+  const auraMat = new THREE.MeshBasicMaterial({ color: 0x80cfff, transparent: true, opacity: 0.16, depthWrite: false });
+
+  const barGeo = new THREE.CapsuleGeometry(0.11, 0.64, 5, 10);
+  const sideGeo = new THREE.CapsuleGeometry(0.11, 0.92, 5, 10);
+  const tipGeo = new THREE.CapsuleGeometry(0.115, 0.22, 5, 10);
+
+  const bridge = addBloom(new THREE.Mesh(barGeo, coreMat));
+  bridge.rotation.z = Math.PI * 0.5;
+  bridge.position.set(0, 0.18, 0);
+  body.add(bridge);
+
+  const leftArm = addBloom(new THREE.Mesh(sideGeo, coreMat));
+  leftArm.position.set(-0.34, -0.02, 0);
+  body.add(leftArm);
+
+  const rightArm = addBloom(new THREE.Mesh(sideGeo, coreMat));
+  rightArm.position.set(0.34, -0.02, 0);
+  body.add(rightArm);
+
+  const leftTip = addBloom(new THREE.Mesh(tipGeo, leftTipMat));
+  leftTip.position.set(-0.34, 0.54, 0);
+  body.add(leftTip);
+
+  const rightTip = addBloom(new THREE.Mesh(tipGeo, rightTipMat));
+  rightTip.position.set(0.34, 0.54, 0);
+  body.add(rightTip);
+
+  const aura = addBloom(new THREE.Mesh(new THREE.TorusGeometry(0.72, 0.035, 10, 48), auraMat));
+  aura.rotation.x = Math.PI * 0.5;
+  aura.position.y = 0.18;
+  body.add(aura);
+
+  body.position.y = 0.56;
+  root.add(body);
+  root.userData.visual = body;
+  root.userData.shape = 'magnet';
+  root.userData.aura = aura;
+
+  return {
+    root,
+    mat: coreMat,
+    extraMats: [leftTipMat, rightTipMat, auraMat],
+  };
+}
+
 function makeCubePickup(type){
   const root = new THREE.Group();
   const balance = new THREE.Group();
@@ -172,6 +224,7 @@ function makeCubePickup(type){
 function createPickupVisual(type){
   if (type === 'doubleDamage' || type === 'coinValue2x') return makeOrbPickup(type);
   if (type === 'invincibility') return makeInvincibilityPickup();
+  if (type === 'coinMagnet') return makeCoinMagnetPickup();
   return makeCubePickup(type);
 }
 
