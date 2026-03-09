@@ -9,6 +9,7 @@ import { getFireInterval, getWaveBullets, getBulletDamage } from '../xp.js';
 import { updateHealthBar } from '../player.js';
 import { initHudCoin } from '../hudCoin.js';
 import { recomputeLuck, getFourthOptionChance } from '../luck.js';
+import { getPlayerMaxHPForLevel } from '../constants.js';
 
 function $(id) { return document.getElementById(id); }
 function clamp(v, a, b){ return Math.max(a, Math.min(b, v)); }
@@ -266,10 +267,10 @@ function applyUpgradeEffect(key, newTier) {
       break;
 
     case 'maxHealth': {
-      const base = Math.max(1, state.basePlayerMaxHP || 100);
-      const newMax = Math.round(base * (1 + 0.10 * newTier));
-      const prevMax = Math.max(1, state.playerMaxHP || base);
-      const pct = (state.playerHP || prevMax) / prevMax;
+      const levelBase = Math.max(1, getPlayerMaxHPForLevel(state.playerLevel || 1));
+      const prevMax = Math.max(1, state.playerMaxHP || levelBase);
+      const pct = Math.max(0, Math.min(1, (state.playerHP || prevMax) / prevMax));
+      const newMax = Math.round(levelBase * (1 + 0.10 * newTier));
       state.playerMaxHP = newMax;
       state.playerHP = Math.max(1, Math.round(pct * newMax));
       try { updateHealthBar(); } catch {}

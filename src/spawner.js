@@ -7,8 +7,6 @@
 // - maintain a live pressure floor so the player rarely gets breathing room
 // - add periodic formation waves and emergency refill bursts
 
-import * as THREE from 'three';
-
 import { state } from './state.js';
 import { camera } from './renderer.js';
 import { playerGroup } from './player.js';
@@ -54,16 +52,6 @@ function normAngle(a) {
   while (out <= -Math.PI) out += Math.PI * 2;
   while (out > Math.PI) out -= Math.PI * 2;
   return out;
-}
-
-const _spawnProbe = new THREE.Vector3();
-
-function isPositionOffscreen(x, z, margin = 0.015) {
-  _spawnProbe.set(x, 1.1, z).project(camera);
-  return (
-    _spawnProbe.x < (-1 - margin) || _spawnProbe.x > (1 + margin) ||
-    _spawnProbe.y < (-1 - margin) || _spawnProbe.y > (1 + margin)
-  );
 }
 
 function splitCount(total, parts) {
@@ -133,6 +121,20 @@ function availableSlots(level) {
   return Math.max(0, cap - countRegularEnemies());
 }
 
+function getTypeSoftCap(type, level) {
+  if (type === ENEMY_TYPE.ORBITER) {
+    const quotaBase = state.spawn?.quotas?.[type] ?? getEffectiveQuota(type, level);
+    return Math.max(1, Math.floor(quotaBase * 0.5));
+  }
+  return Number.POSITIVE_INFINITY;
+}
+
+function availableTypeSlots(type, level) {
+  const softCap = getTypeSoftCap(type, level);
+  if (!Number.isFinite(softCap)) return Number.POSITIVE_INFINITY;
+  return Math.max(0, softCap - countType(type));
+}
+
 function getEffectiveQuota(type, level) {
   const base = SPAWN_BASE[type];
   if (!base) return 0;
@@ -176,41 +178,11 @@ function getRingMetrics(isBoss = false) {
 function getPositionOnRing(angle, { isBoss = false, distScale = 1.0, radialJitter = 0.0 } = {}) {
   const px = playerGroup.position.x;
   const pz = playerGroup.position.z;
-  const dirX = Math.cos(angle);
-  const dirZ = Math.sin(angle);
   const { major, minor } = getRingMetrics(isBoss);
-  const initialGuess = Math.max(major, minor) * (isBoss ? 1.08 : 1.02);
-
-  let low = 0;
-  let high = Math.max(2.0, initialGuess);
-  let x = px + dirX * high;
-  let z = pz + dirZ * high;
-
-  for (let i = 0; i < 10 && !isPositionOffscreen(x, z, 0.01); i++) {
-    high *= 1.12;
-    x = px + dirX * high;
-    z = pz + dirZ * high;
-  }
-
-  for (let i = 0; i < 18; i++) {
-    const mid = (low + high) * 0.5;
-    const mx = px + dirX * mid;
-    const mz = pz + dirZ * mid;
-    if (isPositionOffscreen(mx, mz, 0.01)) high = mid;
-    else low = mid;
-  }
-
   const jitter = radialJitter ? randFloat(-radialJitter, radialJitter) : 0;
-  let radius = high + (isBoss ? 0.55 : 0.16) + Math.max(-0.08, (distScale - 1.0) * (isBoss ? 0.8 : 0.28)) + jitter;
-  x = px + dirX * radius;
-  z = pz + dirZ * radius;
-
-  for (let i = 0; i < 6 && !isPositionOffscreen(x, z, 0.005); i++) {
-    radius += isBoss ? 0.18 : 0.08;
-    x = px + dirX * radius;
-    z = pz + dirZ * radius;
-  }
-
+  const scale = Math.max(0.72, distScale + jitter);
+  const x = px + Math.cos(angle) * major * scale;
+  const z = pz + Math.sin(angle) * minor * scale;
   return { x, z };
 }
 
@@ -224,7 +196,9 @@ function spawnAtAngle(type, angle, level, opts = {}) {
 function spawnArc(type, count, level, centerAngle, arcWidth, opts = {}) {
   let spawned = 0;
   if (count <= 0) return spawned;
-  const safeCount = (type === ENEMY_TYPE.BOSS) ? count : Math.min(count, availableSlots(level));
+  const safeCount = (type === ENEMY_TYPE.BOSS)
+    ? count
+    : Math.min(count, availableSlots(level), availableTypeSlots(type, level));
   if (safeCount <= 0) return 0;
 
   const width = Math.max(0.08, arcWidth);
@@ -654,7 +628,7 @@ export function updateSpawner(delta) {
 
     const baseTarget = state.spawn.quotas[t] ?? getEffectiveQuota(t, level);
     const have = countType(t);
-    let target = baseTarget;
+    let target = Math.min(baseTarget, getTypeSoftCap(t, level));
 
     if (t === ENEMY_TYPE.RUSHER && level >= 3) {
       const cap = getEnemyCapForLevel(level);

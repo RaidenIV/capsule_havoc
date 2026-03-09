@@ -3,13 +3,13 @@ import * as THREE from 'three';
 import { scene } from './renderer.js';
 import { state } from './state.js';
 
-export const ambientLight = new THREE.AmbientLight(0x1a2433, 0.72);
+export const ambientLight = new THREE.AmbientLight(0x111827, 0.42);
 scene.add(ambientLight);
 
-export const hemiLight = new THREE.HemisphereLight(0xe9f5ff, 0x0c1018, 1.08);
+export const hemiLight = new THREE.HemisphereLight(0xe7f4ff, 0x0a0d12, 0.75);
 scene.add(hemiLight);
 
-export const sunLight = new THREE.DirectionalLight(0xf8fbff, 7.2);
+export const sunLight = new THREE.DirectionalLight(0xf7fbff, 5.8);
 sunLight.position.set(16, 28, 14);
 sunLight.castShadow = true;
 sunLight.shadow.mapSize.set(4096, 4096);
@@ -24,21 +24,20 @@ sunLight.shadow.normalBias = 0.035;
 scene.add(sunLight);
 scene.add(sunLight.target);
 
-export const fillLight = new THREE.DirectionalLight(0xd9e7ff, 2.15);
-fillLight.position.set(-18, 11, -14);
+export const fillLight = new THREE.DirectionalLight(0xc7d9ff, 1.35);
+fillLight.position.set(-18, 10, -14);
 scene.add(fillLight);
 
-export const rimLight = new THREE.DirectionalLight(0xb8d6ff, 1.32);
-rimLight.position.set(6, 6, -26);
+export const rimLight = new THREE.DirectionalLight(0xaec8ff, 0.82);
+rimLight.position.set(6, 5, -26);
 scene.add(rimLight);
 
-// Branched, crackling helper lights around the player. These are brighter than
-// the previous pass so the scene keeps its old readability while still feeling
-// like electrically fractured light rather than plain circular orbit lights.
+// Branching, cool-white crackle lights inspired by Lichtenberg figures.
+// These are kept subtle so the scene still reads as grounded rather than neon.
 export const orbitLights = [
-  { light: new THREE.PointLight(0xeaf7ff, 10.8, 22, 2), angle: 0.0, radius: 5.2, speed: 2.0, yOff: 3.8, phase: 0.0, branch: 1.00 },
-  { light: new THREE.PointLight(0xd8ecff, 8.9, 20, 2), angle: 1.8, radius: 6.1, speed: 1.55, yOff: 3.2, phase: 1.4, branch: 0.82 },
-  { light: new THREE.PointLight(0xf8fbff, 7.1, 18, 2), angle: 3.3, radius: 4.0, speed: 2.45, yOff: 4.4, phase: 2.8, branch: 0.62 },
+  { light: new THREE.PointLight(0xe6f6ff, 8.2, 18, 2), angle: 0.0,  radius: 4.8, speed: 1.9, yOff: 3.4, phase: 0.0, branch: 1.00 },
+  { light: new THREE.PointLight(0xcfe6ff, 6.6, 16, 2), angle: 1.6,  radius: 5.9, speed: 1.4, yOff: 2.9, phase: 1.7, branch: 0.78 },
+  { light: new THREE.PointLight(0xf8fbff, 5.2, 14, 2), angle: 3.2,  radius: 3.7, speed: 2.3, yOff: 4.1, phase: 3.1, branch: 0.56 },
 ];
 orbitLights.forEach(({ light }) => {
   light.castShadow = false;
@@ -49,36 +48,17 @@ export function updateOrbitLights(delta, playerPosition) {
   const t = Number(state.elapsed || 0);
   orbitLights.forEach((ol, idx) => {
     ol.angle += ol.speed * delta;
-
-    const forkA = Math.sin(t * (4.4 + idx * 0.75) + ol.phase) * (1.15 * ol.branch);
-    const forkB = Math.sin(t * (8.2 + idx * 1.35) + ol.phase * 1.7) * (0.72 * ol.branch);
-    const jitter = Math.sin(t * (17.0 + idx * 3.3) + ol.phase * 2.2) * (0.32 * ol.branch);
-
-    const radial = ol.radius + forkA;
-    const tangentScale = 1.85 + forkB;
-
-    const x = playerPosition.x
-      + Math.cos(ol.angle) * radial
-      + Math.cos(ol.angle + Math.PI * 0.5) * tangentScale
-      + Math.cos(ol.angle * 2.1 + ol.phase) * jitter;
-
-    const z = playerPosition.z
-      + Math.sin(ol.angle) * radial
-      + Math.sin(ol.angle + Math.PI * 0.5) * tangentScale
-      + Math.sin(ol.angle * 1.7 + ol.phase) * jitter;
-
-    const y = ol.yOff
-      + Math.sin(t * (6.0 + idx * 0.9) + ol.phase) * (0.55 * ol.branch)
-      + Math.max(0, Math.sin(t * (12.5 + idx * 1.8) + ol.phase)) * (0.35 * ol.branch);
-
+    const fork = Math.sin(t * (4.5 + idx * 0.8) + ol.phase) * 0.85;
+    const branch = Math.sin(t * (7.0 + idx * 1.1) + ol.phase * 1.9) * 0.42;
+    const radial = ol.radius + fork * (1.1 * ol.branch);
+    const tangential = branch * (1.6 * ol.branch);
+    const x = playerPosition.x + Math.cos(ol.angle) * radial + Math.cos(ol.angle + Math.PI * 0.5) * tangential;
+    const z = playerPosition.z + Math.sin(ol.angle) * radial + Math.sin(ol.angle + Math.PI * 0.5) * tangential;
+    const y = ol.yOff + Math.sin(t * (5.8 + idx)) * (0.42 * ol.branch);
     ol.light.position.set(x, y, z);
 
-    const crackle = 0.86
-      + Math.max(0, Math.sin(t * (15.5 + idx * 4.2) + ol.phase)) * 0.58
-      + Math.max(0, Math.sin(t * (28.0 + idx * 6.0) + ol.phase * 1.6)) * 0.22;
-
-    const base = idx === 0 ? 10.8 : idx === 1 ? 8.9 : 7.1;
-    ol.light.intensity = base * crackle;
+    const crackle = 0.78 + Math.max(0, Math.sin(t * (16.0 + idx * 4.0) + ol.phase)) * 0.42;
+    ol.light.intensity = (idx === 0 ? 8.2 : idx === 1 ? 6.6 : 5.2) * crackle;
   });
 }
 
