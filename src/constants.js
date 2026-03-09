@@ -41,6 +41,12 @@ export const SLOW_RECOVER_RATE = 7;
 // ── Pickups ───────────────────────────────────────────────────────────────────
 export const HEALTH_PICKUP_CHANCE = 0.02; // reduced by 75%
 export const HEALTH_RESTORE       = 0.20; // restores 20% of max HP
+export const LEVEL_UP_HEAL_FRACTION = 0.25;
+export const ITEM_ATTRACT_SPEED = 34.0;
+export const MAGNET_ATTRACT_RANGE_BASE = 3.0;
+export const MAGNET_ATTRACT_RANGE_BONUS_PER_TIER = 0.125; // +12.5% radius per tier
+export const MAGNET_POWERUP_RANGE = 18.0;
+export const XP_GROWTH_BONUS_PER_TIER = 0.10;
 
 // ── Elite fire rates per minLevel ─────────────────────────────────────────────
 export const ELITE_FIRE_RATE = { 1: 3.0, 3: 2.5, 5: 2.0, 7: 1.5, 9: 1.2, 10: 0.9 };
@@ -236,12 +242,12 @@ export function getActiveEnemyTypesForLevel(level){
 // enemy defs: percent values are fractions of player max HP (e.g. 0.10 = 10%)
 export const ENEMY_DEFS = Object.freeze({
   [ENEMY_TYPE.RUSHER]:     { color: 0x888888, sizeMult: 0.75, hpPct: 0.08, contactPct: 0.10, shoot: false, metallic: false },
-    [ENEMY_TYPE.ORBITER]:    { color: 0x00cc44, sizeMult: 1.00, hpPct: 0.50, contactPct: 0.15, shoot: true,  bulletPct: 0.10, fireRate: 4.00, bulletSpeedMult: 1.00, metallic: true,  orbitR: 6.5 },
-    [ENEMY_TYPE.TANKER]:     { color: 0x2b2b2b, sizeMult: 1.50, hpPct: 2.00, contactPct: 0.20, shoot: true,  bulletPct: 0.20, fireRate: 4.50, bulletSpeedMult: 0.85, metallic: true },
+  [ENEMY_TYPE.ORBITER]:    { color: 0x00cc44, sizeMult: 1.00, hpPct: 0.50, contactPct: 0.15, shoot: true,  bulletPct: 0.10, fireRate: 4.00, bulletSpeedMult: 1.00, metallic: false, orbitR: 6.5 },
+  [ENEMY_TYPE.TANKER]:     { color: 0x2b2b2b, sizeMult: 1.50, hpPct: 2.00, contactPct: 0.20, shoot: true,  bulletPct: 0.20, fireRate: 4.50, bulletSpeedMult: 0.85, metallic: false },
   [ENEMY_TYPE.SNIPER]:     { color: 0x9b30ff, sizeMult: 1.00, hpPct: 3.00, contactPct: 0.10, shoot: true,  bulletPct: 0.333, fireRate: 3.70, bulletSpeedMult: 1.35, metallic: false },
-  [ENEMY_TYPE.TELEPORTER]: { color: 0xe0e0e0, sizeMult: 0.75, hpPct: 3.00, contactPct: 0.333, shoot: false, metallic: true,  teleportWhenBelow: 0.50 },
+  [ENEMY_TYPE.TELEPORTER]: { color: 0xe0e0e0, sizeMult: 0.75, hpPct: 3.00, contactPct: 0.333, shoot: false, metallic: false, teleportWhenBelow: 0.50 },
   [ENEMY_TYPE.SHIELDED]:   { color: 0x4aa3ff, sizeMult: 1.25, hpPct: 0.50, shieldPct: 1.50, contactPct: 0.20, shoot: false, metallic: false },
-    [ENEMY_TYPE.SPLITTER]:   { color: 0x80FB37, sizeMult: 2.00, hpPct: 3.00, contactPct: 0.30, shoot: true, bulletPct: 0.25, fireRate: 4.00, bulletSpeedMult: 1.20, metallic: true, splitCountMin: 2, splitCountMax: 3 },
+  [ENEMY_TYPE.SPLITTER]:   { color: 0x80FB37, sizeMult: 2.00, hpPct: 3.00, contactPct: 0.30, shoot: true, bulletPct: 0.25, fireRate: 4.00, bulletSpeedMult: 1.20, metallic: false, splitCountMin: 2, splitCountMax: 3 },
   [ENEMY_TYPE.BOSS]:       { color: 0x111111, sizeMult: 3.00, hpPct: 4.00, contactPct: 0.50, shoot: true,  bulletPct: 0.33, fireRate: 1.75, bulletSpeedMult: 1.10, metallic: true },
 });
 
@@ -292,4 +298,15 @@ export function getEnemyDamageScaleForLevel(level){
   const L = Math.max(1, Math.floor(level || 1));
   const n = Math.max(0, L - 1);
   return 1 + (n * 0.006) + (Math.floor(n / 10) * 0.04);
+}
+
+export function getMagnetAttractRangeForTier(tier = 0, powerupActive = false){
+  const t = Math.max(0, Math.min(5, Math.floor(tier || 0)));
+  const range = MAGNET_ATTRACT_RANGE_BASE * (1 + MAGNET_ATTRACT_RANGE_BONUS_PER_TIER * t);
+  return powerupActive ? Math.max(range, MAGNET_POWERUP_RANGE) : range;
+}
+
+export function getXPGrowthBonusForTier(tier = 0){
+  const t = Math.max(0, Math.min(5, Math.floor(tier || 0)));
+  return XP_GROWTH_BONUS_PER_TIER * t;
 }

@@ -9,7 +9,7 @@ import { getFireInterval, getWaveBullets, getBulletDamage } from '../xp.js';
 import { updateHealthBar } from '../player.js';
 import { initHudCoin } from '../hudCoin.js';
 import { recomputeLuck, getFourthOptionChance } from '../luck.js';
-import { getPlayerMaxHPForLevel } from '../constants.js';
+import { getPlayerMaxHPForLevel, getMagnetAttractRangeForTier } from '../constants.js';
 
 function $(id) { return document.getElementById(id); }
 function clamp(v, a, b){ return Math.max(a, Math.min(b, v)); }
@@ -125,7 +125,7 @@ const CATEGORIES = [
           'Max dash distance and cooldown',
         ][t - 1] || `Tier ${t}` },
       { key: 'magnet', name: 'Magnet Radius', costs: STANDARD_COSTS,
-        desc: t => `+0.625 item attraction range (Tier ${t})` },
+        desc: t => `+12.5% item attraction radius (Tier ${t})` },
     ],
   },
   {
@@ -269,10 +269,12 @@ function applyUpgradeEffect(key, newTier) {
     case 'maxHealth': {
       const levelBase = Math.max(1, getPlayerMaxHPForLevel(state.playerLevel || 1));
       const prevMax = Math.max(1, state.playerMaxHP || levelBase);
-      const pct = Math.max(0, Math.min(1, (state.playerHP || prevMax) / prevMax));
+      const prevHP = Math.max(0, state.playerHP || prevMax);
+      const wasFull = prevHP >= (prevMax - 0.001);
+      const pct = Math.max(0, Math.min(1, prevHP / prevMax));
       const newMax = Math.round(levelBase * (1 + 0.10 * newTier));
       state.playerMaxHP = newMax;
-      state.playerHP = Math.max(1, Math.round(pct * newMax));
+      state.playerHP = wasFull ? newMax : Math.max(1, Math.round(pct * newMax));
       try { updateHealthBar(); } catch {}
       break;
     }
@@ -385,7 +387,7 @@ function updateStatsPanel(){
   const slashDmg = Math.max(1, Math.round(bulletDmg * 1.8));
   const totalProjectiles = Math.max(1, waveDirs) * (1 + msTier);
   const dashCd = dashTier > 0 ? (dashTier >= 5 ? 1.36 : dashTier >= 4 ? 1.64 : dashTier >= 3 ? 2.00 : dashTier >= 2 ? 2.40 : 2.80) : 0;
-  const magnetRadius = 0.75 + magnetTier * 0.625;
+  const magnetRadius = getMagnetAttractRangeForTier(magnetTier, false);
   const shieldCharges = shieldTier >= 5 ? 3 : (shieldTier >= 3 ? 2 : (shieldTier >= 1 ? 1 : 0));
   const shieldRecharge = shieldTier > 0 ? (shieldTier >= 4 ? 12.0 * 0.45 : (shieldTier >= 2 ? 12.0 * 0.65 : 12.0)) : 0;
 
@@ -413,7 +415,7 @@ function updateStatsPanel(){
   if (pierce > 0) ownedRows.push(_statRow('Piercing', `+${pierce}`));
   if (moveTier > 0) ownedRows.push(_statRow('Move Speed', `+${moveTier * 8}%`));
   if (dashTier > 0) ownedRows.push(_statRow('Dash CD', `${dashCd.toFixed(2)}s`));
-  if (magnetTier > 0) ownedRows.push(_statRow('Magnet Radius', `${magnetRadius.toFixed(2)}`));
+  if (magnetTier > 0) ownedRows.push(_statRow('Magnet Radius', `${magnetRadius.toFixed(2)} radius`));
   if (shieldTier > 0) ownedRows.push(_statRow('Shield', `${shieldCharges} hit • ${shieldRecharge.toFixed(1)}s recharge`));
   if (targetedTier > 0) ownedRows.push(_statRow('Targeted CD', `-${targetedCooldownTier * 10}% • +${targetedRangeTier * 10}% range`));
   if (lightningTier > 0) ownedRows.push(_statRow('Lightning Bonus', `+${lightningDamageTier * 10}% dmg • -${lightningCooldownTier * 10}% CD`));

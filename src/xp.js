@@ -1,6 +1,6 @@
 // ─── xp.js ───────────────────────────────────────────────────────────────────
 import { state } from './state.js';
-import { getPlayerMaxHPForLevel, getPlayerBaseDamageForLevel } from './constants.js';
+import { getPlayerMaxHPForLevel, getPlayerBaseDamageForLevel, LEVEL_UP_HEAL_FRACTION, getXPGrowthBonusForTier } from './constants.js';
 import { expToNext } from './leveling.js';
 import { getDamageMultiplier, getXPMultiplier } from './activeEffects.js';
 
@@ -68,7 +68,7 @@ export function updateXP(amount) {
   // XP Growth tiers: +10/+20/+30/+40/+50%  + Curse (+10% per tier)
   const growthTier = Math.max(0, state.upg?.xpGrowth || 0);
   const curseTier = Math.max(0, state.upg?.curse || 0);
-  const growthBonus = [0, 0.10, 0.20, 0.30, 0.40, 0.50][Math.min(growthTier, 5)] || 0;
+  const growthBonus = getXPGrowthBonusForTier(growthTier);
   const mult = (1 + growthBonus) * (1 + 0.10 * curseTier) * getXPMultiplier();
   const add = Math.max(0, Math.floor((amount || 0) * mult));
   if (!Number.isFinite(add) || add <= 0) { syncXPUI(); return; }
@@ -88,13 +88,15 @@ export function updateXP(amount) {
     state.playerLevel++;
 
     // Player HP scaling (design doc) + Max Health upgrade
-    const prevMax = state.playerMaxHP || getPlayerMaxHPForLevel(prevLevel);
+    const prevMax = Math.max(1, state.playerMaxHP || getPlayerMaxHPForLevel(prevLevel));
+    const prevHP = Math.max(0, state.playerHP || prevMax);
+    const wasFull = prevHP >= (prevMax - 0.001);
     const newBase  = getPlayerMaxHPForLevel(state.playerLevel);
     const hpTier = Math.max(0, state.upg?.maxHealth || 0);
     const newMax  = Math.round(newBase * (1 + 0.10 * hpTier));
-    const pct = prevMax > 0 ? (state.playerHP / prevMax) : 1;
+    const levelUpHeal = Math.max(1, Math.round(newMax * LEVEL_UP_HEAL_FRACTION));
     state.playerMaxHP = newMax;
-    state.playerHP = Math.max(1, pct * newMax);
+    state.playerHP = wasFull ? newMax : Math.min(newMax, Math.round(prevHP + levelUpHeal));
 
     // Controlled late-run damage growth so the player scales up without flattening
     // higher-tier enemies. Upgrades, multishot, orbit, targeted fire, and effects

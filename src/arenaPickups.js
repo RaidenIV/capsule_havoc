@@ -249,14 +249,12 @@ function triggerCoinMagnetBurst(){
     for (const cp of state.coinPickups) {
       if (!cp) continue;
       cp.attracting = true;
-      cp.magnetBurst = Math.max(cp.magnetBurst || 0, 1.2);
     }
   }
   if (Array.isArray(state.healthPickups)) {
     for (const hp of state.healthPickups) {
       if (!hp) continue;
       hp.attracting = true;
-      hp.magnetBurst = Math.max(hp.magnetBurst || 0, 1.2);
     }
   }
 }
@@ -325,8 +323,10 @@ export function updateArenaPickups(worldDelta){
         grantArmor(3);
         notifyPowerup('Armor', null);
       } else if (p.type === 'coinMagnet') {
+        const dur = 12.5;
+        applyEffect('coinMagnet', dur);
         triggerCoinMagnetBurst();
-        notifyPowerup('Coin Magnet', null);
+        notifyPowerup('Coin Magnet', dur, 'coinMagnet');
       } else {
         const dur = (p.type === 'clock') ? 8 : (p.type === 'blackHole' ? 3 : 10);
         applyEffect(p.type, dur);

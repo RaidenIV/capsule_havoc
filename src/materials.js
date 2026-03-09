@@ -1,6 +1,7 @@
 // ─── materials.js ─────────────────────────────────────────────────────────────
 import * as THREE from 'three';
 import { state } from './state.js';
+import { ENEMY_DEFS, ENEMY_TYPE } from './constants.js';
 
 // ── Geometry params (mutated by control panel) ────────────────────────────────
 export const playerGeoParams = { radius: 0.4,   length: 1.2,  capSegs: 8, radial: 16 };
@@ -64,8 +65,10 @@ export function syncEnemyMats(enemies) {
       e.mat.color.copy(enemyMat.color);
       e.baseColor.copy(enemyMat.color);
     }
-    e.mat.metalness = enemyMat.metalness;
-    e.mat.roughness = enemyMat.roughness;
+    const def = ENEMY_DEFS[e.enemyType] || null;
+    const keepNonMetal = !!def && e.enemyType !== ENEMY_TYPE.BOSS && !def.metallic;
+    e.mat.metalness = keepNonMetal ? 0.0 : enemyMat.metalness;
+    e.mat.roughness = keepNonMetal ? Math.max(enemyMat.roughness, 0.45) : enemyMat.roughness;
     if (e.mat.clearcoat          !== undefined) e.mat.clearcoat          = enemyMat.clearcoat;
     if (e.mat.clearcoatRoughness !== undefined) e.mat.clearcoatRoughness = enemyMat.clearcoatRoughness;
     if (e.mat.envMapIntensity    !== undefined) e.mat.envMapIntensity    = enemyMat.envMapIntensity;

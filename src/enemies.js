@@ -262,6 +262,12 @@ export function spawnEnemy(x, z, eliteTypeOrCfg = null) {
 
   const mat = enemyMat.clone();
   mat.color.set(color);
+  const resolvedDef = ENEMY_DEFS[enemyType] || null;
+  const isStandardEnemy = !!resolvedDef && enemyType !== ENEMY_TYPE.BOSS;
+  if (isStandardEnemy && !resolvedDef.metallic) {
+    mat.metalness = 0.0;
+    mat.roughness = Math.max(mat.roughness ?? 0.0, 0.45);
+  }
 
   const geo = new THREE.CapsuleGeometry(
     enemyGeoParams.radius * scaleMult, enemyGeoParams.length * scaleMult,

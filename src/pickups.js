@@ -2,7 +2,10 @@
 import * as THREE from 'three';
 import { scene } from './renderer.js';
 import { state } from './state.js';
-import { PLAYER_MAX_HP, HEALTH_PICKUP_CHANCE, HEALTH_RESTORE } from './constants.js';
+import {
+  PLAYER_MAX_HP, HEALTH_PICKUP_CHANCE, HEALTH_RESTORE,
+  ITEM_ATTRACT_SPEED, getMagnetAttractRangeForTier,
+} from './constants.js';
 import { playerGroup, updateHealthBar } from './player.js';
 import { spawnHealNum } from './damageNumbers.js';
 import { playSound } from './audio.js';
@@ -81,17 +84,15 @@ export function dropLoot(pos, coinValue, coinMult, coinColorHex = null) {
 }
 
 // ── Update ────────────────────────────────────────────────────────────────────
-const ATTRACT_DIST_COIN_BASE = 0.75;
-const ATTRACT_SPD_COIN  = 9.0;
-const MAGNET_BURST_SPEED = 34.0;
-const ATTRACT_DIST_MAGNET_PER_TIER = 0.625;
-const ATTRACT_SPD_HP    = ATTRACT_SPD_COIN;
+const ATTRACT_SPD_COIN  = ITEM_ATTRACT_SPEED;
+const ATTRACT_SPD_HP    = ITEM_ATTRACT_SPEED;
 const COLLECT_COIN      = 0.7;
 const COLLECT_HP        = 0.8;
 
 export function updatePickups(worldDelta, playerLevel, elapsed) {
   const attractDelta = Math.max(0, worldDelta) / Math.max(0.0001, state.worldScale || 1.0);
-  const coinAttractDist = ATTRACT_DIST_COIN_BASE + Math.max(0, (state.upg?.magnet || 0)) * ATTRACT_DIST_MAGNET_PER_TIER;
+  const magnetActive = (state.effects?.coinMagnet || 0) > 0;
+  const coinAttractDist = getMagnetAttractRangeForTier(state.upg?.magnet || 0, magnetActive);
   const healthAttractDist = coinAttractDist;
   // Coin merge safety (performance): consolidate if too many coins are on the ground.
   if (state.coinPickups.length > 400) {
@@ -129,12 +130,9 @@ export function updatePickups(worldDelta, playerLevel, elapsed) {
       playSound('coin', 0.5, 0.95 + Math.random() * 0.15);
       continue;
     }
-    if ((cp.magnetBurst || 0) > 0) cp.attracting = true;
     if (coinAttractDist > 0 && dist < coinAttractDist) cp.attracting = true;
     if (cp.attracting && dist > 0.001) {
-      const burstActive = (cp.magnetBurst || 0) > 0;
-      if (burstActive) cp.magnetBurst = Math.max(0, cp.magnetBurst - attractDelta);
-      const spd = (burstActive ? MAGNET_BURST_SPEED : ATTRACT_SPD_COIN) * attractDelta;
+      const spd = ATTRACT_SPD_COIN * attractDelta;
       cp.mesh.position.x += (dx/dist) * Math.min(spd, dist);
       cp.mesh.position.z += (dz/dist) * Math.min(spd, dist);
     }
