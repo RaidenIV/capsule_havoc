@@ -56,7 +56,7 @@ function getOrbitRingDefsFromTier(tier) {
   const count = [0, 2, 3, 4, 5, 6][Math.min(t, 5)] || 0;
   const tierRadiusBonus = Math.max(0, t - 1) * 0.35;
   const radius = 1.9 + tierRadiusBonus + Math.max(0, state.upg?.orbitRange || 0) * 0.22;
-  const speedBase = (1.7 * 2.0) + Math.max(0, state.upg?.orbitSpeed || 0) * 0.20;
+  const speedBase = (1.7 * 2.0) * (1 + 0.15 * t) + Math.max(0, state.upg?.orbitSpeed || 0) * 0.20;
   return [{ count, radius, speed: speedBase, color: 0x00eeff }];
 }
 
@@ -627,7 +627,9 @@ export function updateSecondaryWeapons(worldDelta) {
       const cd = Math.max(0.25, 2.4 * Math.pow(0.90, Math.max(0, state.upg?.lightningCooldown || 0)));
       state.lightningTimer = cd;
       const strikes = Math.min(5, ltTier);
-      const dmg = Math.max(1, Math.round(getBulletDamage() * (1 + 0.10 * Math.max(0, state.upg?.lightningDamage || 0)) * 1.15));
+      const lightningDamageTier = Math.max(0, state.upg?.lightningDamage || 0);
+      const lightningStun = 0.5 + (lightningDamageTier * 0.25);
+      const dmg = Math.max(1, Math.round(getBulletDamage() * (1 + 0.15 * lightningDamageTier) * 1.15));
       const pool = state.enemies.filter(e => e && !e.dead).slice();
       if (pool.length > 0) playSound('lightning', 0.78, 1.0);
       pool.sort((a, b) => {
@@ -637,6 +639,7 @@ export function updateSecondaryWeapons(worldDelta) {
       });
       for (const e of pool.slice(0, strikes)) {
         applyEnemyDamage(e, dmg);
+        e.lightningStunTimer = Math.max(e.lightningStunTimer || 0, lightningStun);
         spawnEnemyDamageNum(dmg, e);
         _spawnLightningFx(e.grp.position);
         updateEliteBar(e);

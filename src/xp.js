@@ -29,7 +29,7 @@ export function getWeaponConfig() {
   const orbitCount = [0, 2, 3, 4, 5, 6][Math.min(Math.max(0, state.upg?.orbit || 0), 5)] || 0;
   const orbitTier = Math.min(Math.max(0, state.upg?.orbit || 0), 5);
   const orbitRadius = 1.9 + Math.max(0, orbitTier - 1) * 0.35 + Math.max(0, state.upg?.orbitRange || 0) * 0.22;
-  const orbitSpeed = (1.7 * 2.0) + Math.max(0, state.upg?.orbitSpeed || 0) * 0.20;
+  const orbitSpeed = (1.7 * 2.0) * (1 + 0.15 * orbitTier) + Math.max(0, state.upg?.orbitSpeed || 0) * 0.20;
   return [getFireInterval(), waveBullets, 1.0, orbitCount, orbitRadius, orbitSpeed, 0x00eeff];
 }
 export function getBulletDamage() {

@@ -356,7 +356,7 @@ export function tick() {
     return;
   }
   updateOrbitBullets(delta);
-  updateSecondaryWeapons(worldDelta);
+  updateSecondaryWeapons(delta);
 
   if (!state.gameOver && state.playerHP <= 0) {
     triggerGameOver();

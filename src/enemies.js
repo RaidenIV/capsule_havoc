@@ -58,18 +58,13 @@ function makeGroundCue(color = 0xffffff, radius = 0.9) {
 }
 
 function ensureOrbiterLane() {
-  if (state._orbiterLane) return state._orbiterLane;
-  const radius = ENEMY_DEFS[ENEMY_TYPE.ORBITER]?.orbitR ?? 6.5;
-  const mesh = new THREE.Mesh(
-    new THREE.TorusGeometry(radius, 0.045, 10, 96),
-    new THREE.MeshBasicMaterial({ color: 0x66ff99, transparent: true, opacity: 0.0, depthWrite: false })
-  );
-  mesh.rotation.x = Math.PI / 2;
-  mesh.position.y = 0.06;
-  mesh.visible = false;
-  scene.add(mesh);
-  state._orbiterLane = mesh;
-  return mesh;
+  if (state._orbiterLane) {
+    try { scene.remove(state._orbiterLane); } catch {}
+    try { state._orbiterLane.geometry?.dispose?.(); } catch {}
+    try { state._orbiterLane.material?.dispose?.(); } catch {}
+    state._orbiterLane = null;
+  }
+  return null;
 }
 
 function getShotTellConfig(enemyType, isBoss) {
@@ -328,7 +323,7 @@ export function spawnEnemy(x, z, eliteTypeOrCfg = null) {
     scaleMult, expMult, coinMult, eliteType, eliteBarFill,
     fireRate, baseFireRate: fireRate,
     shootTimer: fireRate ? Math.random() * fireRate : 0,
-    staggerTimer: 0, baseColor: new THREE.Color(color),
+    staggerTimer: 0, lightningStunTimer: 0, baseColor: new THREE.Color(color),
     spawnFlashTimer: SPAWN_FLASH_DURATION, matDirty: true,
     enemyType,
     bulletSpeedMult: (cfg && Number.isFinite(cfg.bulletSpeedMult)) ? cfg.bulletSpeedMult : 1,
@@ -506,6 +501,10 @@ export function updateEnemies(delta, worldDelta, elapsed) {
     }
     const fullySpawned = e.spawnFlashTimer <= 0;
 
+    if ((e.lightningStunTimer || 0) > 0) {
+      e.lightningStunTimer = Math.max(0, e.lightningStunTimer - worldDelta);
+    }
+
     if (e.staggerTimer > 0) {
       e.staggerTimer = Math.max(0, e.staggerTimer - worldDelta);
       const t = e.staggerTimer / STAGGER_DURATION;
@@ -607,7 +606,7 @@ export function updateEnemies(delta, worldDelta, elapsed) {
     }
 
     // Movement (per-type behavior)
-    if (!e.teleportPending && dist > 0.01 && e.staggerTimer <= 0) {
+    if (!e.teleportPending && dist > 0.01 && e.staggerTimer <= 0 && (e.lightningStunTimer || 0) <= 0) {
       const eR = enemyGeoParams.radius * (e.scaleMult || 1);
       let { sx, sz } = steerAroundProps(
         e.grp.position.x, e.grp.position.z,
@@ -696,13 +695,6 @@ export function updateEnemies(delta, worldDelta, elapsed) {
   }
 
   if (!contactThisFrame) state.contactDmgTimer = 0;
-
-  lane.visible = orbiterAlive;
-  if (orbiterAlive) {
-    lane.position.set(playerGroup.position.x, 0.06, playerGroup.position.z);
-    lane.material.opacity = 0.18 + Math.sin(elapsed * 2.8) * 0.05;
-    lane.rotation.z += worldDelta * 0.2;
-  }
 
   rebuildEnemySpatialHash();
   for (let i = 0; i < state.enemies.length; i++) {

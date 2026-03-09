@@ -11,6 +11,7 @@ import { grantArmor } from './armor.js';
 import { playSound } from './audio.js';
 import { getLuckSpawnMultiplier } from './luck.js';
 import { notifyPowerup } from './hudEffects.js';
+import { ITEM_ATTRACT_SPEED, getMagnetAttractRangeForTier } from './constants.js';
 
 const PICKUP_WEIGHTS = [
   ['doubleDamage', 6.25],
@@ -280,6 +281,16 @@ export function updateArenaPickups(worldDelta){
       state.arenaPickups.splice(i, 1);
       continue;
     }
+    if (p.life < 2.0) {
+      const alpha = Math.max(0, p.life / 2.0);
+      p.mat.transparent = true;
+      p.mat.opacity = alpha;
+      for (const m of (p.extraMats || [])) {
+        if (!m) continue;
+        m.transparent = true;
+        m.opacity = alpha;
+      }
+    }
 
     p.spin += worldDelta * (p.type === 'doubleDamage' || p.type === 'coinValue2x' ? 1.55 : 1.8);
     p.mesh.rotation.y = p.spin;
@@ -306,10 +317,9 @@ export function updateArenaPickups(worldDelta){
     const dist2 = dx*dx + dz*dz;
 
     const dist = Math.sqrt(dist2);
-    const magnetActive = (state.effects?.coinMagnet || 0) > 0;
-    const attractDist = magnetActive ? 0.0 : 5.0;
+    const attractDist = getMagnetAttractRangeForTier(state.upg?.magnet || 0, false);
     if (dist < attractDist && dist > 0.001) {
-      const spd = 18.0 * attractDelta;
+      const spd = ITEM_ATTRACT_SPEED * attractDelta;
       p.mesh.position.x += (dx / dist) * Math.min(spd, dist);
       p.mesh.position.z += (dz / dist) * Math.min(spd, dist);
     }

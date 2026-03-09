@@ -122,7 +122,7 @@ const CATEGORIES = [
         ][t - 1] || `Tier ${t}` },
       { key: 'lightningDamage', name: 'Lightning Damage', costs: STANDARD_COSTS,
         requires: { key: 'lightning', minTier: 1 },
-        desc: t => `+10% lightning damage (Tier ${t})` },
+        desc: t => `+15% lightning damage (Tier ${t})` },
       { key: 'lightningCooldown', name: 'Lightning Cooldown', costs: STANDARD_COSTS,
         requires: { key: 'lightning', minTier: 1 },
         desc: t => `-10% lightning cooldown (Tier ${t})` },
@@ -438,7 +438,7 @@ function updateStatsPanel(){
   if (magnetTier > 0) ownedRows.push(_statRow('Magnet Radius', `${magnetRadius.toFixed(2)} radius`));
   if (shieldTier > 0) ownedRows.push(_statRow('Shield', `${shieldCharges} hit • ${shieldRecharge.toFixed(1)}s recharge`));
   if (targetedTier > 0 && targetedSystemsTier > 0) ownedRows.push(_statRow('Targeted Systems', `+${targetedSystemsTier * 15}% dmg/range • -${targetedSystemsTier * 15}% CD`));
-  if (lightningTier > 0) ownedRows.push(_statRow('Lightning Bonus', `+${lightningDamageTier * 10}% dmg • -${lightningCooldownTier * 10}% CD`));
+  if (lightningTier > 0) ownedRows.push(_statRow('Lightning Bonus', `+${lightningDamageTier * 15}% dmg • -${lightningCooldownTier * 10}% CD`));
   if (maxHealthTier > 0) ownedRows.push(_statRow('Max HP Bonus', `+${maxHealthTier * 10}%`));
   if (regenTier > 0) ownedRows.push(_statRow('Regen', `${regenTier} HP/s`));
   if (xpGrowthTier > 0) ownedRows.push(_statRow('XP Growth', `+${getTierBonusPct(XP_GROWTH_BONUS_PCT, xpGrowthTier)}%`));
