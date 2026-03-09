@@ -215,6 +215,8 @@ export function restartGame(opts = {}) {
     dmg:0, fireRate:0, projSpeed:0, piercing:0, multishot:0,
     moveSpeed:0, dash:0, magnet:0,
     shield:0, burst:0, timeSlow:0,
+    targetedFire:0, targetedCooldown:0, targetedRange:0, targetedDamage:0,
+    lightning:0, lightningCooldown:0, lightningDamage:0,
     maxHealth:0, regen:0, xpGrowth:0, coinBonus:0, curse:0, luck:0,
   };
   state.luck = 0;

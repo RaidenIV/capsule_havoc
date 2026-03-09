@@ -305,8 +305,9 @@ export function updateArenaPickups(worldDelta){
     const dz = playerGroup.position.z - p.mesh.position.z;
     const dist2 = dx*dx + dz*dz;
 
-    const attractDist = 5.0;
     const dist = Math.sqrt(dist2);
+    const magnetActive = (state.effects?.coinMagnet || 0) > 0;
+    const attractDist = magnetActive ? 0.0 : 5.0;
     if (dist < attractDist && dist > 0.001) {
       const spd = 18.0 * attractDelta;
       p.mesh.position.x += (dx / dist) * Math.min(spd, dist);

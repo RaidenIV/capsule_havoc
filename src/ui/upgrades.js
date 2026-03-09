@@ -23,8 +23,31 @@ function shuffle(arr){
 }
 function choice(arr){ return arr[Math.floor(Math.random() * arr.length)]; }
 
-function getTier(key){
+function getRawTier(key){
   return Math.max(0, state.upg?.[key] || 0);
+}
+
+function getTargetedSystemsTier(){
+  return Math.max(
+    0,
+    getRawTier('targetedCooldown'),
+    getRawTier('targetedDamage'),
+    getRawTier('targetedRange'),
+  );
+}
+
+function getTier(key){
+  if (key === 'targetedCooldown' || key === 'targetedDamage' || key === 'targetedRange') {
+    return getTargetedSystemsTier();
+  }
+  return getRawTier(key);
+}
+
+function getUpgradeCategoryId(key){
+  for (const category of CATEGORIES) {
+    if (category.upgrades.some(upg => upg.key === key)) return category.id;
+  }
+  return 'other';
 }
 
 function getLoadoutWeapon(){
@@ -86,15 +109,9 @@ const CATEGORIES = [
           'Fires much faster',
           'Maximum lock speed',
         ][t - 1] || `Tier ${t}` },
-      { key: 'targetedDamage', name: 'Targeted Damage', costs: STANDARD_COSTS,
+      { key: 'targetedCooldown', name: 'Targeted Systems', costs: STANDARD_COSTS,
         requires: { key: 'targetedFire', minTier: 1 },
-        desc: t => `+10% targeted shot damage (Tier ${t})` },
-      { key: 'targetedCooldown', name: 'Targeted Cooldown', costs: STANDARD_COSTS,
-        requires: { key: 'targetedFire', minTier: 1 },
-        desc: t => `-10% targeted shot cooldown (Tier ${t})` },
-      { key: 'targetedRange', name: 'Targeted Range', costs: STANDARD_COSTS,
-        requires: { key: 'targetedFire', minTier: 1 },
-        desc: t => `+10% targeted shot range (Tier ${t})` },
+        desc: t => `+${t * 15}% dmg/range, -${t * 15}% cooldown (Tier ${t})` },
       { key: 'lightning', name: 'Lightning', costs: STANDARD_COSTS,
         desc: t => [
           'Unlocks lightning strike',
@@ -301,6 +318,11 @@ function applyUpgradeEffect(key, newTier) {
     case 'targetedDamage':
     case 'targetedCooldown':
     case 'targetedRange':
+      if (key === 'targetedCooldown' || key === 'targetedDamage' || key === 'targetedRange') {
+        state.upg.targetedCooldown = newTier;
+        state.upg.targetedDamage = newTier;
+        state.upg.targetedRange = newTier;
+      }
     case 'lightning':
     case 'lightningDamage':
     case 'lightningCooldown':
@@ -371,9 +393,7 @@ function updateStatsPanel(){
   const magnetTier = getTier('magnet');
   const shieldTier = getTier('shield');
   const targetedTier = getTier('targetedFire');
-  const targetedDamageTier = getTier('targetedDamage');
-  const targetedCooldownTier = getTier('targetedCooldown');
-  const targetedRangeTier = getTier('targetedRange');
+  const targetedSystemsTier = getTargetedSystemsTier();
   const lightningTier = getTier('lightning');
   const lightningDamageTier = getTier('lightningDamage');
   const lightningCooldownTier = getTier('lightningCooldown');
@@ -404,7 +424,7 @@ function updateStatsPanel(){
     rows.push(_statRow('Fire Interval', `${fire.toFixed(2)}s`));
   }
   if (orbitTier > 0) rows.push(_statRow('Orbit DMG', `${bulletDmg} / hit`));
-  if (targetedTier > 0) rows.push(_statRow('Targeted Shot', `T${targetedTier} • ${Math.round(bulletDmg * (1 + 0.10 * targetedDamageTier))} dmg`));
+  if (targetedTier > 0) rows.push(_statRow('Targeted Shot', `T${targetedTier} • ${Math.round(bulletDmg * (1 + 0.15 * targetedSystemsTier))} dmg`));
   if (lightningTier > 0) rows.push(_statRow('Lightning', `${Math.min(5, lightningTier)} strike${Math.min(5, lightningTier) === 1 ? '' : 's'}`));
 
   const ownedRows = [];
@@ -417,7 +437,7 @@ function updateStatsPanel(){
   if (dashTier > 0) ownedRows.push(_statRow('Dash CD', `${dashCd.toFixed(2)}s`));
   if (magnetTier > 0) ownedRows.push(_statRow('Magnet Radius', `${magnetRadius.toFixed(2)} radius`));
   if (shieldTier > 0) ownedRows.push(_statRow('Shield', `${shieldCharges} hit • ${shieldRecharge.toFixed(1)}s recharge`));
-  if (targetedTier > 0) ownedRows.push(_statRow('Targeted CD', `-${targetedCooldownTier * 10}% • +${targetedRangeTier * 10}% range`));
+  if (targetedTier > 0 && targetedSystemsTier > 0) ownedRows.push(_statRow('Targeted Systems', `+${targetedSystemsTier * 15}% dmg/range • -${targetedSystemsTier * 15}% CD`));
   if (lightningTier > 0) ownedRows.push(_statRow('Lightning Bonus', `+${lightningDamageTier * 10}% dmg • -${lightningCooldownTier * 10}% CD`));
   if (maxHealthTier > 0) ownedRows.push(_statRow('Max HP Bonus', `+${maxHealthTier * 10}%`));
   if (regenTier > 0) ownedRows.push(_statRow('Regen', `${regenTier} HP/s`));
@@ -720,7 +740,15 @@ function pickChestItems(count, chestTier) {
     return cur < upg.costs.length && (cur + 1) <= tierCap && meetsRequirement(upg) && isUpgradeAllowedForLoadout(upg);
   });
   if (!candidates.length) return [];
-  return shuffle(candidates).slice(0, Math.min(count, candidates.length));
+
+  const weapons = shuffle(candidates.filter(upg => getUpgradeCategoryId(upg.key) === 'weapons'));
+  const abilities = shuffle(candidates.filter(upg => getUpgradeCategoryId(upg.key) === 'abilities'));
+  const others = shuffle(candidates.filter(upg => {
+    const categoryId = getUpgradeCategoryId(upg.key);
+    return categoryId !== 'weapons' && categoryId !== 'abilities';
+  }));
+
+  return [...weapons, ...abilities, ...others].slice(0, Math.min(count, candidates.length));
 }
 
 function ensureChestOverlay() {
