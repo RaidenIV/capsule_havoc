@@ -15,7 +15,7 @@ export const SLASH_FADE_TIME   = 0.25;            // fades after peak
 
 // ── Movement ─────────────────────────────────────────────────────────────────
 export const PLAYER_SPEED          = 7;
-export const ENEMY_SPEED           = 2.8;
+export const ENEMY_SPEED           = 3.08;
 export const BULLET_SPEED          = 14;
 export const BULLET_LIFETIME       = 2.2;
 

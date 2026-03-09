@@ -3,6 +3,7 @@ import { state } from './state.js';
 import { getPlayerMaxHPForLevel, getPlayerBaseDamageForLevel, LEVEL_UP_HEAL_FRACTION, getXPGrowthBonusForTier } from './constants.js';
 import { expToNext } from './leveling.js';
 import { getDamageMultiplier, getXPMultiplier } from './activeEffects.js';
+import { notifyPowerup } from './hudEffects.js';
 
 // DOM refs
 const xpLevelLabelEl = document.getElementById('xp-level-label');
@@ -180,9 +181,11 @@ export function updateXP(amount) {
 
     const cheapestUpgradeCost = getCheapestEligibleUpgradeCost(state.playerLevel);
     if (Number.isFinite(cheapestUpgradeCost) && cheapestUpgradeCost > 0 && (state.coins || 0) < cheapestUpgradeCost) {
-      state.coins += (cheapestUpgradeCost - (state.coins || 0));
+      const bonusCoins = cheapestUpgradeCost - (state.coins || 0);
+      state.coins += bonusCoins;
       const coinEl = document.getElementById('coin-count');
       if (coinEl) coinEl.textContent = state.coins;
+      notifyPowerup(`Level Bonus +${bonusCoins} Coins`, null);
     }
 
     // Queue a shop for every level-up, including boss levels. Using a numeric queue

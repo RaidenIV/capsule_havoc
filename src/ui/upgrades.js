@@ -123,7 +123,7 @@ const CATEGORIES = [
         ][t - 1] || `Tier ${t}` },
       { key: 'targetedCooldown', name: 'Targeted Systems', costs: STANDARD_COSTS,
         requires: { key: 'targetedFire', minTier: 1 },
-        desc: t => `+${t * 15}% dmg/range, -${t * 15}% cooldown (Tier ${t})` },
+        desc: t => `+${t * 15}% dmg/range/speed, -${t * 15}% cooldown (Tier ${t})` },
       { key: 'lightning', name: 'Lightning', costs: STANDARD_COSTS,
         desc: t => [
           'Unlocks 1 lightning strike',
@@ -443,7 +443,7 @@ function updateStatsPanel(){
   if (dashTier > 0) ownedRows.push(_statRow('Dash CD', `${dashCd.toFixed(2)}s`));
   if (magnetTier > 0) ownedRows.push(_statRow('Magnet Radius', `${magnetRadius.toFixed(2)} radius`));
   if (shieldTier > 0) ownedRows.push(_statRow('Shield', `${shieldCharges} hit • ${shieldRecharge.toFixed(1)}s recharge`));
-  if (targetedTier > 0 && targetedSystemsTier > 0) ownedRows.push(_statRow('Targeted Systems', `+${targetedSystemsTier * 15}% dmg/range • -${targetedSystemsTier * 15}% CD`));
+  if (targetedTier > 0 && targetedSystemsTier > 0) ownedRows.push(_statRow('Targeted Systems', `+${targetedSystemsTier * 15}% dmg/range/speed • -${targetedSystemsTier * 15}% CD`));
   if (lightningTier > 0 && lightningBonusTier > 0) {
     ownedRows.push(_statRow('Lightning Bonus', `+${lightningBonusTier * 15}% dmg • -${lightningBonusTier * 10}% CD • +${(lightningBonusTier * 0.25).toFixed(2)}s stun`));
   }

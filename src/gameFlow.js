@@ -266,7 +266,7 @@ export function restartGame(opts = {}) {
 
   if (killsEl)     killsEl.textContent    = '0';
   if (timerEl)     timerEl.textContent    = '00:00';
-  if (coinCountEl) coinCountEl.textContent = '10';
+  if (coinCountEl) coinCountEl.textContent = '0';
 
   resetPowerupNotifications();
 

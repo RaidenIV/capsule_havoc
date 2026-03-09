@@ -609,7 +609,7 @@ export function updateSecondaryWeapons(worldDelta) {
         const dx = target.grp.position.x - playerGroup.position.x;
         const dz = target.grp.position.z - playerGroup.position.z;
         const dir = new THREE.Vector3(dx, 0, dz).normalize();
-        const speed = BULLET_SPEED * 2.2;
+        const speed = BULLET_SPEED * 2.2 * (1 + (0.15 * targetedSystemsTier));
         _bulletQ.setFromUnitVectors(_bulletUp, dir);
         obj.quaternion.copy(_bulletQ);
         obj.position.copy(playerGroup.position);
