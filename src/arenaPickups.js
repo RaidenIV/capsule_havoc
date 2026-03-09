@@ -275,17 +275,13 @@ function spawnAtRandom(type){
   });
 }
 
-function triggerCoinMagnetBurst(){
+function triggerCoinMagnetBurst(duration = 12.5){
+  const magnetUntil = (state.elapsed || 0) + duration;
   if (Array.isArray(state.coinPickups)) {
     for (const cp of state.coinPickups) {
       if (!cp) continue;
       cp.attracting = true;
-    }
-  }
-  if (Array.isArray(state.healthPickups)) {
-    for (const hp of state.healthPickups) {
-      if (!hp) continue;
-      hp.attracting = true;
+      cp.coinMagnetUntil = Math.max(cp.coinMagnetUntil || 0, magnetUntil);
     }
   }
 }
@@ -366,7 +362,7 @@ export function updateArenaPickups(worldDelta){
       } else if (p.type === 'coinMagnet') {
         const dur = 12.5;
         applyEffect('coinMagnet', dur);
-        triggerCoinMagnetBurst();
+        triggerCoinMagnetBurst(dur);
         notifyPowerup('Coin Magnet', dur, 'coinMagnet');
       } else {
         const dur = (p.type === 'clock') ? 8 : (p.type === 'blackHole' ? 3 : 10);

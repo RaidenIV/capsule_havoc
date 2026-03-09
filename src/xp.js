@@ -35,8 +35,7 @@ const SHOP_UPGRADES = [
   { key: 'projSpeed', costs: STANDARD_COSTS },
   { key: 'piercing', costs: STANDARD_COSTS },
   { key: 'multishot', costs: MULTISHOT_COSTS },
-  { key: 'targetedFire', costs: STANDARD_COSTS },
-  { key: 'targetedCooldown', costs: STANDARD_COSTS, requires: { key: 'targetedFire', minTier: 1 } },
+  { key: 'targetedCooldown', costs: STANDARD_COSTS },
   { key: 'lightning', costs: STANDARD_COSTS },
   { key: 'moveSpeed', costs: STANDARD_COSTS },
   { key: 'dash', costs: STANDARD_COSTS },
@@ -51,8 +50,8 @@ const SHOP_UPGRADES = [
 const RED_LASER_LOCKOUT = new Set(['laserFire', 'fireRate', 'projSpeed', 'piercing', 'multishot']);
 
 function getShopTierForKey(key) {
-  if (key === 'targetedCooldown' || key === 'targetedDamage' || key === 'targetedRange') {
-    return Math.max(0, state.upg?.targetedCooldown || 0, state.upg?.targetedDamage || 0, state.upg?.targetedRange || 0);
+  if (key === 'targetedFire' || key === 'targetedCooldown' || key === 'targetedDamage' || key === 'targetedRange') {
+    return Math.max(0, state.upg?.targetedFire || 0, state.upg?.targetedCooldown || 0, state.upg?.targetedDamage || 0, state.upg?.targetedRange || 0);
   }
   if (key === 'lightning' || key === 'lightningDamage' || key === 'lightningCooldown') {
     return Math.max(0, state.upg?.lightning || 0, state.upg?.lightningDamage || 0, state.upg?.lightningCooldown || 0);

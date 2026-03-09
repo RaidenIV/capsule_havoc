@@ -91,23 +91,31 @@ const COLLECT_HP        = 0.8;
 
 export function updatePickups(worldDelta, playerLevel, elapsed) {
   const attractDelta = Math.max(0, worldDelta) / Math.max(0.0001, state.worldScale || 1.0);
-  const magnetActive = (state.effects?.coinMagnet || 0) > 0;
-  const coinAttractDist = getMagnetAttractRangeForTier(state.upg?.magnet || 0, magnetActive);
-  const healthAttractDist = coinAttractDist;
+  const baseCoinAttractDist = getMagnetAttractRangeForTier(state.upg?.magnet || 0, false);
+  const healthAttractDist = baseCoinAttractDist;
   // Coin merge safety (performance): consolidate if too many coins are on the ground.
   if (state.coinPickups.length > 400) {
     let sum = 0;
-    for (const cp of state.coinPickups) { sum += (cp.value || 0); scene.remove(cp.mesh); cp.mat.dispose(); }
+    let mergedCoinMagnetUntil = 0;
+    for (const cp of state.coinPickups) {
+      sum += (cp.value || 0);
+      mergedCoinMagnetUntil = Math.max(mergedCoinMagnetUntil, cp.coinMagnetUntil || 0);
+      scene.remove(cp.mesh);
+      cp.mat.dispose();
+    }
     state.coinPickups.length = 0;
     // Place merged coin at edge/corner away from player.
     const px = playerGroup.position.x;
     const pz = playerGroup.position.z;
     const dx = (Math.random() < 0.5 ? -1 : 1);
     const dz = (Math.random() < 0.5 ? -1 : 1);
-    const far = Math.max(4.0, coinAttractDist || 0, healthAttractDist || 0) * 3.25;
+    const far = Math.max(4.0, baseCoinAttractDist || 0, healthAttractDist || 0) * 3.25;
     const pos = { x: px + dx * far, z: pz + dz * far };
     spawnCoins(pos, 1, sum, 0xffffff);
-    if (state.coinPickups[0]) state.coinPickups[0].merged = true;
+    if (state.coinPickups[0]) {
+      state.coinPickups[0].merged = true;
+      state.coinPickups[0].coinMagnetUntil = Math.max(state.coinPickups[0].coinMagnetUntil || 0, mergedCoinMagnetUntil);
+    }
     playSound('coin_merge', 0.7, 0.95 + Math.random() * 0.1);
   }
 
@@ -130,6 +138,8 @@ export function updatePickups(worldDelta, playerLevel, elapsed) {
       playSound('coin', 0.5, 0.95 + Math.random() * 0.15);
       continue;
     }
+    const coinMagnetActive = (cp.coinMagnetUntil || 0) > (state.elapsed || 0);
+    const coinAttractDist = getMagnetAttractRangeForTier(state.upg?.magnet || 0, coinMagnetActive);
     if (coinAttractDist > 0 && dist < coinAttractDist) cp.attracting = true;
     if (cp.attracting && dist > 0.001) {
       const spd = ATTRACT_SPD_COIN * attractDelta;

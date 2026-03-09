@@ -30,6 +30,7 @@ function getRawTier(key){
 function getTargetedSystemsTier(){
   return Math.max(
     0,
+    getRawTier('targetedFire'),
     getRawTier('targetedCooldown'),
     getRawTier('targetedDamage'),
     getRawTier('targetedRange'),
@@ -46,7 +47,7 @@ function getLightningSystemsTier(){
 }
 
 function getTier(key){
-  if (key === 'targetedCooldown' || key === 'targetedDamage' || key === 'targetedRange') {
+  if (key === 'targetedFire' || key === 'targetedCooldown' || key === 'targetedDamage' || key === 'targetedRange') {
     return getTargetedSystemsTier();
   }
   if (key === 'lightning' || key === 'lightningDamage' || key === 'lightningCooldown') {
@@ -113,17 +114,14 @@ const CATEGORIES = [
         desc: t => `+1 enemy pierced per shot (Tier ${t})` },
       { key: 'multishot', name: 'Multi-Shot', costs: MULTISHOT_COSTS,
         desc: t => t === 1 ? 'Every 5th volley fires 1 extra spread laser' : 'Every 5th volley fires 2 extra spread lasers' },
-      { key: 'targetedFire', name: 'Targeted Shot', costs: STANDARD_COSTS,
-        desc: t => [
-          'Unlocks auto-targeting shot',
-          'Fires faster and farther',
-          'Improves cadence and reach',
-          'Fires much faster',
-          'Maximum lock speed',
-        ][t - 1] || `Tier ${t}` },
       { key: 'targetedCooldown', name: 'Targeted Systems', costs: STANDARD_COSTS,
-        requires: { key: 'targetedFire', minTier: 1 },
-        desc: t => `+${t * 15}% dmg/range/speed, -${t * 15}% cooldown (Tier ${t})` },
+        desc: t => [
+          'Unlocks auto-targeting shot • +15% dmg/range/speed • -15% cooldown',
+          'Targeted Shot +30% dmg/range/speed • -30% cooldown',
+          'Targeted Shot +45% dmg/range/speed • -45% cooldown',
+          'Targeted Shot +60% dmg/range/speed • -60% cooldown',
+          'Targeted Shot +75% dmg/range/speed • -75% cooldown',
+        ][t - 1] || `Tier ${t}` },
       { key: 'lightning', name: 'Lightning', costs: STANDARD_COSTS,
         desc: t => [
           'Unlocks 1 lightning strike',
@@ -324,11 +322,10 @@ function applyUpgradeEffect(key, newTier) {
     case 'targetedDamage':
     case 'targetedCooldown':
     case 'targetedRange':
-      if (key === 'targetedCooldown' || key === 'targetedDamage' || key === 'targetedRange') {
-        state.upg.targetedCooldown = newTier;
-        state.upg.targetedDamage = newTier;
-        state.upg.targetedRange = newTier;
-      }
+      state.upg.targetedFire = newTier;
+      state.upg.targetedCooldown = newTier;
+      state.upg.targetedDamage = newTier;
+      state.upg.targetedRange = newTier;
     case 'lightning':
     case 'lightningDamage':
     case 'lightningCooldown':
@@ -399,8 +396,8 @@ function updateStatsPanel(){
   const dashTier = getTier('dash');
   const magnetTier = getTier('magnet');
   const shieldTier = getTier('shield');
-  const targetedTier = getTier('targetedFire');
-  const targetedSystemsTier = getTargetedSystemsTier();
+  const targetedTier = getTargetedSystemsTier();
+  const targetedSystemsTier = targetedTier;
   const lightningTier = getTier('lightning');
   const lightningBonusTier = Math.max(0, lightningTier - 1);
   const maxHealthTier = getTier('maxHealth');
@@ -443,7 +440,7 @@ function updateStatsPanel(){
   if (dashTier > 0) ownedRows.push(_statRow('Dash CD', `${dashCd.toFixed(2)}s`));
   if (magnetTier > 0) ownedRows.push(_statRow('Magnet Radius', `${magnetRadius.toFixed(2)} radius`));
   if (shieldTier > 0) ownedRows.push(_statRow('Shield', `${shieldCharges} hit • ${shieldRecharge.toFixed(1)}s recharge`));
-  if (targetedTier > 0 && targetedSystemsTier > 0) ownedRows.push(_statRow('Targeted Systems', `+${targetedSystemsTier * 15}% dmg/range/speed • -${targetedSystemsTier * 15}% CD`));
+  if (targetedSystemsTier > 0) ownedRows.push(_statRow('Targeted Systems', `+${targetedSystemsTier * 15}% dmg/range/speed • -${targetedSystemsTier * 15}% CD`));
   if (lightningTier > 0 && lightningBonusTier > 0) {
     ownedRows.push(_statRow('Lightning Bonus', `+${lightningBonusTier * 15}% dmg • -${lightningBonusTier * 10}% CD • +${(lightningBonusTier * 0.25).toFixed(2)}s stun`));
   }
@@ -557,8 +554,11 @@ function getDisplayedUpgradeCost(upg, currentTier){
 }
 
 function updateCoinsUI() {
+  const value = String(state.coins || 0);
   const el = $('upgradeCoins');
-  if (el) el.textContent = String(state.coins || 0);
+  if (el) el.textContent = value;
+  const gameHudEl = document.getElementById('coin-count');
+  if (gameHudEl) gameHudEl.textContent = value;
 }
 
 function renderShop() {

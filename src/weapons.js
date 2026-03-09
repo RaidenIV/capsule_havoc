@@ -510,8 +510,8 @@ function _spawnLightningFx(pos) {
   for (let i = 0; i < mainPts.length - 1; i++) {
     const a = mainPts[i];
     const b = mainPts[i + 1];
-    const glowSeg = _makeLightningSegment(a, b, 0.065, glowMat, 1);
-    const coreSeg = _makeLightningSegment(a, b, 0.022, coreMat, 0);
+    const glowSeg = _makeLightningSegment(a, b, 0.0325, glowMat, 1);
+    const coreSeg = _makeLightningSegment(a, b, 0.011, coreMat, 0);
     if (glowSeg) { root.add(glowSeg.mesh); geos.push(glowSeg.geo); }
     if (coreSeg) { root.add(coreSeg.mesh); geos.push(coreSeg.geo); }
 
@@ -524,8 +524,8 @@ function _spawnLightningFx(pos) {
       ));
       const branchPts = _buildLightningPath(branchStart, branchEnd, 4, 0.18, 0.65);
       for (let j = 0; j < branchPts.length - 1; j++) {
-        const g = _makeLightningSegment(branchPts[j], branchPts[j + 1], 0.036, glowMat, 1);
-        const c = _makeLightningSegment(branchPts[j], branchPts[j + 1], 0.013, coreMat, 0);
+        const g = _makeLightningSegment(branchPts[j], branchPts[j + 1], 0.018, glowMat, 1);
+        const c = _makeLightningSegment(branchPts[j], branchPts[j + 1], 0.0065, coreMat, 0);
         if (g) { root.add(g.mesh); geos.push(g.geo); }
         if (c) { root.add(c.mesh); geos.push(c.geo); }
       }
@@ -601,12 +601,12 @@ export function updateSecondaryWeapons(worldDelta) {
   _updateTargetedShots(worldDelta);
   _updateLightningFx(worldDelta);
 
-  const tfTier = Math.max(0, state.upg?.targetedFire || 0);
+  const tfTier = Math.max(0, state.upg?.targetedFire || 0, state.upg?.targetedCooldown || 0, state.upg?.targetedDamage || 0, state.upg?.targetedRange || 0);
   if (tfTier > 0) {
     state.targetedShotTimer = Math.max(0, (state.targetedShotTimer || 0) - worldDelta);
     if (state.targetedShotTimer <= 0) {
       const baseCdMult = [1.0, 1.0, 0.90, 0.80, 0.70, 0.60][Math.min(tfTier, 5)] || 1.0;
-      const targetedSystemsTier = Math.max(0, state.upg?.targetedCooldown || 0, state.upg?.targetedDamage || 0, state.upg?.targetedRange || 0);
+      const targetedSystemsTier = Math.max(0, state.upg?.targetedFire || 0, state.upg?.targetedCooldown || 0, state.upg?.targetedDamage || 0, state.upg?.targetedRange || 0);
       const extraCdMult = Math.pow(0.85, targetedSystemsTier);
       const baseRangeMult = [1.0, 1.0, 1.0, 1.10, 1.10, 1.20][Math.min(tfTier, 5)] || 1.0;
       const extraRangeMult = 1 + (0.15 * targetedSystemsTier);

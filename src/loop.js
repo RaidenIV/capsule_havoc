@@ -378,7 +378,7 @@ export function tick() {
 
   updatePickups(worldDelta, state.playerLevel, state.elapsed);
   updateParticles(worldDelta);
-  updateDamageNums(worldDelta);
+  updateDamageNums(delta);
   updateHudEffects();
   updateHudLevel();
   updateDashStreaks(delta);
