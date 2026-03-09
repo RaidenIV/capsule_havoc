@@ -620,16 +620,16 @@ export function updateSecondaryWeapons(worldDelta) {
     }
   }
 
-  const ltTier = Math.max(0, state.upg?.lightning || 0);
+  const ltTier = Math.max(0, state.upg?.lightning || 0, state.upg?.lightningDamage || 0, state.upg?.lightningCooldown || 0);
   if (ltTier > 0) {
     state.lightningTimer = Math.max(0, (state.lightningTimer || 0) - worldDelta);
     if (state.lightningTimer <= 0) {
-      const cd = Math.max(0.25, 2.4 * Math.pow(0.90, Math.max(0, state.upg?.lightningCooldown || 0)));
+      const lightningBonusTier = Math.max(0, ltTier - 1);
+      const cd = Math.max(0.25, 2.4 * Math.pow(0.90, lightningBonusTier));
       state.lightningTimer = cd;
       const strikes = Math.min(5, ltTier);
-      const lightningDamageTier = Math.max(0, state.upg?.lightningDamage || 0);
-      const lightningStun = 0.5 + (lightningDamageTier * 0.25);
-      const dmg = Math.max(1, Math.round(getBulletDamage() * (1 + 0.15 * lightningDamageTier) * 1.15));
+      const lightningStun = 0.5 + (lightningBonusTier * 0.25);
+      const dmg = Math.max(1, Math.round(getBulletDamage() * (1 + 0.15 * lightningBonusTier) * 1.15));
       const pool = state.enemies.filter(e => e && !e.dead).slice();
       if (pool.length > 0) playSound('lightning', 0.78, 1.0);
       pool.sort((a, b) => {

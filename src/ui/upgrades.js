@@ -36,9 +36,21 @@ function getTargetedSystemsTier(){
   );
 }
 
+function getLightningSystemsTier(){
+  return Math.max(
+    0,
+    getRawTier('lightning'),
+    getRawTier('lightningDamage'),
+    getRawTier('lightningCooldown'),
+  );
+}
+
 function getTier(key){
   if (key === 'targetedCooldown' || key === 'targetedDamage' || key === 'targetedRange') {
     return getTargetedSystemsTier();
+  }
+  if (key === 'lightning' || key === 'lightningDamage' || key === 'lightningCooldown') {
+    return getLightningSystemsTier();
   }
   return getRawTier(key);
 }
@@ -114,18 +126,12 @@ const CATEGORIES = [
         desc: t => `+${t * 15}% dmg/range, -${t * 15}% cooldown (Tier ${t})` },
       { key: 'lightning', name: 'Lightning', costs: STANDARD_COSTS,
         desc: t => [
-          'Unlocks lightning strike',
-          'Adds another strike per cast',
-          'Improves chain count',
-          'Improves cast frequency',
-          'Maximum strike count',
+          'Unlocks 1 lightning strike',
+          '2 strikes • +15% dmg • -10% cooldown • +0.25s stun',
+          '3 strikes • +30% dmg • -20% cooldown • +0.50s stun',
+          '4 strikes • +45% dmg • -30% cooldown • +0.75s stun',
+          '5 strikes • +60% dmg • -40% cooldown • +1.00s stun',
         ][t - 1] || `Tier ${t}` },
-      { key: 'lightningDamage', name: 'Lightning Damage', costs: STANDARD_COSTS,
-        requires: { key: 'lightning', minTier: 1 },
-        desc: t => `+15% lightning damage (Tier ${t})` },
-      { key: 'lightningCooldown', name: 'Lightning Cooldown', costs: STANDARD_COSTS,
-        requires: { key: 'lightning', minTier: 1 },
-        desc: t => `-10% lightning cooldown (Tier ${t})` },
     ],
   },
   {
@@ -326,6 +332,7 @@ function applyUpgradeEffect(key, newTier) {
     case 'lightning':
     case 'lightningDamage':
     case 'lightningCooldown':
+      state.upg.lightning = Math.max(getLightningSystemsTier(), newTier);
       try { syncOrbitBullets(); } catch {}
       break;
 
@@ -395,8 +402,7 @@ function updateStatsPanel(){
   const targetedTier = getTier('targetedFire');
   const targetedSystemsTier = getTargetedSystemsTier();
   const lightningTier = getTier('lightning');
-  const lightningDamageTier = getTier('lightningDamage');
-  const lightningCooldownTier = getTier('lightningCooldown');
+  const lightningBonusTier = Math.max(0, lightningTier - 1);
   const maxHealthTier = getTier('maxHealth');
   const regenTier = getTier('regen');
   const xpGrowthTier = getTier('xpGrowth');
@@ -438,7 +444,9 @@ function updateStatsPanel(){
   if (magnetTier > 0) ownedRows.push(_statRow('Magnet Radius', `${magnetRadius.toFixed(2)} radius`));
   if (shieldTier > 0) ownedRows.push(_statRow('Shield', `${shieldCharges} hit • ${shieldRecharge.toFixed(1)}s recharge`));
   if (targetedTier > 0 && targetedSystemsTier > 0) ownedRows.push(_statRow('Targeted Systems', `+${targetedSystemsTier * 15}% dmg/range • -${targetedSystemsTier * 15}% CD`));
-  if (lightningTier > 0) ownedRows.push(_statRow('Lightning Bonus', `+${lightningDamageTier * 15}% dmg • -${lightningCooldownTier * 10}% CD`));
+  if (lightningTier > 0 && lightningBonusTier > 0) {
+    ownedRows.push(_statRow('Lightning Bonus', `+${lightningBonusTier * 15}% dmg • -${lightningBonusTier * 10}% CD • +${(lightningBonusTier * 0.25).toFixed(2)}s stun`));
+  }
   if (maxHealthTier > 0) ownedRows.push(_statRow('Max HP Bonus', `+${maxHealthTier * 10}%`));
   if (regenTier > 0) ownedRows.push(_statRow('Regen', `${regenTier} HP/s`));
   if (xpGrowthTier > 0) ownedRows.push(_statRow('XP Growth', `+${getTierBonusPct(XP_GROWTH_BONUS_PCT, xpGrowthTier)}%`));

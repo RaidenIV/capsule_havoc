@@ -205,7 +205,7 @@ export function restartGame(opts = {}) {
   state.playerXP    = 0;
   state.playerLevel = 1;
   initSpawner();
-  state.coins       = 10;
+  state.coins       = 0;
   state.weaponTier  = state.characterPrimaryWeapon === 'laser' ? 1 : 0;
   state.pickupRangeLvl = 0;
   state.firstLevelUpShopHandled = false;

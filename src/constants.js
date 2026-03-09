@@ -248,7 +248,7 @@ export const ENEMY_DEFS = Object.freeze({
   [ENEMY_TYPE.TELEPORTER]: { color: 0xe0e0e0, sizeMult: 0.75, hpPct: 3.00, contactPct: 0.333, shoot: false, metallic: false, teleportWhenBelow: 0.50 },
   [ENEMY_TYPE.SHIELDED]:   { color: 0x4aa3ff, sizeMult: 1.25, hpPct: 0.50, shieldPct: 1.50, contactPct: 0.20, shoot: false, metallic: false },
   [ENEMY_TYPE.SPLITTER]:   { color: 0x80FB37, sizeMult: 2.00, hpPct: 3.00, contactPct: 0.30, shoot: true, bulletPct: 0.25, fireRate: 4.00, bulletSpeedMult: 1.20, metallic: false, splitCountMin: 2, splitCountMax: 3 },
-  [ENEMY_TYPE.BOSS]:       { color: 0x111111, sizeMult: 2.00, hpPct: 4.00, contactPct: 0.50, shoot: true,  bulletPct: 0.33, fireRate: 1.75, bulletSpeedMult: 1.10, metallic: true },
+  [ENEMY_TYPE.BOSS]:       { color: 0x111111, sizeMult: 2.00, hpPct: 4.00, contactPct: 0.50, shoot: true,  bulletPct: 0.33, fireRate: 1.75, bulletSpeedMult: 1.375, metallic: true },
 });
 
 export function isBossLevel(level){
