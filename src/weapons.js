@@ -492,15 +492,15 @@ function _spawnLightningFx(pos) {
   const geos = [];
   const mats = [coreMat, glowMat];
 
-  const start = new THREE.Vector3(0, 5.6, 0);
-  const end = new THREE.Vector3((Math.random() * 2 - 1) * 0.08, 0.45, (Math.random() * 2 - 1) * 0.08);
-  const mainPts = _buildLightningPath(start, end, 7, 0.62, 1.0);
+  const start = new THREE.Vector3(0, 11.2, 0);
+  const end = new THREE.Vector3((Math.random() * 2 - 1) * 0.06, 0.45, (Math.random() * 2 - 1) * 0.06);
+  const mainPts = _buildLightningPath(start, end, 9, 0.48, 1.0);
 
   for (let i = 0; i < mainPts.length - 1; i++) {
     const a = mainPts[i];
     const b = mainPts[i + 1];
-    const glowSeg = _makeLightningSegment(a, b, 0.11, glowMat, 1);
-    const coreSeg = _makeLightningSegment(a, b, 0.042, coreMat, 0);
+    const glowSeg = _makeLightningSegment(a, b, 0.065, glowMat, 1);
+    const coreSeg = _makeLightningSegment(a, b, 0.022, coreMat, 0);
     if (glowSeg) { root.add(glowSeg.mesh); geos.push(glowSeg.geo); }
     if (coreSeg) { root.add(coreSeg.mesh); geos.push(coreSeg.geo); }
 
@@ -511,10 +511,10 @@ function _spawnLightningFx(pos) {
         -(0.5 + Math.random() * 1.1),
         (Math.random() * 2 - 1) * 0.95,
       ));
-      const branchPts = _buildLightningPath(branchStart, branchEnd, 3, 0.22, 0.65);
+      const branchPts = _buildLightningPath(branchStart, branchEnd, 4, 0.18, 0.65);
       for (let j = 0; j < branchPts.length - 1; j++) {
-        const g = _makeLightningSegment(branchPts[j], branchPts[j + 1], 0.062, glowMat, 1);
-        const c = _makeLightningSegment(branchPts[j], branchPts[j + 1], 0.024, coreMat, 0);
+        const g = _makeLightningSegment(branchPts[j], branchPts[j + 1], 0.036, glowMat, 1);
+        const c = _makeLightningSegment(branchPts[j], branchPts[j + 1], 0.013, coreMat, 0);
         if (g) { root.add(g.mesh); geos.push(g.geo); }
         if (c) { root.add(c.mesh); geos.push(c.geo); }
       }
@@ -522,7 +522,7 @@ function _spawnLightningFx(pos) {
   }
 
   const impactGlow = new THREE.Mesh(
-    new THREE.SphereGeometry(0.34, 12, 12),
+    new THREE.SphereGeometry(0.26, 12, 12),
     new THREE.MeshBasicMaterial({ color: 0x92dcff, transparent: true, opacity: 0.55, depthWrite: false })
   );
   impactGlow.position.copy(end);

@@ -1312,6 +1312,14 @@ body.mode-playing #menu-screen { display: none !important; }
   border: 1px solid rgba(255, 210, 50, 0.2);
   background: rgba(255, 200, 30, 0.05);
 }
+
+.upgrade-hdr .upgrade-coins {
+  padding: 0;
+  border: none;
+  background: transparent;
+  border-radius: 0;
+  box-shadow: none;
+}
 .coin-icon {
   width: 14px;
   height: 14px;

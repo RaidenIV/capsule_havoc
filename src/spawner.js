@@ -122,7 +122,7 @@ function availableSlots(level) {
 }
 
 function getTypeSoftCap(type, level) {
-  if (type === ENEMY_TYPE.ORBITER) {
+  if (type === ENEMY_TYPE.ORBITER || type === ENEMY_TYPE.TANKER) {
     const quotaBase = state.spawn?.quotas?.[type] ?? getEffectiveQuota(type, level);
     return Math.max(1, Math.floor(quotaBase * 0.5));
   }
