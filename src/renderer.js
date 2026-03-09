@@ -10,7 +10,7 @@ renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 if ('useLegacyLights' in renderer) renderer.useLegacyLights = false;
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
-renderer.toneMappingExposure = 0.42;
+renderer.toneMappingExposure = 0.58;
 document.body.appendChild(renderer.domElement);
 renderer.domElement.id = 'webgl-canvas';
 // Ensure WebGL canvas covers the full viewport (prevents top bars from layout)
@@ -55,12 +55,12 @@ envScene.add(new THREE.Mesh(skyGeo, new THREE.MeshBasicMaterial({ color: 0x05051
 
 const _sceneEnvTexture = pmrem.fromScene(envScene).texture;
 scene.environment = _sceneEnvTexture;
-scene.environmentIntensity = 1.15;
+scene.environmentIntensity = 1.35;
 pmrem.dispose();
 
 export function setEnvironmentReflectionsEnabled(enabled) {
   scene.environment = enabled ? _sceneEnvTexture : null;
-  scene.environmentIntensity = enabled ? 1.15 : 0.0;
+  scene.environmentIntensity = enabled ? 1.35 : 0.0;
   scene.traverse((obj) => {
     const mats = obj?.material ? (Array.isArray(obj.material) ? obj.material : [obj.material]) : [];
     mats.forEach((mat) => { if (mat) mat.needsUpdate = true; });

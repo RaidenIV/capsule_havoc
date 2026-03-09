@@ -432,15 +432,107 @@ function _releaseTargetedShotVisual(g) {
   _targetedBulletPool.push(g);
 }
 
+function _makeLightningSegment(a, b, radius, material, layer = 0) {
+  const dir = new THREE.Vector3().subVectors(b, a);
+  const len = dir.length();
+  if (len <= 0.0001) return null;
+
+  const geo = new THREE.CylinderGeometry(radius, radius * 1.18, len, 5, 1, false);
+  const mesh = new THREE.Mesh(geo, material);
+  mesh.position.copy(a).add(b).multiplyScalar(0.5);
+  mesh.quaternion.setFromUnitVectors(_bulletUp, dir.normalize());
+  if (layer === 1) mesh.layers.enable(1);
+  return { mesh, geo };
+}
+
+function _buildLightningPath(start, end, segments, jitter, taper = 1.0) {
+  const pts = [start.clone()];
+  const dir = new THREE.Vector3().subVectors(end, start);
+  const len = Math.max(0.001, dir.length());
+  dir.normalize();
+
+  let side = new THREE.Vector3(dir.z, 0, -dir.x);
+  if (side.lengthSq() < 0.0001) side.set(1, 0, 0);
+  side.normalize();
+  const side2 = new THREE.Vector3().crossVectors(dir, side).normalize();
+
+  for (let i = 1; i < segments; i++) {
+    const t = i / segments;
+    const p = start.clone().lerp(end, t);
+    const amp = jitter * (1.0 - t * 0.72) * taper;
+    const offA = (Math.random() * 2 - 1) * amp;
+    const offB = (Math.random() * 2 - 1) * amp * 0.55;
+    p.addScaledVector(side, offA);
+    p.addScaledVector(side2, offB);
+    pts.push(p);
+  }
+  pts.push(end.clone());
+  return pts;
+}
+
 function _spawnLightningFx(pos) {
   if (!state.lightningFx) state.lightningFx = [];
-  const geo = new THREE.CylinderGeometry(0.05, 0.14, 4.8, 6);
-  const mat = new THREE.MeshBasicMaterial({ color: 0xd8f7ff, transparent: true, opacity: 0.9, depthWrite: false });
-  const mesh = new THREE.Mesh(geo, mat);
-  mesh.position.set(pos.x, 2.4, pos.z);
-  mesh.layers.enable(1);
-  scene.add(mesh);
-  state.lightningFx.push({ mesh, geo, mat, life: 0.12, maxLife: 0.12 });
+
+  const root = new THREE.Group();
+  root.position.set(pos.x, 0, pos.z);
+
+  const coreMat = new THREE.MeshBasicMaterial({
+    color: 0xf7fcff,
+    transparent: true,
+    opacity: 0.98,
+    depthWrite: false,
+  });
+  const glowMat = new THREE.MeshBasicMaterial({
+    color: 0x8fd8ff,
+    transparent: true,
+    opacity: 0.62,
+    depthWrite: false,
+  });
+
+  const geos = [];
+  const mats = [coreMat, glowMat];
+
+  const start = new THREE.Vector3(0, 5.6, 0);
+  const end = new THREE.Vector3((Math.random() * 2 - 1) * 0.08, 0.45, (Math.random() * 2 - 1) * 0.08);
+  const mainPts = _buildLightningPath(start, end, 7, 0.62, 1.0);
+
+  for (let i = 0; i < mainPts.length - 1; i++) {
+    const a = mainPts[i];
+    const b = mainPts[i + 1];
+    const glowSeg = _makeLightningSegment(a, b, 0.11, glowMat, 1);
+    const coreSeg = _makeLightningSegment(a, b, 0.042, coreMat, 0);
+    if (glowSeg) { root.add(glowSeg.mesh); geos.push(glowSeg.geo); }
+    if (coreSeg) { root.add(coreSeg.mesh); geos.push(coreSeg.geo); }
+
+    if (i > 1 && i < mainPts.length - 2 && Math.random() < 0.72) {
+      const branchStart = a.clone().lerp(b, 0.45);
+      const branchEnd = branchStart.clone().add(new THREE.Vector3(
+        (Math.random() * 2 - 1) * 0.95,
+        -(0.5 + Math.random() * 1.1),
+        (Math.random() * 2 - 1) * 0.95,
+      ));
+      const branchPts = _buildLightningPath(branchStart, branchEnd, 3, 0.22, 0.65);
+      for (let j = 0; j < branchPts.length - 1; j++) {
+        const g = _makeLightningSegment(branchPts[j], branchPts[j + 1], 0.062, glowMat, 1);
+        const c = _makeLightningSegment(branchPts[j], branchPts[j + 1], 0.024, coreMat, 0);
+        if (g) { root.add(g.mesh); geos.push(g.geo); }
+        if (c) { root.add(c.mesh); geos.push(c.geo); }
+      }
+    }
+  }
+
+  const impactGlow = new THREE.Mesh(
+    new THREE.SphereGeometry(0.34, 12, 12),
+    new THREE.MeshBasicMaterial({ color: 0x92dcff, transparent: true, opacity: 0.55, depthWrite: false })
+  );
+  impactGlow.position.copy(end);
+  impactGlow.layers.enable(1);
+  root.add(impactGlow);
+  geos.push(impactGlow.geometry);
+  mats.push(impactGlow.material);
+
+  scene.add(root);
+  state.lightningFx.push({ root, geos, mats, life: 0.17, maxLife: 0.17 });
 }
 
 function _updateTargetedShots(worldDelta) {
@@ -479,9 +571,18 @@ function _updateLightningFx(worldDelta) {
     const fx = state.lightningFx[i];
     fx.life -= worldDelta;
     if (fx.life <= 0) {
-      scene.remove(fx.mesh); fx.geo.dispose(); fx.mat.dispose(); state.lightningFx.splice(i, 1); continue;
+      scene.remove(fx.root);
+      for (const geo of (fx.geos || [])) geo.dispose?.();
+      for (const mat of (fx.mats || [])) mat.dispose?.();
+      state.lightningFx.splice(i, 1);
+      continue;
     }
-    fx.mat.opacity = Math.max(0, fx.life / fx.maxLife);
+    const a = Math.max(0, fx.life / fx.maxLife);
+    for (const mat of (fx.mats || [])) {
+      if (!mat) continue;
+      const base = mat.color?.getHex?.() === 0xf7fcff ? 0.98 : (mat.color?.getHex?.() === 0x8fd8ff ? 0.62 : 0.55);
+      mat.opacity = Math.max(0, base * a);
+    }
   }
 }
 

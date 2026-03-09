@@ -328,7 +328,7 @@ export function updateArenaPickups(worldDelta){
         triggerCoinMagnetBurst();
         notifyPowerup('Coin Magnet', null);
       } else {
-        const dur = (p.type === 'clock') ? 8 : 10;
+        const dur = (p.type === 'clock') ? 8 : (p.type === 'blackHole' ? 3 : 10);
         applyEffect(p.type, dur);
 
         switch (p.type) {
