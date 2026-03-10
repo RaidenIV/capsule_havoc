@@ -88,34 +88,90 @@ const ATTRACT_SPD_COIN  = ITEM_ATTRACT_SPEED;
 const ATTRACT_SPD_HP    = ITEM_ATTRACT_SPEED;
 const COLLECT_COIN      = 0.7;
 const COLLECT_HP        = 0.8;
+const COIN_TOUCH_MERGE_DIST = 0.48;
+const COIN_TOUCH_MERGE_CELL = 0.56;
+
+function mergeTouchingCoins(){
+  if (!Array.isArray(state.coinPickups) || state.coinPickups.length < 2) return;
+
+  const grid = new Map();
+  const removed = new Set();
+  const mergeDist2 = COIN_TOUCH_MERGE_DIST * COIN_TOUCH_MERGE_DIST;
+
+  for (let i = 0; i < state.coinPickups.length; i++) {
+    if (removed.has(i)) continue;
+    const cp = state.coinPickups[i];
+    if (!cp?.mesh) continue;
+
+    const x = cp.mesh.position.x;
+    const z = cp.mesh.position.z;
+    const gx = Math.floor(x / COIN_TOUCH_MERGE_CELL);
+    const gz = Math.floor(z / COIN_TOUCH_MERGE_CELL);
+    let merged = false;
+
+    for (let ox = -1; ox <= 1 && !merged; ox++) {
+      for (let oz = -1; oz <= 1 && !merged; oz++) {
+        const cellKey = `${gx + ox},${gz + oz}`;
+        const bucket = grid.get(cellKey);
+        if (!bucket) continue;
+
+        for (const keepIndex of bucket) {
+          if (removed.has(keepIndex)) continue;
+          const keep = state.coinPickups[keepIndex];
+          if (!keep?.mesh) continue;
+
+          const dx = x - keep.mesh.position.x;
+          const dz = z - keep.mesh.position.z;
+          if ((dx * dx + dz * dz) > mergeDist2) continue;
+
+          keep.value = Math.max(1, (keep.value || 0) + (cp.value || 0));
+          keep.life = Math.max(keep.life || 0, cp.life || 0);
+          keep.attracting = Boolean(keep.attracting || cp.attracting);
+          keep.merged = true;
+          keep.mesh.scale.setScalar(Math.min(1.8, 1.0 + Math.log2(Math.max(1, keep.value)) * 0.03));
+          try { scene.remove(cp.mesh); } catch {}
+          try { cp.mat?.dispose?.(); } catch {}
+          removed.add(i);
+          merged = true;
+          break;
+        }
+      }
+    }
+
+    if (merged) continue;
+
+    const ownKey = `${gx},${gz}`;
+    if (!grid.has(ownKey)) grid.set(ownKey, []);
+    grid.get(ownKey).push(i);
+  }
+
+  if (removed.size > 0) {
+    state.coinPickups = state.coinPickups.filter((_, idx) => !removed.has(idx));
+  }
+}
 
 export function updatePickups(worldDelta, playerLevel, elapsed) {
   const attractDelta = Math.max(0, worldDelta) / Math.max(0.0001, state.worldScale || 1.0);
-  const baseCoinAttractDist = getMagnetAttractRangeForTier(state.upg?.magnet || 0, false);
-  const healthAttractDist = baseCoinAttractDist;
+  const magnetActive = (state.effects?.coinMagnet || 0) > 0;
+  const coinAttractDist = getMagnetAttractRangeForTier(state.upg?.magnet || 0, magnetActive);
+  const healthAttractDist = coinAttractDist;
+
+  mergeTouchingCoins();
+
   // Coin merge safety (performance): consolidate if too many coins are on the ground.
   if (state.coinPickups.length > 400) {
     let sum = 0;
-    let mergedCoinMagnetUntil = 0;
-    for (const cp of state.coinPickups) {
-      sum += (cp.value || 0);
-      mergedCoinMagnetUntil = Math.max(mergedCoinMagnetUntil, cp.coinMagnetUntil || 0);
-      scene.remove(cp.mesh);
-      cp.mat.dispose();
-    }
+    for (const cp of state.coinPickups) { sum += (cp.value || 0); scene.remove(cp.mesh); cp.mat.dispose(); }
     state.coinPickups.length = 0;
     // Place merged coin at edge/corner away from player.
     const px = playerGroup.position.x;
     const pz = playerGroup.position.z;
     const dx = (Math.random() < 0.5 ? -1 : 1);
     const dz = (Math.random() < 0.5 ? -1 : 1);
-    const far = Math.max(4.0, baseCoinAttractDist || 0, healthAttractDist || 0) * 3.25;
+    const far = Math.max(4.0, coinAttractDist || 0, healthAttractDist || 0) * 3.25;
     const pos = { x: px + dx * far, z: pz + dz * far };
     spawnCoins(pos, 1, sum, 0xffffff);
-    if (state.coinPickups[0]) {
-      state.coinPickups[0].merged = true;
-      state.coinPickups[0].coinMagnetUntil = Math.max(state.coinPickups[0].coinMagnetUntil || 0, mergedCoinMagnetUntil);
-    }
+    if (state.coinPickups[0]) state.coinPickups[0].merged = true;
     playSound('coin_merge', 0.7, 0.95 + Math.random() * 0.1);
   }
 
@@ -138,8 +194,6 @@ export function updatePickups(worldDelta, playerLevel, elapsed) {
       playSound('coin', 0.5, 0.95 + Math.random() * 0.15);
       continue;
     }
-    const coinMagnetActive = (cp.coinMagnetUntil || 0) > (state.elapsed || 0);
-    const coinAttractDist = getMagnetAttractRangeForTier(state.upg?.magnet || 0, coinMagnetActive);
     if (coinAttractDist > 0 && dist < coinAttractDist) cp.attracting = true;
     if (cp.attracting && dist > 0.001) {
       const spd = ATTRACT_SPD_COIN * attractDelta;

@@ -30,7 +30,6 @@ function getRawTier(key){
 function getTargetedSystemsTier(){
   return Math.max(
     0,
-    getRawTier('targetedFire'),
     getRawTier('targetedCooldown'),
     getRawTier('targetedDamage'),
     getRawTier('targetedRange'),
@@ -47,7 +46,7 @@ function getLightningSystemsTier(){
 }
 
 function getTier(key){
-  if (key === 'targetedFire' || key === 'targetedCooldown' || key === 'targetedDamage' || key === 'targetedRange') {
+  if (key === 'targetedCooldown' || key === 'targetedDamage' || key === 'targetedRange') {
     return getTargetedSystemsTier();
   }
   if (key === 'lightning' || key === 'lightningDamage' || key === 'lightningCooldown') {
@@ -113,15 +112,18 @@ const CATEGORIES = [
       { key: 'piercing', name: 'Piercing', costs: STANDARD_COSTS,
         desc: t => `+1 enemy pierced per shot (Tier ${t})` },
       { key: 'multishot', name: 'Multi-Shot', costs: MULTISHOT_COSTS,
-        desc: t => t === 1 ? 'Every 5th volley fires 1 extra spread laser' : 'Every 5th volley fires 2 extra spread lasers' },
-      { key: 'targetedCooldown', name: 'Targeted Systems', costs: STANDARD_COSTS,
+        desc: t => t === 1 ? '2 shot burst' : '3 shot burst' },
+      { key: 'targetedFire', name: 'Targeted Shot', costs: STANDARD_COSTS,
         desc: t => [
-          'Unlocks auto-targeting shot • +15% dmg/range/speed • -15% cooldown',
-          'Targeted Shot +30% dmg/range/speed • -30% cooldown',
-          'Targeted Shot +45% dmg/range/speed • -45% cooldown',
-          'Targeted Shot +60% dmg/range/speed • -60% cooldown',
-          'Targeted Shot +75% dmg/range/speed • -75% cooldown',
+          'Unlocks auto-targeting shot',
+          'Fires faster and farther',
+          'Improves cadence and reach',
+          'Fires much faster',
+          'Maximum lock speed',
         ][t - 1] || `Tier ${t}` },
+      { key: 'targetedCooldown', name: 'Targeted Systems', costs: STANDARD_COSTS,
+        requires: { key: 'targetedFire', minTier: 1 },
+        desc: t => `+${t * 15}% dmg/range/speed, -${t * 15}% cooldown (Tier ${t})` },
       { key: 'lightning', name: 'Lightning', costs: STANDARD_COSTS,
         desc: t => [
           'Unlocks 1 lightning strike',
@@ -318,14 +320,24 @@ function applyUpgradeEffect(key, newTier) {
     case 'fireRate':
     case 'projSpeed':
     case 'multishot':
+      try { syncOrbitBullets(); } catch {}
+      break;
+
     case 'targetedFire':
+      state.upg.targetedFire = Math.max(state.upg.targetedFire || 0, newTier);
+      try { syncOrbitBullets(); } catch {}
+      break;
+
     case 'targetedDamage':
     case 'targetedCooldown':
     case 'targetedRange':
-      state.upg.targetedFire = newTier;
+      state.upg.targetedFire = Math.max(state.upg.targetedFire || 0, 1);
       state.upg.targetedCooldown = newTier;
       state.upg.targetedDamage = newTier;
       state.upg.targetedRange = newTier;
+      try { syncOrbitBullets(); } catch {}
+      break;
+
     case 'lightning':
     case 'lightningDamage':
     case 'lightningCooldown':
@@ -396,8 +408,8 @@ function updateStatsPanel(){
   const dashTier = getTier('dash');
   const magnetTier = getTier('magnet');
   const shieldTier = getTier('shield');
-  const targetedTier = getTargetedSystemsTier();
-  const targetedSystemsTier = targetedTier;
+  const targetedTier = getTier('targetedFire');
+  const targetedSystemsTier = getTargetedSystemsTier();
   const lightningTier = getTier('lightning');
   const lightningBonusTier = Math.max(0, lightningTier - 1);
   const maxHealthTier = getTier('maxHealth');
@@ -408,7 +420,7 @@ function updateStatsPanel(){
   const curseTier = getTier('curse');
   const armorHits = Math.max(0, state.armorHits || 0);
   const slashDmg = Math.max(1, Math.round(bulletDmg * 1.8));
-  const totalProjectiles = Math.max(1, waveDirs);
+  const totalProjectiles = Math.max(1, waveDirs) * (1 + msTier);
   const dashCd = dashTier > 0 ? (dashTier >= 5 ? 1.36 : dashTier >= 4 ? 1.64 : dashTier >= 3 ? 2.00 : dashTier >= 2 ? 2.40 : 2.80) : 0;
   const magnetRadius = getMagnetAttractRangeForTier(magnetTier, false);
   const shieldCharges = shieldTier >= 5 ? 3 : (shieldTier >= 3 ? 2 : (shieldTier >= 1 ? 1 : 0));
@@ -433,14 +445,14 @@ function updateStatsPanel(){
   const ownedRows = [];
   if (dmgTier > 0) ownedRows.push(_statRow('Damage Bonus', `+${dmgTier * 10}%`));
   if (fireRateTier > 0 && (laserTier > 0 || loadout === 'laser')) ownedRows.push(_statRow('Fire Rate Bonus', `-${fireRateTier * 10}% CD`));
-  if (msTier > 0 && (laserTier > 0 || loadout === 'laser')) ownedRows.push(_statRow('Multishot', `Every 5th volley • +${msTier} / dir`));
+  if (msTier > 0 && (laserTier > 0 || loadout === 'laser')) ownedRows.push(_statRow('Multishot', `+${msTier} / dir`));
   if (psTier > 0 && (laserTier > 0 || loadout === 'laser')) ownedRows.push(_statRow('Proj Speed', `+${psTier * 20}%`));
   if (pierce > 0) ownedRows.push(_statRow('Piercing', `+${pierce}`));
   if (moveTier > 0) ownedRows.push(_statRow('Move Speed', `+${moveTier * 8}%`));
   if (dashTier > 0) ownedRows.push(_statRow('Dash CD', `${dashCd.toFixed(2)}s`));
   if (magnetTier > 0) ownedRows.push(_statRow('Magnet Radius', `${magnetRadius.toFixed(2)} radius`));
   if (shieldTier > 0) ownedRows.push(_statRow('Shield', `${shieldCharges} hit • ${shieldRecharge.toFixed(1)}s recharge`));
-  if (targetedSystemsTier > 0) ownedRows.push(_statRow('Targeted Systems', `+${targetedSystemsTier * 15}% dmg/range/speed • -${targetedSystemsTier * 15}% CD`));
+  if (targetedTier > 0 && targetedSystemsTier > 0) ownedRows.push(_statRow('Targeted Systems', `+${targetedSystemsTier * 15}% dmg/range/speed • -${targetedSystemsTier * 15}% CD`));
   if (lightningTier > 0 && lightningBonusTier > 0) {
     ownedRows.push(_statRow('Lightning Bonus', `+${lightningBonusTier * 15}% dmg • -${lightningBonusTier * 10}% CD • +${(lightningBonusTier * 0.25).toFixed(2)}s stun`));
   }
@@ -554,11 +566,8 @@ function getDisplayedUpgradeCost(upg, currentTier){
 }
 
 function updateCoinsUI() {
-  const value = String(state.coins || 0);
   const el = $('upgradeCoins');
-  if (el) el.textContent = value;
-  const gameHudEl = document.getElementById('coin-count');
-  if (gameHudEl) gameHudEl.textContent = value;
+  if (el) el.textContent = String(state.coins || 0);
 }
 
 function renderShop() {
