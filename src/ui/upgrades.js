@@ -175,8 +175,6 @@ const CATEGORIES = [
         desc: t => `+${getTierBonusPct(XP_GROWTH_BONUS_PCT, t)}% XP from kills (Tier ${t})` },
       { key: 'coinBonus', name: 'Coin Bonus', costs: STANDARD_COSTS,
         desc: t => `+${getTierBonusPct(COIN_BONUS_PCT, t)}% coins per kill (Tier ${t})` },
-      { key: 'luck', name: 'Luck', costs: STANDARD_COSTS,
-        desc: t => `+5 Luck — better chests & 4th shop option chance (Tier ${t})` },
     ],
   },
 ];
@@ -416,7 +414,6 @@ function updateStatsPanel(){
   const regenTier = getTier('regen');
   const xpGrowthTier = getTier('xpGrowth');
   const coinBonusTier = getTier('coinBonus');
-  const luckTier = getTier('luck');
   const curseTier = getTier('curse');
   const armorHits = Math.max(0, state.armorHits || 0);
   const slashDmg = Math.max(1, Math.round(bulletDmg * 1.8));
@@ -439,7 +436,9 @@ function updateStatsPanel(){
     rows.push(_statRow('Fire Interval', `${fire.toFixed(2)}s`));
   }
   if (orbitTier > 0) rows.push(_statRow('Orbit DMG', `${bulletDmg} / hit`));
-  if (targetedTier > 0) rows.push(_statRow('Targeted Shot', `T${targetedTier} • ${Math.round(bulletDmg * (1 + 0.15 * targetedSystemsTier))} dmg`));
+  const _tsBonusPcts = [0, 15, 20, 25, 30, 50];
+  const tsBonusPct = _tsBonusPcts[Math.min(targetedSystemsTier, 5)] || 0;
+  if (targetedTier > 0) rows.push(_statRow('Targeted Shot', `T${targetedTier} • ${Math.round(bulletDmg * (1 + tsBonusPct / 100))} dmg`));
   if (lightningTier > 0) rows.push(_statRow('Lightning', `${Math.min(5, lightningTier)} strike${Math.min(5, lightningTier) === 1 ? '' : 's'}`));
 
   const ownedRows = [];
@@ -452,7 +451,7 @@ function updateStatsPanel(){
   if (dashTier > 0) ownedRows.push(_statRow('Dash CD', `${dashCd.toFixed(2)}s`));
   if (magnetTier > 0) ownedRows.push(_statRow('Magnet Radius', `${magnetRadius.toFixed(2)} radius`));
   if (shieldTier > 0) ownedRows.push(_statRow('Shield', `${shieldCharges} hit • ${shieldRecharge.toFixed(1)}s recharge`));
-  if (targetedTier > 0 && targetedSystemsTier > 0) ownedRows.push(_statRow('Targeted Systems', `+${targetedSystemsTier * 15}% dmg/range/speed • -${targetedSystemsTier * 15}% CD`));
+  if (targetedTier > 0 && targetedSystemsTier > 0) ownedRows.push(_statRow('Targeted Systems', `+${tsBonusPct}% dmg/range/speed • -${targetedSystemsTier * 15}% CD`));
   if (lightningTier > 0 && lightningBonusTier > 0) {
     ownedRows.push(_statRow('Lightning Bonus', `+${lightningBonusTier * 15}% dmg • -${lightningBonusTier * 10}% CD • +${(lightningBonusTier * 0.25).toFixed(2)}s stun`));
   }
@@ -460,7 +459,8 @@ function updateStatsPanel(){
   if (regenTier > 0) ownedRows.push(_statRow('Regen', `${regenTier} HP/s`));
   if (xpGrowthTier > 0) ownedRows.push(_statRow('XP Growth', `+${getTierBonusPct(XP_GROWTH_BONUS_PCT, xpGrowthTier)}%`));
   if (coinBonusTier > 0) ownedRows.push(_statRow('Coin Bonus', `+${getTierBonusPct(COIN_BONUS_PCT, coinBonusTier)}%`));
-  if (luckTier > 0) ownedRows.push(_statRow('Luck', `+${luckTier * 5}`));
+  const autoLuck = Math.max(0, state.luck || 0);
+  if (autoLuck > 0) ownedRows.push(_statRow('Luck (auto)', `${autoLuck}`));
   if (curseTier > 0) ownedRows.push(_statRow('Boss Curse', `T${curseTier}`));
   if (armorHits > 0) ownedRows.push(_statRow('Armor Hits', `${armorHits}`));
 
