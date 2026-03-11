@@ -275,14 +275,21 @@ function spawnAtRandom(type){
   });
 }
 
-function triggerCoinMagnetBurst(duration = 12.5){
-  const magnetUntil = (state.elapsed || 0) + duration;
+function triggerCoinMagnetInstant(){
+  // Instantly collect every coin currently on the ground.
+  const coinCountEl = document.getElementById('coin-count');
+  let sum = 0;
   if (Array.isArray(state.coinPickups)) {
     for (const cp of state.coinPickups) {
-      if (!cp) continue;
-      cp.attracting = true;
-      cp.coinMagnetUntil = Math.max(cp.coinMagnetUntil || 0, magnetUntil);
+      sum += (cp.value || 0);
+      try { scene.remove(cp.mesh); } catch {}
+      try { cp.mat?.dispose?.(); } catch {}
     }
+    state.coinPickups.length = 0;
+  }
+  if (sum > 0) {
+    state.coins += sum;
+    if (coinCountEl) coinCountEl.textContent = state.coins;
   }
 }
 
@@ -360,10 +367,8 @@ export function updateArenaPickups(worldDelta){
         grantArmor(3);
         notifyPowerup('Armor', null);
       } else if (p.type === 'coinMagnet') {
-        const dur = 12.5;
-        applyEffect('coinMagnet', dur);
-        triggerCoinMagnetBurst(dur);
-        notifyPowerup('Coin Magnet', dur, 'coinMagnet');
+        triggerCoinMagnetInstant();
+        notifyPowerup('Coin Magnet — Collected!', null);
       } else {
         const dur = (p.type === 'clock') ? 8 : (p.type === 'blackHole' ? 3 : 10);
         applyEffect(p.type, dur);
