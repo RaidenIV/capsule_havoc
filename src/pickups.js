@@ -88,8 +88,8 @@ const ATTRACT_SPD_COIN  = ITEM_ATTRACT_SPEED;
 const ATTRACT_SPD_HP    = ITEM_ATTRACT_SPEED;
 const COLLECT_COIN      = 0.7;
 const COLLECT_HP        = 0.8;
-const COIN_TOUCH_MERGE_DIST = 0.48;
-const COIN_TOUCH_MERGE_CELL = 0.56;
+const COIN_TOUCH_MERGE_DIST = 1.2;
+const COIN_TOUCH_MERGE_CELL = 1.4;
 
 function mergeTouchingCoins(){
   if (!Array.isArray(state.coinPickups) || state.coinPickups.length < 2) return;
