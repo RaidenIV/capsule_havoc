@@ -276,6 +276,11 @@ export function restartGame(opts = {}) {
   if (h1) { h1.textContent = 'DESTROYED'; h1.style.color = ''; h1.style.textShadow = ''; }
   document.querySelectorAll('.lvl-cb').forEach(lb => lb.classList.remove('active'));
 
+  // Force re-init of design-doc systems (resets arena pickup spawn timer, etc.)
+  state._designDocInitDone = false;
+  // Re-init spawner at the very end so all state resets have already happened
+  initSpawner();
+
   // Wave system handles spawns (no initial enemies here)
 
   if (startCountdownNow) startCountdown();
