@@ -607,20 +607,23 @@ export function updateSecondaryWeapons(worldDelta) {
     if (state.targetedShotTimer <= 0) {
       const baseCdMult = [1.0, 1.0, 0.90, 0.80, 0.70, 0.60][Math.min(tfTier, 5)] || 1.0;
       const targetedSystemsTier = Math.max(0, state.upg?.targetedFire || 0, state.upg?.targetedCooldown || 0, state.upg?.targetedDamage || 0, state.upg?.targetedRange || 0);
+      // Per-tier bonus: 0%, 15%, 20%, 25%, 30%, 50%
+      const _tsBonuses = [0, 0.15, 0.20, 0.25, 0.30, 0.50];
+      const tsBonus = _tsBonuses[Math.min(targetedSystemsTier, 5)] || 0;
       const extraCdMult = Math.pow(0.85, targetedSystemsTier);
       const baseRangeMult = [1.0, 1.0, 1.0, 1.10, 1.10, 1.20][Math.min(tfTier, 5)] || 1.0;
-      const extraRangeMult = 1 + (0.15 * targetedSystemsTier);
+      const extraRangeMult = 1 + tsBonus;
       const maxRange = 10.0 * baseRangeMult * extraRangeMult;
       const target = _getNearestEnemy(maxRange);
       const cd = Math.max(0.18, 1.4 * baseCdMult * extraCdMult);
       state.targetedShotTimer = cd;
       if (target) {
-        const dmg = Math.max(1, Math.round(getBulletDamage() * (1 + 0.15 * targetedSystemsTier)));
+        const dmg = Math.max(1, Math.round(getBulletDamage() * (1 + tsBonus)));
         const obj = _acquireTargetedShotVisual();
         const dx = target.grp.position.x - playerGroup.position.x;
         const dz = target.grp.position.z - playerGroup.position.z;
         const dir = new THREE.Vector3(dx, 0, dz).normalize();
-        const speed = BULLET_SPEED * 2.2 * (1 + (0.15 * targetedSystemsTier));
+        const speed = BULLET_SPEED * 2.2 * (1 + tsBonus);
         _bulletQ.setFromUnitVectors(_bulletUp, dir);
         obj.quaternion.copy(_bulletQ);
         obj.position.copy(playerGroup.position);
