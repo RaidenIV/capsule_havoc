@@ -1,20 +1,21 @@
 // ─── luck.js ────────────────────────────────────────────────────────────────
 // Design-doc Luck stat aggregation + utility helpers.
-// Luck sources:
-//  - Shop purchases: state.upg.luck (tiered)
-//  - Boss wave bonuses: state.bossLuck (accumulates)
+// Luck is now earned automatically as the player levels up.
+// Every 5 levels grants +5 luck, up to a max of 60 at level 60+.
 
 import { state } from './state.js';
 
 function clamp(v, a, b){ return Math.max(a, Math.min(b, v)); }
 
-// Shop luck tiers: 0..5 -> +0/+5/+10/+15/+20/+25
-const SHOP_LUCK = [0, 5, 10, 15, 20, 25];
+// Auto-luck from level: +5 per 5 levels, capped at 60
+function getLevelLuck(){
+  const level = Math.max(1, Math.floor(state.playerLevel || 1));
+  return clamp(Math.floor(level / 5) * 5, 0, 60);
+}
 
 export function recomputeLuck(){
-  const shop = SHOP_LUCK[clamp(state.upg?.luck ?? 0, 0, 5)] ?? 0;
   const boss = state.bossLuck ?? 0;
-  state.luck = shop + boss;
+  state.luck = getLevelLuck() + boss;
   return state.luck;
 }
 
@@ -25,9 +26,7 @@ export function getLuck(){
 export function addLuck(amount = 0, source = 'misc'){
   const n = Number(amount) || 0;
   if (source === 'bossWave') state.bossLuck = (state.bossLuck ?? 0) + n;
-  else if (source === 'shop') {
-    // shop luck is tracked via tier; do nothing here
-  } else {
+  else {
     state.bossLuck = (state.bossLuck ?? 0) + n;
   }
   recomputeLuck();
