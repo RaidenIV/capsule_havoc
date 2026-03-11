@@ -45,7 +45,6 @@ const SHOP_UPGRADES = [
   { key: 'regen', costs: STANDARD_COSTS },
   { key: 'xpGrowth', costs: STANDARD_COSTS },
   { key: 'coinBonus', costs: STANDARD_COSTS },
-  { key: 'luck', costs: STANDARD_COSTS },
 ];
 const RED_LASER_LOCKOUT = new Set(['laserFire', 'fireRate', 'projSpeed', 'piercing', 'multishot']);
 
